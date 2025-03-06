@@ -72,6 +72,27 @@ Next, you can link your Turborepo to your Remote Cache by running the following 
 npx turbo link
 ```
 
+## Database Setup
+
+This project uses PostgreSQL as a database for both applications. The database is configured using Docker Compose.
+
+### Starting the Database
+
+To start the PostgreSQL database, run:
+
+```bash
+docker-compose up -d postgres
+```
+
+### Database Configuration
+
+The PostgreSQL database is configured with separate databases for each application:
+
+- `agent` - Database for the Agent application
+- `discord_bot` - Database for the Discord Bot application
+
+For more details on the database setup, see the [PostgreSQL documentation](./docker/postgres/README.md).
+
 ## Useful Links
 
 Learn more about the power of Turborepo:
