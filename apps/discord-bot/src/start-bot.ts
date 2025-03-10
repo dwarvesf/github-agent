@@ -3,7 +3,7 @@ import { Options, Partials } from 'discord.js';
 import { createRequire } from 'node:module';
 
 import { Button } from './buttons/index.js';
-import { DevCommand, HelpCommand, InfoCommand, TestCommand } from './commands/chat/index.js';
+import { DevCommand, HelpCommand, InfoCommand, TestCommand, AccessKeyCommand } from './commands/chat/index.js';
 import {
     ChatCommandMetadata,
     Command,
@@ -20,6 +20,7 @@ import {
     MessageHandler,
     ReactionHandler,
     TriggerHandler,
+    ModalHandler,
 } from './events/index.js';
 import { CustomClient } from './extensions/index.js';
 import { Job } from './jobs/index.js';
@@ -30,6 +31,7 @@ import {
     EventDataService,
     JobService,
     Logger,
+    WebhookService,
 } from './services/index.js';
 import { Trigger } from './triggers/index.js';
 
@@ -60,6 +62,7 @@ async function start(): Promise<void> {
         new HelpCommand(),
         new InfoCommand(),
         new TestCommand(),
+        new AccessKeyCommand(),
 
         // Message Context Commands
         new ViewDateSent(),
@@ -93,6 +96,7 @@ async function start(): Promise<void> {
     let triggerHandler = new TriggerHandler(triggers, eventDataService);
     let messageHandler = new MessageHandler(triggerHandler);
     let reactionHandler = new ReactionHandler(reactions, eventDataService);
+    let modalHandler = new ModalHandler();
 
     // Jobs
     let jobs: Job[] = [
@@ -109,6 +113,7 @@ async function start(): Promise<void> {
         commandHandler,
         buttonHandler,
         reactionHandler,
+        modalHandler,
         new JobService(jobs)
     );
 
@@ -132,6 +137,10 @@ async function start(): Promise<void> {
     }
 
     await bot.start();
+
+    // Initialize and start webhook service
+    const webhookService = new WebhookService(client, Config.webhook?.port || 3000);
+    webhookService.start();
 }
 
 process.on('unhandledRejection', (reason, _promise) => {
