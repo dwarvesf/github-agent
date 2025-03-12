@@ -49,3 +49,14 @@ pnpm --filter discord-bot pm2:stop
 # Delete PM2 processes
 pnpm --filter discord-bot pm2:delete
 ```
+
+## Webhooks
+This bot uses webhooks to send messages to Discord
+Message format: "Test message to User <@!user_id> In Channel <#channel_id>"
+```bash
+# Send message to a channel
+curl -X POST http://localhost:3000/webhook/channel -H "Content-Type: application/json" -d '{"channelId": "channel_id", "message": "Test message to <@!user_id> In <#channel_id> channel"}'
+
+# Send message to a user
+curl -X POST http://localhost:3000/webhook/user -H "Content-Type: application/json" -d '{"userId": "user_id", "message": "Test message to <@!user_id> In <#channel_id> channel"}'
+```

@@ -17,40 +17,78 @@ export class WebhookService {
     }
 
     private setupRoutes(): void {
-        // Route to receive webhook requests
-        this.app.post('/webhook', async (req, res) => {
+        // Route to send messages to a channel
+        this.app.post('/webhook/channel', async (req, res) => {
             try {
                 // Get data from request
                 const { channelId, message, secret } = req.body;
-
+    
                 // Simple validation
                 if (!channelId || !message) {
                     return res.status(400).send({ error: 'Missing required fields: channelId and message' });
                 }
-
+    
                 // // Security check - validate a secret key
                 // // You should define YOUR_SECRET_KEY in your config
                 // if (secret !== process.env.WEBHOOK_SECRET) {
                 //     return res.status(401).send({ error: 'Unauthorized' });
                 // }
-
+    
                 // Get the channel
                 const channel = await this.client.channels.fetch(channelId);
                 if (!channel || !('send' in channel)) {
                     return res.status(404).send({ error: 'Channel not found or not a text channel' });
                 }
-
+    
                 // Send message to the channel
                 await channel.send(message);
-
+    
                 // Return success
-                return res.status(200).send({ status: 'Message sent successfully' });
+                return res.status(200).send({ status: 'Message sent successfully to channel' });
             } catch (error) {
-                Logger.error('Error processing webhook:', error);
+                Logger.error('Error processing channel webhook:', error);
                 return res.status(500).send({ error: 'Failed to process webhook' });
             }
-        });    }
-
+        });
+    
+        // Route to send direct messages to a user
+        this.app.post('/webhook/user', async (req, res) => {
+            try {
+                // Get data from request
+                const { userId, message, secret } = req.body;
+    
+                // Simple validation
+                if (!userId || !message) {
+                    return res.status(400).send({ error: 'Missing required fields: userId and message' });
+                }
+    
+                // // Security check - validate a secret key
+                // // You should define YOUR_SECRET_KEY in your config
+                // if (secret !== process.env.WEBHOOK_SECRET) {
+                //     return res.status(401).send({ error: 'Unauthorized' });
+                // }
+    
+                try {
+                    // Fetch the user
+                    const user = await this.client.users.fetch(userId);
+                    
+                    // Create DM channel and send message
+                    const dmChannel = await user.createDM();
+                    await dmChannel.send(message);
+                    
+                    // Return success
+                    return res.status(200).send({ status: 'Message sent successfully to user' });
+                } catch (userError) {
+                    Logger.error('Error sending DM to user:', userError);
+                    return res.status(404).send({ error: 'User not found or cannot send DM to this user' });
+                }
+            } catch (error) {
+                Logger.error('Error processing user webhook:', error);
+                return res.status(500).send({ error: 'Failed to process webhook' });
+            }
+        });
+    }
+    
     public start(): void {
         this.app.listen(this.port, () => {
             Logger.info(`Webhook server started on port ${this.port}`);
