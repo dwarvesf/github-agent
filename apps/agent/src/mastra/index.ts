@@ -3,7 +3,7 @@ import { createLogger } from '@mastra/core/logger';
 import {
   notifyDeveloperPRRequestWorkflow,
   sendPRListToDiscordWorkflow,
-  notifyDeveloperRequestReviewer,
+  notifyDeveloperAboutPRStatus,
 } from './workflows';
 import { githubAgent } from './agents';
 
@@ -11,7 +11,7 @@ export const mastra = new Mastra({
   workflows: {
     notifyDeveloperPRRequestWorkflow,
     sendPRListToDiscordWorkflow,
-    notifyDeveloperRequestReviewer,
+    notifyDeveloperAboutPRStatus,
   },
   agents: {
     githubAgent,
