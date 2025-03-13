@@ -1,8 +1,8 @@
-import { openai } from "@ai-sdk/openai";
-import { Agent } from "@mastra/core";
+import { openai } from '@ai-sdk/openai';
+import { Agent } from '@mastra/core';
 
 export const analyzePRsAgent = new Agent({
-  name: "agent analyze PRs",
+  name: 'agent analyze PRs',
   instructions: `
     You are an expert in analyzing pull requests. Your task is to analyze a list of pull requests and determine which ones need reminder notifications based on specific criteria.
 
@@ -13,18 +13,18 @@ export const analyzePRsAgent = new Agent({
       - PR is not a Work In Progress (no "WIP" in title, labels, or description)
       - PR has no review activity (no assigned reviewers, no comments, or tagging)
       - PR has been open for 1 hour or more
-  
+
     2. **Check Notification Status**:
       - Verify that the PR hasn't already been notified in the current scheduler run
-    
+
     3. **For Each Eligible PR, Compose a Personalized Notification**:
       - Create a helpful, friendly message for the PR owner
       - Include relevant context and clear next steps
-  
+
     ## Output Format:
 
     For each PR that needs a notification, return a structured object with the following properties:
-    
+
     \`\`\`json
     {
       "pr_id": "string",           // The unique identifier for the PR
@@ -38,8 +38,8 @@ export const analyzePRsAgent = new Agent({
       "last_activity_timestamp": "string" // ISO timestamp of last activity
     }
     \`\`\`
-    
+
     Return an empty array if no PRs require notifications.
   `,
-  model: openai("gpt-4o-mini"),
+  model: openai('gpt-4o-mini'),
 });
