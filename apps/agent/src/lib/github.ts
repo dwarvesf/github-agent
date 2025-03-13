@@ -214,31 +214,44 @@ class GitHubClient {
     return true;
   }
 
-  async getOrgPRs(repo: string): Promise<PullRequest[]> {
+  // https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests
+  async getOrgPRs(
+    repo: string,
+    params?: { isOpen?: boolean; isMerged?: boolean; reviewerId?: string },
+  ): Promise<PullRequest[]> {
     const prs: PullRequest[] = [];
+
+    const { isOpen = true, isMerged = true, reviewerId } = params || {};
+    const reviewerFilter = reviewerId
+      ? ` user-review-requested:${reviewerId}`
+      : '';
 
     try {
       // Fetch open PRs
-      const openQuery = `is:pr is:open org:${this.owner}${repo ? ` repo:${repo}` : ''}`;
-      const openPrs = await this.fetchPRs(openQuery);
-      prs.push(...openPrs);
+      if (isOpen) {
+        const openQuery = `is:pr is:open org:${this.owner}${repo ? ` repo:${repo}` : ''}${reviewerFilter}`;
+        const openPrs = await this.fetchPRs(openQuery);
+        prs.push(...openPrs);
+      }
 
-      // Fetch closed PRs (to filter merged PRs)
-      const closedQuery = `is:pr is:closed org:${this.owner}${repo ? ` repo:${repo}` : ''}`;
-      const closedPrs = await this.fetchPRs(closedQuery);
+      if (isMerged) {
+        // Fetch closed PRs (to filter merged PRs)
+        const closedQuery = `is:pr is:closed org:${this.owner}${repo ? ` repo:${repo}` : ''}${reviewerFilter}`;
+        const closedPrs = await this.fetchPRs(closedQuery);
 
-      // Filter out merged PRs
-      const mergedPrsPromises = closedPrs.map(async (pr) => {
-        const prDetails = await this.fetchPRDetails(pr);
-        return prDetails.merged_at ? prDetails : null;
-      });
+        // Filter out merged PRs
+        const mergedPrsPromises = closedPrs.map(async (pr) => {
+          const prDetails = await this.fetchPRDetails(pr);
+          return prDetails.merged_at ? prDetails : null;
+        });
 
-      const mergedPrs = (await Promise.all(mergedPrsPromises)).filter(
-        Boolean,
-      ) as PullRequest[];
+        const mergedPrs = (await Promise.all(mergedPrsPromises)).filter(
+          Boolean,
+        ) as PullRequest[];
 
-      // Combine open and merged PRs
-      prs.push(...mergedPrs);
+        // Combine open and merged PRs
+        prs.push(...mergedPrs);
+      }
 
       return prs;
     } catch (error) {
