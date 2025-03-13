@@ -1,22 +1,24 @@
-FROM node:16
+# Use Node.js base image
+FROM node:18-alpine
 
-# Create app directory
+# Set working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json
-COPY package*.json ./
+# Copy package files and install dependencies
+COPY package.json package-lock.json ./
+RUN npm install --production
 
-# Install packages
-RUN npm install
-
-# Copy the app code
+# Copy application files
 COPY . .
 
-# Build the project
-RUN npm run build
+# Install envsubst for variable replacement
+RUN apk add --no-cache gettext
 
-# Expose ports
-EXPOSE 3001
+# Make entrypoint script executable
+RUN chmod +x /app/entrypoint.sh
 
-# Run the application
-CMD [ "node", "dist/start-manager.js" ]
+# Expose the API, Webhook, Master port
+EXPOSE 3001 3000 5000
+
+# Run the entrypoint script
+ENTRYPOINT ["/app/entrypoint.sh"]
