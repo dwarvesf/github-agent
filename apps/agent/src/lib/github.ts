@@ -201,6 +201,10 @@ class GitHubClient {
       return false;
     }
 
+    if (pr.merged_at !== null) {
+      return false;
+    }
+
     // Check if PR has been open for at least 1 hour
     const createdAt = new Date(pr.created_at);
     const now = new Date();

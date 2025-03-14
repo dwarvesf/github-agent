@@ -27,9 +27,11 @@ class DiscordClient {
   async sendMessageToChannel({
     channelId,
     message,
+    embed,
   }: {
     channelId: string;
-    message: string;
+    message?: string;
+    embed?: Record<string, unknown>;
   }): Promise<string> {
     const response = await fetch(`${DISCORD_WEBHOOK_BASE_URL}/channel`, {
       method: 'POST',
@@ -37,6 +39,7 @@ class DiscordClient {
       body: JSON.stringify({
         channelId,
         message,
+        embed,
       }),
     });
 
@@ -56,9 +59,11 @@ class DiscordClient {
   async sendMessageToUser({
     message,
     userId,
+    embed,
   }: {
     userId: string;
-    message: string;
+    message?: string;
+    embed?: Record<string, unknown>;
   }): Promise<string> {
     const response = await fetch(`${DISCORD_WEBHOOK_BASE_URL}/user`, {
       method: 'POST',
@@ -66,6 +71,7 @@ class DiscordClient {
       body: JSON.stringify({
         userId,
         message,
+        embed,
       }),
     });
 

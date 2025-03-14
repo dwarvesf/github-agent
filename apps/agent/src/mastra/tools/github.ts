@@ -16,6 +16,27 @@ export const prsSchema = z.array(
   }),
 );
 
+export interface PullRequest {
+  number: number;
+  title: string;
+  url: string;
+  author: string;
+  createdAt: string;
+  updatedAt: string;
+  draft: boolean;
+  isWaitingForReview: boolean;
+  isWIP: boolean;
+  isMerged: boolean;
+  labels: string[];
+  reviewers: string[];
+  hasComments: boolean;
+  hasReviews: boolean;
+}
+
+export interface PRList {
+  list: PullRequest[];
+}
+
 export const getOrgOpenPRsTool = createTool({
   id: 'get-org-open-prs',
   description: 'Get open pull requests across the organization',
@@ -97,6 +118,7 @@ export const getPRListTool = createTool({
           createdAt: z.string(),
           updatedAt: z.string(),
           draft: z.boolean(),
+          isWIP: z.boolean(),
           isWaitingForReview: z.boolean(),
           labels: z.array(z.string()),
           reviewers: z.array(z.string()),
@@ -121,6 +143,7 @@ export const getPRListTool = createTool({
         isMerged: pr.merged_at !== null,
         draft: pr.draft,
         isWaitingForReview: githubClient.isWaitingForReview(pr),
+        isWIP: githubClient.isWIP(pr),
         labels: pr.labels.map((label) => label.name),
         reviewers: pr.requested_reviewers.map((reviewer) => reviewer.login),
         hasComments: pr.comments > 0 || pr.review_comments > 0,
@@ -148,6 +171,7 @@ export const getPullRequestTool = createTool({
           updatedAt: z.string(),
           draft: z.boolean(),
           isWaitingForReview: z.boolean(),
+          isWIP: z.boolean(),
           labels: z.array(z.string()),
           reviewers: z.array(z.string()),
           hasComments: z.boolean(),
@@ -172,6 +196,7 @@ export const getPullRequestTool = createTool({
         mergedAt: pr.merged_at,
         isMerged: pr.merged_at !== null,
         draft: pr.draft,
+        isWIP: githubClient.isWIP(pr),
         isWaitingForReview: githubClient.isWaitingForReview(pr),
         labels: pr.labels.map((label) => label.name),
         reviewers: pr.requested_reviewers.map((reviewer) => reviewer.login),

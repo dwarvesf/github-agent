@@ -37,16 +37,21 @@ const notifyDeveloperAboutPRStatus = new Workflow({
               );
 
               if (watingForReviewPrs.length > 0) {
-                const message =
-                  watingForReviewPrs.length === 1
-                    ? `Is your PR [${watingForReviewPrs[0].title}](${watingForReviewPrs[0].url}) ready for review?`
-                    : `Are your PRs ready for review?\n${watingForReviewPrs
-                        .map((pr) => `- [${pr.title}](${pr.url})`)
-                        .join('\n')}`;
+                const isPlural = watingForReviewPrs.length > 1;
+                const embed = {
+                  title: `👀 ${isPlural ? ' are' : ' is'} your pull request${isPlural ? 's' : ''} ready for review?`,
+                  color: 3447003,
+                  fields: watingForReviewPrs.map((pr) => ({
+                    name: `#${pr.number} ${pr.title}`,
+                    value: `Created at: ${new Date(pr.createdAt).toISOString().split('T')[0]} | [link](${pr.url})`,
+                    inline: false,
+                  })),
+                };
 
                 await discordClient.sendMessageToUser({
-                  message,
                   userId: discordUserId,
+                  message: '',
+                  embed,
                 });
               }
             }
