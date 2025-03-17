@@ -25,6 +25,7 @@ export interface PullRequest {
   updatedAt: string;
   draft: boolean;
   isWaitingForReview: boolean;
+  hasMergeConflicts: boolean;
   isWIP: boolean;
   isMerged: boolean;
   labels: string[];
@@ -119,6 +120,7 @@ export const getPRListTool = createTool({
           updatedAt: z.string(),
           draft: z.boolean(),
           isWIP: z.boolean(),
+          hasMergeConflicts: z.boolean(),
           isWaitingForReview: z.boolean(),
           labels: z.array(z.string()),
           reviewers: z.array(z.string()),
@@ -141,8 +143,9 @@ export const getPRListTool = createTool({
         updatedAt: pr.updated_at,
         mergedAt: pr.merged_at,
         isMerged: pr.merged_at !== null,
-        draft: pr.draft,
         isWaitingForReview: githubClient.isWaitingForReview(pr),
+        hasMergeConflicts: githubClient.hasMergeConflicts(pr),
+        draft: pr.draft,
         isWIP: githubClient.isWIP(pr),
         labels: pr.labels.map((label) => label.name),
         reviewers: pr.requested_reviewers.map((reviewer) => reviewer.login),
@@ -172,6 +175,7 @@ export const getPullRequestTool = createTool({
           draft: z.boolean(),
           isWaitingForReview: z.boolean(),
           isWIP: z.boolean(),
+          hasMergeConflicts: z.boolean(),
           labels: z.array(z.string()),
           reviewers: z.array(z.string()),
           hasComments: z.boolean(),
@@ -195,6 +199,7 @@ export const getPullRequestTool = createTool({
         updatedAt: pr.updated_at,
         mergedAt: pr.merged_at,
         isMerged: pr.merged_at !== null,
+        hasMergeConflicts: githubClient.hasMergeConflicts(pr),
         draft: pr.draft,
         isWIP: githubClient.isWIP(pr),
         isWaitingForReview: githubClient.isWaitingForReview(pr),

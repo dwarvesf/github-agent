@@ -40,6 +40,8 @@ interface PullRequest {
     state: string;
     submitted_at: string;
   }>;
+  mergeable: boolean | null;
+  mergeable_state: string;
 }
 
 /**
@@ -216,6 +218,15 @@ class GitHubClient {
     }
 
     return true;
+  }
+
+  /**
+   * Check if PR has merge conflicts
+   */
+  hasMergeConflicts(pr: PullRequest): boolean {
+    // mergeable can be true, false, or null (when GitHub hasn't computed it yet)
+    // mergeable_state can be: clean, dirty, blocked, behind, unstable
+    return pr.mergeable === false || pr.mergeable_state === 'dirty';
   }
 
   // https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests

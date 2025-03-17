@@ -1,5 +1,5 @@
 import { Step, Workflow } from '@mastra/core/workflows';
-import { getPRListTool } from '../tools';
+import { getPRListTool, PullRequest } from '../tools';
 import * as z from 'zod';
 import { discordClient } from '../../lib/discord';
 import { groupBy } from '../../utils/array';
@@ -21,7 +21,7 @@ const notifyDeveloperAboutPRStatus = new Workflow({
       inputSchema: z.object({}),
       outputSchema: z.object({}),
       execute: async ({ context }) => {
-        const output = context?.getStepResult<{ list: any[] }>(
+        const output = context?.getStepResult<{ list: PullRequest[] }>(
           getPRListTool.id,
         );
 
@@ -32,8 +32,34 @@ const notifyDeveloperAboutPRStatus = new Workflow({
             const discordUserId =
               discordGithubMap[author as keyof typeof discordGithubMap];
             if (discordUserId) {
+              const hasMergedConflictsPRs = prs.filter(
+                (pr: PullRequest) => pr.hasMergeConflicts,
+              );
+
+              // Has merge conflicts
+              if (hasMergedConflictsPRs.length > 0) {
+                const isPlural = hasMergedConflictsPRs.length > 1;
+                const embed = {
+                  title: `🚧 your ${isPlural ? 'PRs have' : 'PR has'} merge conflicts`,
+                  color: 15158332,
+                  fields: hasMergedConflictsPRs.map((pr) => ({
+                    name: `#${pr.number} ${pr.title}`,
+                    value: `Created at: ${new Date(pr.createdAt).toISOString().split('T')[0]} | [link](${pr.url})`,
+                    inline: false,
+                  })),
+                };
+
+                await discordClient.sendMessageToUser({
+                  userId: discordUserId,
+                  message: '',
+                  embed,
+                });
+              }
+
+              // Waiting for review
               const watingForReviewPrs = prs.filter(
-                (pr: any) => pr.isWaitingForReview,
+                (pr: PullRequest) =>
+                  pr.isWaitingForReview && !pr.hasMergeConflicts,
               );
 
               if (watingForReviewPrs.length > 0) {
