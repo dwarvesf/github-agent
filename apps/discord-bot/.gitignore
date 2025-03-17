@@ -1,0 +1,2 @@
+config/*
+!config/*_example.json
