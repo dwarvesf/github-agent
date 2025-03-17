@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Discord API configuration
-const DISCORD_WEBHOOK_BASE_URL = 'http://localhost:3000/webhook';
+const DISCORD_BOT_BASE_URL = `${process.env.DISCORD_BOT_BASE_URL}/webhook`;
 
 /**
  * Discord client for making requests to the Discord webhook
@@ -33,7 +33,7 @@ class DiscordClient {
     message?: string;
     embed?: Record<string, unknown>;
   }): Promise<string> {
-    const response = await fetch(`${DISCORD_WEBHOOK_BASE_URL}/channel`, {
+    const response = await fetch(`${DISCORD_BOT_BASE_URL}/channel`, {
       method: 'POST',
       headers: this.headers,
       body: JSON.stringify({
@@ -65,7 +65,7 @@ class DiscordClient {
     message?: string;
     embed?: Record<string, unknown>;
   }): Promise<string> {
-    const response = await fetch(`${DISCORD_WEBHOOK_BASE_URL}/user`, {
+    const response = await fetch(`${DISCORD_BOT_BASE_URL}/user`, {
       method: 'POST',
       headers: this.headers,
       body: JSON.stringify({
