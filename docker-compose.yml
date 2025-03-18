@@ -23,8 +23,8 @@ services:
   discord-bot:
     build: apps/discord-bot
     environment:
-      - DISCORD_BOT_ID=DISCORD_BOT_ID
-      - DISCORD_BOT_TOKEN=DISCORD_BOT_TOKEN
+      - DISCORD_BOT_ID=${DISCORD_BOT_ID}
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
     ports:
       - "3001:3001"
       - "3000:3000"
