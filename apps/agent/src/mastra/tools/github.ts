@@ -241,7 +241,7 @@ export const getCommitsTool = createTool({
 
     return {
       list: commits.map((c) => ({
-        sha: c.sha,
+        sha: c.sha.substring(0, 8),
         author: c.author.login,
         url: c.html_url,
         message: c.commit.message,
