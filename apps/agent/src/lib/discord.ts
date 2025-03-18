@@ -5,6 +5,7 @@ dotenv.config();
 
 // Discord API configuration
 const DISCORD_BOT_BASE_URL = `${process.env.DISCORD_BOT_BASE_URL}/webhook`;
+export const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID || '';
 
 /**
  * Discord client for making requests to the Discord webhook
