@@ -17,28 +17,6 @@ export const prsSchema = z.array(
   }),
 );
 
-export interface PullRequest {
-  number: number;
-  title: string;
-  url: string;
-  author: string;
-  createdAt: string;
-  updatedAt: string;
-  draft: boolean;
-  isWaitingForReview: boolean;
-  hasMergeConflicts: boolean;
-  isWIP: boolean;
-  isMerged: boolean;
-  labels: string[];
-  reviewers: string[];
-  hasComments: boolean;
-  hasReviews: boolean;
-}
-
-export interface PRList {
-  list: PullRequest[];
-}
-
 export const getOrgOpenPRsTool = createTool({
   id: 'get-org-open-prs',
   description: 'Get open pull requests across the organization',
@@ -230,6 +208,43 @@ export const getPullRequestTool = createTool({
         reviewers: pr.requested_reviewers.map((reviewer) => reviewer.login),
         hasComments: pr.comments > 0 || pr.review_comments > 0,
         hasReviews: pr.reviews && pr.reviews.length > 0,
+      })),
+    };
+  },
+});
+
+export const getCommitsTool = createTool({
+  id: 'get-commits',
+  description: 'Get a list of commits from a repo',
+  inputSchema: z.object({
+    authorId: z.string().describe('Author of the commits').optional(),
+    fromDate: z
+      .string()
+      .describe('From date where the commits were created')
+      .optional(),
+    toDate: z
+      .string()
+      .describe('To date where the commits were created')
+      .optional(),
+  }),
+  outputSchema: z
+    .object({
+      list: z.array(z.object({})),
+    })
+    .describe('List of commits in JSON format'),
+  execute: async ({ context }) => {
+    const commits = await githubClient.getRepoCommits('playground', {
+      from: context.fromDate,
+      to: context.toDate,
+      authorId: context.authorId,
+    });
+
+    return {
+      list: commits.map((c) => ({
+        sha: c.sha.substring(0, 8),
+        author: c.author.login,
+        url: c.html_url,
+        message: c.commit.message,
       })),
     };
   },

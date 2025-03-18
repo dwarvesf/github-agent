@@ -1,8 +1,9 @@
 import { Step, Workflow } from '@mastra/core/workflows';
-import { getTodayPRListTool, PullRequest } from '../tools';
+import { getTodayPRListTool } from '../tools';
 import * as z from 'zod';
 import { discordClient } from '../../lib/discord';
 import { groupBy } from '../../utils/array';
+import { PullRequest } from '../../lib/type';
 
 const discordGithubMap = {
   zlatanpham: '790170208228212766',

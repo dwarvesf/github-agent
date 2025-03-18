@@ -1,7 +1,8 @@
 import { Step, Workflow } from '@mastra/core/workflows';
-import { getTodayPRListTool, PRList, PullRequest } from '../tools';
+import { getTodayPRListTool } from '../tools';
 import * as z from 'zod';
 import { discordClient } from '../../lib/discord';
+import { PullRequest } from '../../lib/type';
 
 const getStatusEmoji = (pr: PullRequest): string => {
   if (pr.isWIP) return '🚧';
@@ -29,7 +30,9 @@ const sendTodayPRListToDiscordWorkflow = new Workflow({
       inputSchema: z.object({}),
       outputSchema: z.object({}),
       execute: async ({ context }) => {
-        const output = context?.getStepResult<PRList>(getTodayPRListTool.id);
+        const output = context?.getStepResult<{ list: PullRequest[] }>(
+          getTodayPRListTool.id,
+        );
         const fields =
           output?.list.map((pr) => ({
             name: `#${pr.number} ${pr.title}`,
