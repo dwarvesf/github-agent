@@ -9,7 +9,8 @@ const discordGithubMap = {
   zlatanpham: '790170208228212766',
   vdhieu: '797044001579597846',
   'R-Jim': '797044001579597846',
-}
+  catngh: '319132138849173505',
+};
 
 const notifyDeveloperAboutPRStatus = new Workflow({
   name: 'Notify developer about PR status',
@@ -92,4 +93,8 @@ const notifyDeveloperAboutPRStatus = new Workflow({
 
 notifyDeveloperAboutPRStatus.commit()
 
+<<<<<<< HEAD
 export { notifyDeveloperAboutPRStatus }
+=======
+export { notifyDeveloperAboutPRStatus, discordGithubMap };
+>>>>>>> f7f4664 (feat: define suggest PR desc agent)

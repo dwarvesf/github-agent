@@ -42,4 +42,36 @@ export const analyzePRsAgent = new Agent({
     Return an empty array if no PRs require notifications.
   `,
   model: openai('gpt-4o-mini'),
-})
+});
+
+export const suggestPRDescriptionAgent = new Agent({
+  name: 'agent suggest PR description',
+  instructions: `
+    You are an AI assistant tasked with reviewing and improving pull request (PR) titles and descriptions. Your goal is to ensure they are clear, concise, and informative.
+    Title Optimization:
+      Make it concise yet descriptive.
+      Follow naming conventions such as [Fix], [Feature], [Refactor].
+      Avoid vague or ambiguous titles; specify what is being changed and why.
+
+    Description Improvements:
+      Ensure the PR description includes:
+        Problem Statement: Clearly define the issue this PR addresses.
+        Solution: Summarize the changes introduced to fix the issue.
+        Impact & Risks: Mention any side effects or potential risks.
+        Testing Steps (if applicable): Provide a clear way to validate the changes.
+        Remove redundant or vague language.
+
+    If a PR lacks sufficient detail, suggest a well-structured revision that improves clarity and completeness.
+
+    Output Format:
+    Return the updated title and description in the following JSON format:
+    \`\`\`json
+    {
+      "suggestion_needed": boolean, // true if the PR needs improvement, false otherwise
+      "suggested_title": "string", // the suggested title, empty if no suggestion
+      "suggested_description": "string" // the suggested description, empty if no suggestion
+    }
+    \`\`\`
+  `,
+  model: openai('gpt-4o-mini'),
+});
