@@ -232,11 +232,23 @@ class GitHubClient {
   // https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests
   async getOrgPRs(
     repo: string,
-    params?: { isOpen?: boolean; isMerged?: boolean; reviewerId?: string },
+    params?: {
+      isOpen?: boolean;
+      isMerged?: boolean;
+      reviewerId?: string;
+      from?: string; // YYYY-MM-DD
+      to?: string; // YYYY-MM-DD
+    },
   ): Promise<PullRequest[]> {
     const prs: PullRequest[] = [];
 
-    const { isOpen = true, isMerged = true, reviewerId } = params || {};
+    const {
+      isOpen = true,
+      isMerged = true,
+      reviewerId,
+      from,
+      to,
+    } = params || {};
     const reviewerFilter = reviewerId
       ? ` user-review-requested:${reviewerId}`
       : '';
@@ -244,27 +256,37 @@ class GitHubClient {
     try {
       // Fetch open PRs
       if (isOpen) {
-        const openQuery = `is:pr is:open org:${this.owner}${repo ? ` repo:${repo}` : ''}${reviewerFilter}`;
+        let dateFilter = '';
+        if (from || to) {
+          if (from) {
+            dateFilter = ` created:>=${from}`;
+          }
+          if (to) {
+            dateFilter = ` created:<=${to}`;
+          }
+        }
+        const openQuery = `is:pr is:open org:${this.owner}${
+          repo ? ` repo:${repo}` : ''
+        }${reviewerFilter}${dateFilter}`;
         const openPrs = await this.fetchPRs(openQuery);
         prs.push(...openPrs);
       }
 
+      // Fetch merged PRs
       if (isMerged) {
-        // Fetch closed PRs (to filter merged PRs)
-        const closedQuery = `is:pr is:closed org:${this.owner}${repo ? ` repo:${repo}` : ''}${reviewerFilter}`;
-        const closedPrs = await this.fetchPRs(closedQuery);
-
-        // Filter out merged PRs
-        const mergedPrsPromises = closedPrs.map(async (pr) => {
-          const prDetails = await this.fetchPRDetails(pr);
-          return prDetails.merged_at ? prDetails : null;
-        });
-
-        const mergedPrs = (await Promise.all(mergedPrsPromises)).filter(
-          Boolean,
-        ) as PullRequest[];
-
-        // Combine open and merged PRs
+        let dateFilter = '';
+        if (from || to) {
+          if (from) {
+            dateFilter = ` merged:>=${from}`;
+          }
+          if (to) {
+            dateFilter = ` merged:<=${to}`;
+          }
+        }
+        const mergedQuery = `is:pr is:merged org:${this.owner}${
+          repo ? ` repo:${repo}` : ''
+        }${reviewerFilter}${dateFilter}`;
+        const mergedPrs = await this.fetchPRs(mergedQuery);
         prs.push(...mergedPrs);
       }
 

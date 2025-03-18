@@ -1,6 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { githubClient } from '../../lib/github';
+import { formatDate } from '../../utils/datetime';
 
 export const prsSchema = z.array(
   z.object({
@@ -104,8 +105,8 @@ export const getPrDetailsTool = createTool({
   },
 });
 
-export const getPRListTool = createTool({
-  id: 'get-pr-list-agent',
+export const getTodayPRListTool = createTool({
+  id: 'get-daily-pr-list-agent',
   description: 'Get a list of current pull requests',
   inputSchema: z.object({}),
   outputSchema: z
@@ -131,7 +132,9 @@ export const getPRListTool = createTool({
     })
     .describe('PR JSON list'),
   execute: async () => {
-    const prs = await githubClient.getOrgPRs('github-agent');
+    const prs = await githubClient.getOrgPRs('github-agent', {
+      from: formatDate(new Date()),
+    });
 
     return {
       list: prs.map((pr) => ({
@@ -158,9 +161,23 @@ export const getPRListTool = createTool({
 
 export const getPullRequestTool = createTool({
   id: 'get-pull-request',
-  description: 'Get a specific pull request',
+  description: 'Get a list of pull requests',
   inputSchema: z.object({
     reviewerId: z.string().describe('Reviewer ID').optional(),
+    isOpen: z.boolean().describe('Filter by open PRs').optional(),
+    isMerged: z.boolean().describe('Filter by merged PRs').optional(),
+    fromDate: z
+      .string()
+      .describe(
+        'From date where the open PRs are created or the closed PRs are merged',
+      )
+      .optional(),
+    toDate: z
+      .string()
+      .describe(
+        'To date where the open PRs are created or the closed PRs are merged',
+      )
+      .optional(),
   }),
   outputSchema: z
     .object({
@@ -187,6 +204,10 @@ export const getPullRequestTool = createTool({
   execute: async ({ context }) => {
     const prs = await githubClient.getOrgPRs('github-agent', {
       reviewerId: context.reviewerId,
+      from: context.fromDate,
+      to: context.toDate,
+      isMerged: context.isMerged,
+      isOpen: context.isOpen,
     });
 
     return {

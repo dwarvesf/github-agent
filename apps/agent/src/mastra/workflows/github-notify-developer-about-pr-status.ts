@@ -1,5 +1,5 @@
 import { Step, Workflow } from '@mastra/core/workflows';
-import { getPRListTool, PullRequest } from '../tools';
+import { getTodayPRListTool, PullRequest } from '../tools';
 import * as z from 'zod';
 import { discordClient } from '../../lib/discord';
 import { groupBy } from '../../utils/array';
@@ -13,7 +13,7 @@ const discordGithubMap = {
 const notifyDeveloperAboutPRStatus = new Workflow({
   name: 'Notify developer about PR status',
 })
-  .step(getPRListTool)
+  .step(getTodayPRListTool)
   .then(
     new Step({
       id: 'send-to-discord',
@@ -22,7 +22,7 @@ const notifyDeveloperAboutPRStatus = new Workflow({
       outputSchema: z.object({}),
       execute: async ({ context }) => {
         const output = context?.getStepResult<{ list: PullRequest[] }>(
-          getPRListTool.id,
+          getTodayPRListTool.id,
         );
 
         const byAuthor = groupBy(output?.list || [], (pr) => pr.author);
