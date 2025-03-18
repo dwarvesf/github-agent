@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { Commit } from './type';
 
 // Load environment variables
 dotenv.config();
@@ -337,6 +338,48 @@ class GitHubClient {
     }
 
     return prResponse.json();
+  }
+
+  /**
+   * Get commits from a repository with optional filters
+   * https://docs.github.com/en/rest/commits/commits#list-commits
+   */
+  async getRepoCommits(
+    repo: string,
+    params?: {
+      authorId?: string;
+      from?: string; // YYYY-MM-DD
+      to?: string; // YYYY-MM-DD
+    },
+  ): Promise<Commit[]> {
+    try {
+      const { authorId, from, to } = params || {};
+
+      let queryParams = new URLSearchParams();
+      if (authorId) {
+        queryParams.append('author', authorId);
+      }
+      if (from) {
+        queryParams.append('since', `${from}T00:00:00Z`);
+      }
+      if (to) {
+        queryParams.append('until', `${to}T23:59:59Z`);
+      }
+
+      const url = `${GITHUB_API_URL}/repos/${this.owner}/${repo}/commits?${queryParams.toString()}`;
+      const response = await fetch(url, { headers: this.headers });
+
+      if (!response.ok) {
+        throw new Error(
+          `GitHub API error: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching repository commits:', error);
+      throw error;
+    }
   }
 }
 
