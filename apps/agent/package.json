@@ -21,6 +21,8 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@types/pg": "^8.11.2"
+    "@types/pg": "^8.11.2",
+    "@packages/typescript-config": "workspace:*",
+    "@packages/eslint-config": "workspace:*"
   }
 }
