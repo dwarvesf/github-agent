@@ -1,6 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { githubClient } from '../../lib/github';
+import { formatDate } from '../../utils/datetime';
 
 export const prsSchema = z.array(
   z.object({
@@ -104,8 +105,8 @@ export const getPrDetailsTool = createTool({
   },
 });
 
-export const getPRListTool = createTool({
-  id: 'get-pr-list-agent',
+export const getTodayPRListTool = createTool({
+  id: 'get-daily-pr-list-agent',
   description: 'Get a list of current pull requests',
   inputSchema: z.object({}),
   outputSchema: z
@@ -131,7 +132,9 @@ export const getPRListTool = createTool({
     })
     .describe('PR JSON list'),
   execute: async () => {
-    const prs = await githubClient.getOrgPRs('github-agent');
+    const prs = await githubClient.getOrgPRs('github-agent', {
+      from: formatDate(new Date()),
+    });
 
     return {
       list: prs.map((pr) => ({

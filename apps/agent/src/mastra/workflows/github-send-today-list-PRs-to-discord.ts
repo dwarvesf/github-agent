@@ -1,5 +1,5 @@
 import { Step, Workflow } from '@mastra/core/workflows';
-import { getPRListTool, PRList, PullRequest } from '../tools';
+import { getTodayPRListTool, PRList, PullRequest } from '../tools';
 import * as z from 'zod';
 import { discordClient } from '../../lib/discord';
 
@@ -18,18 +18,18 @@ const getStatus = (pr: PullRequest): string => {
 
   return 'Open';
 };
-const sendPRListToDiscordWorkflow = new Workflow({
-  name: 'Send PR List to Discord',
+const sendTodayPRListToDiscordWorkflow = new Workflow({
+  name: 'Send daily PR List to Discord',
 })
-  .step(getPRListTool)
+  .step(getTodayPRListTool)
   .then(
     new Step({
       id: 'send-to-discord',
-      description: 'Send PR list to Discord',
+      description: 'Send Todays PR list to Discord',
       inputSchema: z.object({}),
       outputSchema: z.object({}),
       execute: async ({ context }) => {
-        const output = context?.getStepResult<PRList>(getPRListTool.id);
+        const output = context?.getStepResult<PRList>(getTodayPRListTool.id);
         const fields =
           output?.list.map((pr) => ({
             name: `#${pr.number} ${pr.title}`,
@@ -37,7 +37,21 @@ const sendPRListToDiscordWorkflow = new Workflow({
             inline: false,
           })) || [];
 
-        const response = await discordClient.sendMessageToChannel({
+        if (fields.length === 0) {
+          return await discordClient.sendMessageToChannel({
+            channelId: '1348951204419604483',
+            embed: {
+              title: '🏖️ Github daily report',
+              description: 'No PRs found today',
+              color: 3447003,
+              footer: {
+                text: 'df-playground/playground',
+              },
+            },
+          });
+        }
+
+        return await discordClient.sendMessageToChannel({
           channelId: '1348951204419604483',
           embed: {
             title: '📌 Github daily report',
@@ -48,12 +62,10 @@ const sendPRListToDiscordWorkflow = new Workflow({
             },
           },
         });
-
-        return response;
       },
     }),
   );
 
-sendPRListToDiscordWorkflow.commit();
+sendTodayPRListToDiscordWorkflow.commit();
 
-export { sendPRListToDiscordWorkflow };
+export { sendTodayPRListToDiscordWorkflow };

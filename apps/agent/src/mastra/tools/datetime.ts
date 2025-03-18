@@ -12,6 +12,7 @@ import {
   endOfMonth,
   endOfYear,
 } from 'date-fns';
+import { formatDate } from '../../utils/datetime';
 
 const extractDateRangeFromTextAgent = new Agent({
   name: 'Date Range Extractor',
@@ -59,9 +60,6 @@ export const getDateRangeTool = createTool({
     const { from } = parseJSON;
 
     const today = new Date('2025-03-18T10:38:24+07:00');
-
-    // Helper function to format date
-    const formatDate = (date: Date) => format(date, 'yyyy-MM-dd');
 
     // Helper function to parse relative time expressions
     const parseRelativeTime = (
