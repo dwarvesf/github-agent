@@ -164,6 +164,7 @@ export const getPullRequestTool = createTool({
   description: 'Get a list of pull requests',
   inputSchema: z.object({
     reviewerId: z.string().describe('Reviewer ID').optional(),
+    authorId: z.string().describe('Reviewer ID').optional(),
     isOpen: z.boolean().describe('Filter by open PRs').optional(),
     isMerged: z.boolean().describe('Filter by merged PRs').optional(),
     fromDate: z
@@ -208,6 +209,7 @@ export const getPullRequestTool = createTool({
       to: context.toDate,
       isMerged: context.isMerged,
       isOpen: context.isOpen,
+      authorId: context.authorId,
     });
 
     return {

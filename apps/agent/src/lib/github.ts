@@ -236,6 +236,7 @@ class GitHubClient {
       isOpen?: boolean;
       isMerged?: boolean;
       reviewerId?: string;
+      authorId?: string;
       from?: string; // YYYY-MM-DD
       to?: string; // YYYY-MM-DD
     },
@@ -246,12 +247,15 @@ class GitHubClient {
       isOpen = true,
       isMerged = true,
       reviewerId,
+      authorId,
       from,
       to,
     } = params || {};
     const reviewerFilter = reviewerId
       ? ` user-review-requested:${reviewerId}`
       : '';
+
+    const authorFilter = authorId ? ` author:${authorId}` : '';
 
     try {
       // Fetch open PRs
@@ -267,7 +271,7 @@ class GitHubClient {
         }
         const openQuery = `is:pr is:open org:${this.owner}${
           repo ? ` repo:${repo}` : ''
-        }${reviewerFilter}${dateFilter}`;
+        }${reviewerFilter}${authorFilter}${dateFilter}`;
         const openPrs = await this.fetchPRs(openQuery);
         prs.push(...openPrs);
       }
@@ -285,7 +289,7 @@ class GitHubClient {
         }
         const mergedQuery = `is:pr is:merged org:${this.owner}${
           repo ? ` repo:${repo}` : ''
-        }${reviewerFilter}${dateFilter}`;
+        }${reviewerFilter}${authorFilter}${dateFilter}`;
         const mergedPrs = await this.fetchPRs(mergedQuery);
         prs.push(...mergedPrs);
       }
