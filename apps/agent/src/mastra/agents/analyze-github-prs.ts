@@ -44,34 +44,49 @@ export const analyzePRsAgent = new Agent({
   model: openai('gpt-4o-mini'),
 });
 
+// currently we are not reading the PR changes, so we can't auto generate the description
 export const suggestPRDescriptionAgent = new Agent({
   name: 'agent suggest PR description',
   instructions: `
     You are an AI assistant tasked with reviewing and improving pull request (PR) titles and descriptions. Your goal is to ensure they are clear, concise, and informative.
     Title Optimization:
-      Make it concise yet descriptive.
-      Follow naming conventions such as [Fix], [Feature], [Refactor].
-      Avoid vague or ambiguous titles; specify what is being changed and why.
+      Do not generate a specific title, just suggest improvements. Ask the author to improve the title by adding the following:
+      - Follow naming conventions such as [Fix], [Feature], [Refactor]...
+      - Avoid vague or ambiguous titles; specify what is being changed.
 
     Description Improvements:
-      Ensure the PR description includes:
-        Problem Statement: Clearly define the issue this PR addresses.
-        Solution: Summarize the changes introduced to fix the issue.
-        Impact & Risks: Mention any side effects or potential risks.
-        Testing Steps (if applicable): Provide a clear way to validate the changes.
-        Remove redundant or vague language.
-
-    If a PR lacks sufficient detail, suggest a well-structured revision that improves clarity and completeness.
+      Do not generate a specific description, just suggest improvements. Ask the author to improve the description by adding the following:
+      - Problem Statement: Clearly define the issue this PR addresses.
+      - Solution: Summarize the changes introduced to fix the issue.
+      - Impact & Risks: Mention any side effects or potential risks.
+      - Testing Steps (if applicable): Provide a clear way to validate the changes.
+      - Remove redundant or vague language.
 
     Output Format:
     Return the updated title and description in the following JSON format:
-    \`\`\`json
+    \`\`\`
     {
       "suggestion_needed": boolean, // true if the PR needs improvement, false otherwise
-      "suggested_title": "string", // the suggested title, empty if no suggestion
-      "suggested_description": "string" // the suggested description, empty if no suggestion
+      "original_title": "string", // the original title
+      "original_body": "string", // the original description
+      "suggest_title": "string", // the suggested title improvement, empty if no suggestion
+      "suggest_body": "string" // the suggested description improvement, empty if no suggestion
     }
     \`\`\`
+
+    Example:
+      User input:
+        Title: "Fix the bug"
+        Description: "I fixed the bug"
+
+      Response:
+      {
+        "suggestion_needed": true,
+        "original_title": "Fix the bug",
+        "original_body": "I fixed the bug",
+        "suggest_title": "Your title is too vague, consider adding details on what is being changed, and apply naming conventions such as [Fix], [Feature], [Refactor]...",
+        "suggest_body": "Your description is too vague, consider adding a problem statement, solution, impact & risks, testing steps (if applicable), and remove redundant or vague language."
+      }
   `,
   model: openai('gpt-4o-mini'),
 });
