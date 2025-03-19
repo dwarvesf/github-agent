@@ -1,11 +1,11 @@
-import { Mastra } from '@mastra/core/mastra';
-import { createLogger } from '@mastra/core/logger';
+import { Mastra } from '@mastra/core/mastra'
+import { createLogger } from '@mastra/core/logger'
 import {
   notifyDeveloperPRRequestWorkflow,
   sendTodayPRListToDiscordWorkflow,
   notifyDeveloperAboutPRStatus,
-} from './workflows';
-import { githubAgent } from './agents';
+} from './workflows'
+import { githubAgent } from './agents'
 
 export const mastra = new Mastra({
   workflows: {
@@ -20,4 +20,4 @@ export const mastra = new Mastra({
     name: 'GH-AGENT',
     level: 'info',
   }),
-});
+})

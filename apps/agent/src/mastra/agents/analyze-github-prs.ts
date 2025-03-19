@@ -1,5 +1,5 @@
-import { openai } from '@ai-sdk/openai';
-import { Agent } from '@mastra/core';
+import { openai } from '@ai-sdk/openai'
+import { Agent } from '@mastra/core'
 
 export const analyzePRsAgent = new Agent({
   name: 'agent analyze PRs',
@@ -42,4 +42,4 @@ export const analyzePRsAgent = new Agent({
     Return an empty array if no PRs require notifications.
   `,
   model: openai('gpt-4o-mini'),
-});
+})

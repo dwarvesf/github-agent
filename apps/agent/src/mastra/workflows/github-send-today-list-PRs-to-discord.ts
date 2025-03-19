@@ -1,25 +1,25 @@
-import { Step, Workflow } from '@mastra/core/workflows';
-import { getTodayPRListTool } from '../tools';
-import * as z from 'zod';
-import { DISCORD_CHANNEL_ID, discordClient } from '../../lib/discord';
-import { PullRequest } from '../../lib/type';
-import { GITHUB_OWNER, GITHUB_REPO } from '../../lib/github';
+import { Step, Workflow } from '@mastra/core/workflows'
+import { getTodayPRListTool } from '../tools'
+import * as z from 'zod'
+import { DISCORD_CHANNEL_ID, discordClient } from '../../lib/discord'
+import { PullRequest } from '../../lib/type'
+import { GITHUB_OWNER, GITHUB_REPO } from '../../lib/github'
 
 const getStatusEmoji = (pr: PullRequest): string => {
-  if (pr.isWIP) return '🚧';
-  if (pr.isWaitingForReview) return '⏳';
-  if (pr.isMerged) return '✅';
+  if (pr.isWIP) return '🚧'
+  if (pr.isWaitingForReview) return '⏳'
+  if (pr.isMerged) return '✅'
 
-  return '👀';
-};
+  return '👀'
+}
 
 const getStatus = (pr: PullRequest): string => {
-  if (pr.isWIP) return 'WIP';
-  if (pr.isWaitingForReview) return 'Wait for review';
-  if (pr.isMerged) return 'Merged';
+  if (pr.isWIP) return 'WIP'
+  if (pr.isWaitingForReview) return 'Wait for review'
+  if (pr.isMerged) return 'Merged'
 
-  return 'Open';
-};
+  return 'Open'
+}
 const sendTodayPRListToDiscordWorkflow = new Workflow({
   name: 'Send daily PR List to Discord',
 })
@@ -33,13 +33,13 @@ const sendTodayPRListToDiscordWorkflow = new Workflow({
       execute: async ({ context }) => {
         const output = context?.getStepResult<{ list: PullRequest[] }>(
           getTodayPRListTool.id,
-        );
+        )
         const fields =
           output?.list.map((pr) => ({
             name: `#${pr.number} ${pr.title}`,
             value: `by [${pr.author}](https://github.com/${pr.author}) | ${getStatusEmoji(pr)} ${getStatus(pr)} | created at ${new Date(pr.createdAt).toISOString().split('T')[0]} | [link](${pr.url})`,
             inline: false,
-          })) || [];
+          })) || []
 
         if (fields.length === 0) {
           return await discordClient.sendMessageToChannel({
@@ -52,7 +52,7 @@ const sendTodayPRListToDiscordWorkflow = new Workflow({
                 text: `${GITHUB_OWNER}/${GITHUB_REPO}`,
               },
             },
-          });
+          })
         }
 
         return await discordClient.sendMessageToChannel({
@@ -65,11 +65,11 @@ const sendTodayPRListToDiscordWorkflow = new Workflow({
               text: `${GITHUB_OWNER}/${GITHUB_REPO}`,
             },
           },
-        });
+        })
       },
     }),
-  );
+  )
 
-sendTodayPRListToDiscordWorkflow.commit();
+sendTodayPRListToDiscordWorkflow.commit()
 
-export { sendTodayPRListToDiscordWorkflow };
+export { sendTodayPRListToDiscordWorkflow }

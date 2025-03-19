@@ -4,13 +4,13 @@ export function groupBy<T, K extends keyof any>(
 ): Record<K, T[]> {
   return array.reduce(
     (result, item) => {
-      const groupKey = key(item);
+      const groupKey = key(item)
       if (!result[groupKey]) {
-        result[groupKey] = [];
+        result[groupKey] = []
       }
-      result[groupKey].push(item);
-      return result;
+      result[groupKey].push(item)
+      return result
     },
     {} as Record<K, T[]>,
-  );
+  )
 }

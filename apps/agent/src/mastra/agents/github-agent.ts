@@ -1,6 +1,6 @@
-import { openai } from '@ai-sdk/openai';
-import { Agent } from '@mastra/core';
-import * as tools from '../tools';
+import { openai } from '@ai-sdk/openai'
+import { Agent } from '@mastra/core'
+import * as tools from '../tools'
 
 export const githubAgent = new Agent({
   name: 'Github Agent',
@@ -26,4 +26,4 @@ You are a GitHub repository assistant designed to provide users with information
     getDateRangeTool: tools.getDateRangeTool,
     getListCommitsTool: tools.getCommitsTool,
   },
-});
+})

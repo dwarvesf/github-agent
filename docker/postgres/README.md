@@ -1,10 +1,12 @@
 # PostgreSQL Database Setup
 
-This directory contains configuration for the PostgreSQL database used by the Github Agent applications.
+This directory contains configuration for the PostgreSQL database used by the
+Github Agent applications.
 
 ## Configuration
 
-The PostgreSQL database is configured with a single shared database and separate schemas for each application:
+The PostgreSQL database is configured with a single shared database and separate
+schemas for each application:
 
 1. `agent_schema` - Schema for the Agent application
 2. `discord_bot_schema` - Schema for the Discord Bot application
@@ -45,7 +47,8 @@ docker exec -it github-agent-postgres psql -U discord_bot_user -d github_agent
 
 ## Data Persistence
 
-Database data is persisted in a Docker volume named `github-agent-postgres-data`.
+Database data is persisted in a Docker volume named
+`github-agent-postgres-data`.
 
 ## Initialization
 

@@ -1,7 +1,7 @@
-import { createTool } from '@mastra/core/tools';
-import { z } from 'zod';
-import { githubClient } from '../../lib/github';
-import { formatDate } from '../../utils/datetime';
+import { createTool } from '@mastra/core/tools'
+import { z } from 'zod'
+import { githubClient } from '../../lib/github'
+import { formatDate } from '../../utils/datetime'
 
 export const prsSchema = z.array(
   z.object({
@@ -15,7 +15,7 @@ export const prsSchema = z.array(
     reviewers: z.array(z.string()),
     labels: z.array(z.string()),
   }),
-);
+)
 
 export const getOrgOpenPRsTool = createTool({
   id: 'get-org-open-prs',
@@ -25,8 +25,8 @@ export const getOrgOpenPRsTool = createTool({
   }),
   outputSchema: prsSchema,
   execute: async ({ context }) => {
-    console.log('>>>', 'getOrgOpenPRsTool.context', context);
-    const prs = await githubClient.getOrgOpenPRs('github-agent');
+    console.log('>>>', 'getOrgOpenPRsTool.context', context)
+    const prs = await githubClient.getOrgOpenPRs('github-agent')
 
     return prs.map((pr) => ({
       number: pr.number,
@@ -38,9 +38,9 @@ export const getOrgOpenPRsTool = createTool({
       draft: pr.draft,
       reviewers: pr.requested_reviewers.map((reviewer) => reviewer.login),
       labels: pr.labels.map((label) => label.name),
-    }));
+    }))
   },
-});
+})
 
 export const getPrDetailsTool = createTool({
   id: 'get-pr-details',
@@ -63,8 +63,8 @@ export const getPrDetailsTool = createTool({
     hasReviews: z.boolean(),
   }),
   execute: async ({ context }) => {
-    const pr = await githubClient.getPrDetails(context.prNumber);
-    const isWaitingForReview = githubClient.isWaitingForReview(pr);
+    const pr = await githubClient.getPrDetails(context.prNumber)
+    const isWaitingForReview = githubClient.isWaitingForReview(pr)
 
     return {
       number: pr.number,
@@ -79,9 +79,9 @@ export const getPrDetailsTool = createTool({
       reviewers: pr.requested_reviewers.map((reviewer) => reviewer.login),
       hasComments: pr.comments > 0 || pr.review_comments > 0,
       hasReviews: pr.reviews && pr.reviews.length > 0,
-    };
+    }
   },
-});
+})
 
 export const getTodayPRListTool = createTool({
   id: 'get-daily-pr-list-agent',
@@ -112,7 +112,7 @@ export const getTodayPRListTool = createTool({
   execute: async () => {
     const prs = await githubClient.getOrgPRs('github-agent', {
       from: formatDate(new Date()),
-    });
+    })
 
     return {
       list: prs.map((pr) => ({
@@ -133,9 +133,9 @@ export const getTodayPRListTool = createTool({
         hasComments: pr.comments > 0 || pr.review_comments > 0,
         hasReviews: pr.reviews && pr.reviews.length > 0,
       })),
-    };
+    }
   },
-});
+})
 
 export const getPullRequestTool = createTool({
   id: 'get-pull-request',
@@ -188,7 +188,7 @@ export const getPullRequestTool = createTool({
       isMerged: context.isMerged,
       isOpen: context.isOpen,
       authorId: context.authorId,
-    });
+    })
 
     return {
       list: prs.map((pr) => ({
@@ -209,9 +209,9 @@ export const getPullRequestTool = createTool({
         hasComments: pr.comments > 0 || pr.review_comments > 0,
         hasReviews: pr.reviews && pr.reviews.length > 0,
       })),
-    };
+    }
   },
-});
+})
 
 export const getCommitsTool = createTool({
   id: 'get-commits',
@@ -237,7 +237,7 @@ export const getCommitsTool = createTool({
       from: context.fromDate,
       to: context.toDate,
       authorId: context.authorId,
-    });
+    })
 
     return {
       list: commits.map((c) => ({
@@ -246,6 +246,6 @@ export const getCommitsTool = createTool({
         url: c.html_url,
         message: c.commit.message,
       })),
-    };
+    }
   },
-});
+})
