@@ -133,6 +133,37 @@
             "accessKeyFailed": {
                 "title": "❌ Access Denied",
                 "description": "The access key you provided is not correct. Please try again or contact an administrator."
+            },
+            "askHelp": {
+                "title": "{{COM:bot.name}} - Agent info",
+                "fields": [
+                    {
+                        "name": "Model",
+                        "value": ["MODEL-1.0"]
+                    },
+                    {
+                        "name": "Available Prompts",
+                        "value": [
+                            "Prompt 1",
+                            "Prompt 2",
+                            "Prompt 3",
+                            "Prompt 4"
+                        ]
+                    }
+                ]
+            },
+            "askResponse": {
+                "title": "**Asked:** {{QUESTION}}",
+                "fields": [
+                    {
+                        "name": "From",
+                        "value": ["<@!{{USER}}>"]
+                    },
+                    {
+                        "name": "Answer",
+                        "value": ["{{RESPONSE}}"]
+                    }
+                ]
             }
         },
         "validationEmbeds": {
@@ -183,6 +214,10 @@
             "notImplemented": {
                 "description": "This feature has not been implemented yet!",
                 "color": "{{COM:colors.warning}}"
+            },
+            "missingPrompt": {
+                "description": "Required a prompt!",
+                "color": "{{COM:colors.error}}"
             }
         },
         "channelRegexes": {
@@ -201,7 +236,8 @@
             "help": "help",
             "info": "info",
             "test": "test",
-            "accessKey": "accesskey"
+            "accessKey": "accesskey",
+            "ask": "ask"
         },
         "userCommands": {
             "viewDateJoined": "View Date Joined"
@@ -211,19 +247,23 @@
         },
         "arguments": {
             "command": "command",
-            "option": "option"
+            "option": "option",
+            "promptText": "prompt"
         },
         "commandDescs": {
             "dev": "Developer use only.",
             "help": "Find help or contact support.",
             "info": "View bot info.",
             "test": "Run the test command.",
-            "accessKey": "Sign in private channels."
+            "accessKey": "Sign in private channels.",
+            "ask": "Ask a question to the agent bot."
         },
         "argDescs": {
             "devCommand": "Command.",
             "helpOption": "Option.",
-            "infoOption": "Option."
+            "infoOption": "Option.",
+            "askCommand": "Ask.",
+            "promptText": "Enter Prompt text."
         },
         "fields": {
             "commands": "Commands",
@@ -295,6 +335,10 @@
         "infoOptions": {
             "about": "About",
             "translate": "Translate"
+        },
+        "askCommandNames": {
+            "help": "help",
+            "prompt": "prompt"
         },
         "yesNo": {
             "yes": "Yes",

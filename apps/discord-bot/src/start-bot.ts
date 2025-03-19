@@ -9,6 +9,7 @@ import {
   InfoCommand,
   TestCommand,
   AccessKeyCommand,
+  AskCommand,
 } from './commands/chat/index.js'
 import {
   ChatCommandMetadata,
@@ -71,6 +72,7 @@ async function start(): Promise<void> {
     new InfoCommand(),
     new TestCommand(),
     new AccessKeyCommand(),
+    new AskCommand(),
 
     // Message Context Commands
     new ViewDateSent(),
