@@ -18,20 +18,14 @@ const extractDateRangeFromTextAgent = new Agent({
   instructions: `Extract date range from text and return in JSON format {from: string}.
     The values should be either YYYY-MM-DD or keywords like
     - "today"
-    - "yesterday
-    - "3 days ago"
-    - "last 7 days"
-    - "past week"
-    - "this month"
-    - "last 30 days"
-    - "last month"
-    - "last 90 days"
-    - "past 3 months"
-    - "2 months ago"
-    - "this year"
-    - "last 12 months"
-    - "last year"
-    - "past 2 years"
+    - "yesterday"
+    - "this week|month|year"
+    - "last week|month|year"
+    - "past week|month|year"
+    - "last X days|weeks|months|years"
+    - "past X days|weeks|months|years"
+    - "1 day|week|month|year ago"
+    - "X days|weeks|months|years ago"
     - etc.
     If no date detected for either "from" or "to", return the field value as an empty string.
     Ensure the text is in English and number in digit format. e.g last two months should be "last 2 months"`,
@@ -58,7 +52,7 @@ export const getDateRangeTool = createTool({
     const parseJSON = JSON.parse(response.text)
     const { from } = parseJSON
 
-    const today = new Date('2025-03-18T10:38:24+07:00')
+    const today = new Date()
 
     // Helper function to parse relative time expressions
     const parseRelativeTime = (
