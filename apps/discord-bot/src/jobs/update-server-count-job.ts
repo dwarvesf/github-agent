@@ -8,9 +8,9 @@ import { HttpService, Lang, Logger } from '../services/index.js'
 import { ShardUtils } from '../utils/index.js'
 
 const require = createRequire(import.meta.url)
-let BotSites: BotSite[] = require('../../config/bot-sites.json')
-let Config = require('../../config/config.json')
-let Logs = require('../../lang/logs.json')
+const BotSites: BotSite[] = require('../../config/bot-sites.json')
+const Config = require('../../config/config.json')
+const Logs = require('../../lang/logs.json')
 
 export class UpdateServerCountJob extends Job {
   public name = 'Update Server Count'
@@ -31,15 +31,15 @@ export class UpdateServerCountJob extends Job {
   }
 
   public async run(): Promise<void> {
-    let serverCount = await ShardUtils.serverCount(this.shardManager)
+    const serverCount = await ShardUtils.serverCount(this.shardManager)
 
-    let type = ActivityType.Streaming
-    let name = `to ${serverCount.toLocaleString()} servers`
-    let url = Lang.getCom('links.stream')
+    const type = ActivityType.Streaming
+    const name = `to ${serverCount.toLocaleString()} servers`
+    const url = Lang.getCom('links.stream')
 
     await this.shardManager.broadcastEval(
       (client, context) => {
-        let customClient = client as CustomClient
+        const customClient = client as CustomClient
         return customClient.setPresence(context.type, context.name, context.url)
       },
       { context: { type, name, url } },
@@ -52,12 +52,12 @@ export class UpdateServerCountJob extends Job {
       ),
     )
 
-    for (let botSite of this.botSites) {
+    for (const botSite of this.botSites) {
       try {
-        let body = JSON.parse(
+        const body = JSON.parse(
           botSite.body.replaceAll('{{SERVER_COUNT}}', serverCount.toString()),
         )
-        let res = await this.httpService.post(
+        const res = await this.httpService.post(
           botSite.url,
           botSite.authorization,
           body,

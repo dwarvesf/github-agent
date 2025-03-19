@@ -3,9 +3,7 @@ import {
   ApplicationCommandData,
   ApplicationCommandType,
   ChatInputCommandInteraction,
-  GuildMember,
   ModalBuilder,
-  ModalSubmitInteraction,
   PermissionsString,
   TextInputBuilder,
   TextInputStyle,
@@ -15,7 +13,6 @@ import { RateLimiter } from 'discord.js-rate-limiter'
 import { Language } from '../../models/enum-helpers/index.js'
 import { EventData } from '../../models/internal-models.js'
 import { Lang } from '../../services/index.js'
-import { InteractionUtils } from '../../utils/index.js'
 import { Command, CommandDeferType } from '../index.js'
 
 export class AccessKeyCommand implements Command {
@@ -30,10 +27,7 @@ export class AccessKeyCommand implements Command {
     type: ApplicationCommandType.ChatInput,
   }
 
-  public async execute(
-    intr: ChatInputCommandInteraction,
-    data: EventData,
-  ): Promise<void> {
+  public async execute(intr: ChatInputCommandInteraction): Promise<void> {
     // Create a modal for secure input
     const modal = new ModalBuilder()
       .setCustomId('access-key-modal')

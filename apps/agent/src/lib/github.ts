@@ -145,12 +145,6 @@ class GitHubClient {
 
     const pr = (await prResponse.json()) as PullRequest
 
-    // Get comments
-    const commentsUrl = `${GITHUB_API_URL}/repos/${this.owner}/${this.repo}/issues/${prNumber}/comments`
-    const commentsResponse = await fetch(commentsUrl, {
-      headers: this.headers,
-    })
-
     // Get reviews
     const reviewsUrl = `${GITHUB_API_URL}/repos/${this.owner}/${this.repo}/pulls/${prNumber}/reviews`
     const reviewsResponse = await fetch(reviewsUrl, { headers: this.headers })
@@ -355,7 +349,7 @@ class GitHubClient {
     try {
       const { authorId, from, to } = params || {}
 
-      let queryParams = new URLSearchParams()
+      const queryParams = new URLSearchParams()
       if (authorId) {
         queryParams.append('author', authorId)
       }

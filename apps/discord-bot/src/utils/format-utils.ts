@@ -29,7 +29,7 @@ export class FormatUtils {
     command: ApplicationCommand,
     subParts: string[] = [],
   ): string {
-    let name = [command.name, ...subParts].join(' ')
+    const name = [command.name, ...subParts].join(' ')
     return `</${name}:${command.id}>`
   }
 

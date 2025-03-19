@@ -59,9 +59,9 @@ export class Language {
     enabled: boolean,
     limit: number = Number.MAX_VALUE,
   ): Locale[] {
-    let langCodes = enabled ? this.Enabled : Object.values(Locale).sort()
-    let search = input.toLowerCase()
-    let found = new Set<Locale>()
+    const langCodes = enabled ? this.Enabled : Object.values(Locale).sort()
+    const search = input.toLowerCase()
+    const found = new Set<Locale>()
     // Exact match
     if (found.size < limit)
       langCodes

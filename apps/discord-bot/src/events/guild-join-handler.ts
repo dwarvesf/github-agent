@@ -7,7 +7,7 @@ import { EventDataService, Lang, Logger } from '../services/index.js'
 import { ClientUtils, FormatUtils, MessageUtils } from '../utils/index.js'
 
 const require = createRequire(import.meta.url)
-let Logs = require('../../lang/logs.json')
+const Logs = require('../../lang/logs.json')
 
 export class GuildJoinHandler implements EventHandler {
   constructor(private eventDataService: EventDataService) {}
@@ -19,16 +19,16 @@ export class GuildJoinHandler implements EventHandler {
         .replaceAll('{GUILD_ID}', guild.id),
     )
 
-    let owner = await guild.fetchOwner()
+    const owner = await guild.fetchOwner()
 
     // Get data from database
-    let data = await this.eventDataService.create({
+    const data = await this.eventDataService.create({
       user: owner?.user,
       guild,
     })
 
     // Send welcome message to the server's notify channel
-    let notifyChannel = await ClientUtils.findNotifyChannel(
+    const notifyChannel = await ClientUtils.findNotifyChannel(
       guild,
       data.langGuild,
     )

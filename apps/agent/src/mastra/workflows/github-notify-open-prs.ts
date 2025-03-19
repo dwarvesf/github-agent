@@ -8,7 +8,7 @@ const analyzePRs = new Step({
   description:
     'Analyze pull requests and determine if they are ready for review',
   inputSchema: prsSchema,
-  execute: async ({ context, mastra }) => {
+  execute: async ({ context }) => {
     const prs =
       context?.getStepResult<z.infer<typeof prsSchema>>('get-org-open-prs')
 

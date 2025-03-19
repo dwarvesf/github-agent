@@ -20,7 +20,7 @@ export class InfoCommand implements Command {
     intr: ChatInputCommandInteraction,
     data: EventData,
   ): Promise<void> {
-    let args = {
+    const args = {
       option: intr.options.getString(
         Lang.getRef('arguments.option', Language.Default),
       ) as InfoOption,
@@ -34,7 +34,7 @@ export class InfoCommand implements Command {
       }
       case InfoOption.TRANSLATE: {
         embed = Lang.getEmbed('displayEmbeds.translate', data.lang)
-        for (let langCode of Language.Enabled) {
+        for (const langCode of Language.Enabled) {
           embed.addFields([
             {
               name: Language.Data[langCode].nativeName,

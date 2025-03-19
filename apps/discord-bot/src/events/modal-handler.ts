@@ -6,7 +6,7 @@ import { Logger } from '../services/index.js'
 import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
-let Logs = require('../../lang/logs.json')
+const Logs = require('../../lang/logs.json')
 
 export class ModalHandler implements EventHandler {
   public async process(interaction: Interaction): Promise<void> {

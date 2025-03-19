@@ -7,14 +7,14 @@ import { Logger } from './index.js'
 import { Job } from '../jobs/index.js'
 
 const require = createRequire(import.meta.url)
-let Logs = require('../../lang/logs.json')
+const Logs = require('../../lang/logs.json')
 
 export class JobService {
   constructor(private jobs: Job[]) {}
 
   public start(): void {
-    for (let job of this.jobs) {
-      let jobSchedule = job.runOnce
+    for (const job of this.jobs) {
+      const jobSchedule = job.runOnce
         ? parser
             .parseExpression(job.schedule, {
               currentDate: DateTime.now()
