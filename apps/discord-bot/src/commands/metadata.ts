@@ -90,12 +90,8 @@ export const ChatCommandMetadata: {
     ]).toString(),
     options: [
       {
-        ...Args.ASK_COMMAND,
-        required: false,
-      },
-      {
         ...Args.PROMPT,
-        required: false,
+        required: true,
       }
     ],
   },

@@ -24,7 +24,7 @@
     "prepare-bot-sites": "dotenv -e ../../.env -e .env -- envsubst < ./config/bot-sites.example.json > ./config/bot-sites.json",
     "prepare-debug": "dotenv -e ../../.env -e .env -- envsubst < ./config/debug.example.json > ./config/debug.json",
     "prepare-discord": "pnpm run prepare-config && pnpm run prepare-bot-sites && pnpm run prepare-debug",
-    "build": "pnpm run prepare-discord && tsc --project tsconfig.json",
+    "build": "tsc --project tsconfig.json",
     "check-types": "tsc --noEmit",
     "commands:view": "node --enable-source-maps dist/start-bot.js commands view",
     "commands:register": "node --enable-source-maps dist/start-bot.js commands register",

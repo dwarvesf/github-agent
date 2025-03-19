@@ -3,7 +3,7 @@ import {
   ApplicationCommandOptionType,
 } from 'discord.js'
 
-import { DevCommandName, HelpOption, InfoOption, AskCommandName } from '../enums/index.js'
+import { DevCommandName, HelpOption, InfoOption } from '../enums/index.js'
 import { Language } from '../models/enum-helpers/index.js'
 import { Lang } from '../services/index.js'
 
@@ -57,20 +57,6 @@ export class Args {
         name: Lang.getRef('infoOptions.translate', Language.Default),
         name_localizations: Lang.getRefLocalizationMap('infoOptions.translate'),
         value: InfoOption.TRANSLATE,
-      },
-    ],
-  };
-  public static readonly ASK_COMMAND: APIApplicationCommandBasicOption = {
-    name: Lang.getRef('arguments.command', Language.Default),
-    name_localizations: Lang.getRefLocalizationMap('arguments.command'),
-    description: Lang.getRef('argDescs.askCommand', Language.Default),
-    description_localizations: Lang.getRefLocalizationMap('argDescs.askCommand'),
-    type: ApplicationCommandOptionType.String,
-    choices: [
-      {
-        name: Lang.getRef('askCommandNames.help', Language.Default),
-        name_localizations: Lang.getRefLocalizationMap('askCommandNames.help'),
-        value: AskCommandName.HELP,
       },
     ],
   };
