@@ -10,6 +10,7 @@ import { githubAgent } from './agents'
 export const mastra = new Mastra({
   workflows: {
     notifyDeveloperPRRequestWorkflow,
+
     sendTodayPRListToDiscordWorkflow,
     notifyDeveloperAboutPRStatus,
   },
