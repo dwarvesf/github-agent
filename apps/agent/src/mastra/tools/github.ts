@@ -142,6 +142,7 @@ export const getPullRequestTool = createTool({
   description: 'Get a list of pull requests',
   inputSchema: z.object({
     reviewerId: z.string().describe('Reviewer ID').optional(),
+    commenterId: z.string().describe('Commenter ID').optional(),
     authorId: z.string().describe('Reviewer ID').optional(),
     isOpen: z.boolean().describe('Filter by open PRs').optional(),
     isMerged: z.boolean().describe('Filter by merged PRs').optional(),
@@ -183,6 +184,7 @@ export const getPullRequestTool = createTool({
   execute: async ({ context }) => {
     const prs = await githubClient.getOrgPRs('github-agent', {
       reviewerId: context.reviewerId,
+      commenterId: context.commenterId,
       from: context.fromDate,
       to: context.toDate,
       isMerged: context.isMerged,
