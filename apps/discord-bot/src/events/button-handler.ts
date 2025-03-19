@@ -8,7 +8,7 @@ import { EventDataService } from '../services/index.js'
 import { InteractionUtils } from '../utils/index.js'
 
 const require = createRequire(import.meta.url)
-let Config = require('../../config/config.json')
+const Config = require('../../config/config.json')
 
 export class ButtonHandler implements EventHandler {
   private rateLimiter = new RateLimiter(
@@ -28,13 +28,13 @@ export class ButtonHandler implements EventHandler {
     }
 
     // Check if user is rate limited
-    let limited = this.rateLimiter.take(intr.user.id)
+    const limited = this.rateLimiter.take(intr.user.id)
     if (limited) {
       return
     }
 
     // Try to find the button the user wants
-    let button = this.findButton(intr.customId)
+    const button = this.findButton(intr.customId)
     if (!button) {
       return
     }
@@ -70,7 +70,7 @@ export class ButtonHandler implements EventHandler {
     }
 
     // Get data from database
-    let data = await this.eventDataService.create({
+    const data = await this.eventDataService.create({
       user: intr.user,
       channel: intr.channel,
       guild: intr.guild,

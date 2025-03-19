@@ -28,7 +28,7 @@ export class StringUtils {
         .replaceAll(
           /<(a?):(\S+):(\d{17,20})>/g,
           (_match, animatedPrefix, emojiName, emojiId) => {
-            let emojiNameUnescaped = emojiName.replaceAll(/\\/g, '')
+            const emojiNameUnescaped = emojiName.replaceAll(/\\/g, '')
             return `<${animatedPrefix}:${emojiNameUnescaped}:${emojiId}>`
           },
         )

@@ -23,7 +23,7 @@ export class HelpCommand implements Command {
     intr: ChatInputCommandInteraction,
     data: EventData,
   ): Promise<void> {
-    let args = {
+    const args = {
       option: intr.options.getString(
         Lang.getRef('arguments.option', Language.Default),
       ) as HelpOption,

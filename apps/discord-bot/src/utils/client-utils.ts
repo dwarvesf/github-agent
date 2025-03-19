@@ -106,7 +106,7 @@ export class ClientUtils {
     client: Client,
     name: string,
   ): Promise<ApplicationCommand> {
-    let commands = await client.application.commands.fetch()
+    const commands = await client.application.commands.fetch()
     return commands.find((command) => command.name === name)
   }
 
@@ -115,12 +115,12 @@ export class ClientUtils {
     input: string,
   ): Promise<GuildMember> {
     try {
-      let discordId = RegexUtils.discordId(input)
+      const discordId = RegexUtils.discordId(input)
       if (discordId) {
         return await guild.members.fetch(discordId)
       }
 
-      let tag = RegexUtils.tag(input)
+      const tag = RegexUtils.tag(input)
       if (tag) {
         return (
           await guild.members.fetch({
@@ -146,13 +146,13 @@ export class ClientUtils {
 
   public static async findRole(guild: Guild, input: string): Promise<Role> {
     try {
-      let discordId = RegexUtils.discordId(input)
+      const discordId = RegexUtils.discordId(input)
       if (discordId) {
         return await guild.roles.fetch(discordId)
       }
 
-      let search = input.trim().toLowerCase().replace(/^@/, '')
-      let roles = await guild.roles.fetch()
+      const search = input.trim().toLowerCase().replace(/^@/, '')
+      const roles = await guild.roles.fetch()
       return (
         roles.find((role) => role.name.toLowerCase() === search) ??
         roles.find((role) => role.name.toLowerCase().includes(search))
@@ -175,9 +175,9 @@ export class ClientUtils {
     input: string,
   ): Promise<NewsChannel | TextChannel> {
     try {
-      let discordId = RegexUtils.discordId(input)
+      const discordId = RegexUtils.discordId(input)
       if (discordId) {
-        let channel = await guild.channels.fetch(discordId)
+        const channel = await guild.channels.fetch(discordId)
         if (channel instanceof NewsChannel || channel instanceof TextChannel) {
           return channel
         } else {
@@ -185,12 +185,12 @@ export class ClientUtils {
         }
       }
 
-      let search = input
+      const search = input
         .trim()
         .toLowerCase()
         .replace(/^#/, '')
         .replaceAll(' ', '-')
-      let channels = [...(await guild.channels.fetch()).values()].filter(
+      const channels = [...(await guild.channels.fetch()).values()].filter(
         (channel) =>
           channel instanceof NewsChannel || channel instanceof TextChannel,
       )
@@ -216,9 +216,9 @@ export class ClientUtils {
     input: string,
   ): Promise<VoiceChannel | StageChannel> {
     try {
-      let discordId = RegexUtils.discordId(input)
+      const discordId = RegexUtils.discordId(input)
       if (discordId) {
-        let channel = await guild.channels.fetch(discordId)
+        const channel = await guild.channels.fetch(discordId)
         if (
           channel instanceof VoiceChannel ||
           channel instanceof StageChannel
@@ -229,8 +229,8 @@ export class ClientUtils {
         }
       }
 
-      let search = input.trim().toLowerCase().replace(/^#/, '')
-      let channels = [...(await guild.channels.fetch()).values()].filter(
+      const search = input.trim().toLowerCase().replace(/^#/, '')
+      const channels = [...(await guild.channels.fetch()).values()].filter(
         (channel) =>
           channel instanceof VoiceChannel || channel instanceof StageChannel,
       )
@@ -256,7 +256,7 @@ export class ClientUtils {
     langCode: Locale,
   ): Promise<TextChannel | NewsChannel> {
     // Prefer the system channel
-    let systemChannel = guild.systemChannel
+    const systemChannel = guild.systemChannel
     if (systemChannel && PermissionUtils.canSend(systemChannel, true)) {
       return systemChannel
     }

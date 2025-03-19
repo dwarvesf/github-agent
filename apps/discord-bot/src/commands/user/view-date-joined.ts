@@ -24,7 +24,7 @@ export class ViewDateJoined implements Command {
   ): Promise<void> {
     let joinDate: Date
     if (!(intr.channel instanceof DMChannel)) {
-      let member = await intr.guild.members.fetch(intr.targetUser.id)
+      const member = await intr.guild.members.fetch(intr.targetUser.id)
       joinDate = member.joinedAt
     } else joinDate = intr.targetUser.createdAt
 

@@ -44,8 +44,8 @@ export class Lang {
     location: string,
     variables?: { [name: string]: string },
   ): LocalizationMap {
-    let obj = {}
-    for (let langCode of Language.Enabled) {
+    const obj = {}
+    for (const langCode of Language.Enabled) {
       obj[langCode] = this.getRef(location, langCode, variables)
     }
     return obj

@@ -3,7 +3,6 @@ import { createTool } from '@mastra/core/tools'
 import * as z from 'zod'
 import { openai } from '@ai-sdk/openai'
 import {
-  format,
   subDays,
   startOfMonth,
   startOfYear,

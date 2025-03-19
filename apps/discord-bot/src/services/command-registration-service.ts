@@ -11,8 +11,8 @@ import { createRequire } from 'node:module'
 import { Logger } from './logger.js'
 
 const require = createRequire(import.meta.url)
-let Config = require('../../config/config.json')
-let Logs = require('../../lang/logs.json')
+const Config = require('../../config/config.json')
+const Logs = require('../../lang/logs.json')
 
 export class CommandRegistrationService {
   constructor(private rest: REST) {}
@@ -21,18 +21,18 @@ export class CommandRegistrationService {
     localCmds: RESTPostAPIApplicationCommandsJSONBody[],
     args: string[],
   ): Promise<void> {
-    let remoteCmds = (await this.rest.get(
+    const remoteCmds = (await this.rest.get(
       Routes.applicationCommands(Config.client.id),
     )) as RESTGetAPIApplicationCommandsResult
 
-    let localCmdsOnRemote = localCmds.filter((localCmd) =>
+    const localCmdsOnRemote = localCmds.filter((localCmd) =>
       remoteCmds.some((remoteCmd) => remoteCmd.name === localCmd.name),
     )
-    let localCmdsOnly = localCmds.filter(
+    const localCmdsOnly = localCmds.filter(
       (localCmd) =>
         !remoteCmds.some((remoteCmd) => remoteCmd.name === localCmd.name),
     )
-    let remoteCmdsOnly = remoteCmds.filter(
+    const remoteCmdsOnly = remoteCmds.filter(
       (remoteCmd) =>
         !localCmds.some((localCmd) => localCmd.name === remoteCmd.name),
     )
@@ -64,7 +64,7 @@ export class CommandRegistrationService {
               this.formatCommandList(localCmdsOnly),
             ),
           )
-          for (let localCmd of localCmdsOnly) {
+          for (const localCmd of localCmdsOnly) {
             await this.rest.post(Routes.applicationCommands(Config.client.id), {
               body: localCmd,
             })
@@ -79,7 +79,7 @@ export class CommandRegistrationService {
               this.formatCommandList(localCmdsOnRemote),
             ),
           )
-          for (let localCmd of localCmdsOnRemote) {
+          for (const localCmd of localCmdsOnRemote) {
             await this.rest.post(Routes.applicationCommands(Config.client.id), {
               body: localCmd,
             })
@@ -90,14 +90,14 @@ export class CommandRegistrationService {
         return
       }
       case 'rename': {
-        let oldName = args[4]
-        let newName = args[5]
+        const oldName = args[4]
+        const newName = args[5]
         if (!(oldName && newName)) {
           Logger.error(Logs.error.commandActionRenameMissingArg)
           return
         }
 
-        let remoteCmd = remoteCmds.find(
+        const remoteCmd = remoteCmds.find(
           (remoteCmd) => remoteCmd.name == oldName,
         )
         if (!remoteCmd) {
@@ -115,7 +115,7 @@ export class CommandRegistrationService {
             .replaceAll('{OLD_COMMAND_NAME}', remoteCmd.name)
             .replaceAll('{NEW_COMMAND_NAME}', newName),
         )
-        let body: RESTPatchAPIApplicationCommandJSONBody = {
+        const body: RESTPatchAPIApplicationCommandJSONBody = {
           name: newName,
         }
         await this.rest.patch(
@@ -128,13 +128,13 @@ export class CommandRegistrationService {
         return
       }
       case 'delete': {
-        let name = args[4]
+        const name = args[4]
         if (!name) {
           Logger.error(Logs.error.commandActionDeleteMissingArg)
           return
         }
 
-        let remoteCmd = remoteCmds.find((remoteCmd) => remoteCmd.name == name)
+        const remoteCmd = remoteCmds.find((remoteCmd) => remoteCmd.name == name)
         if (!remoteCmd) {
           Logger.error(
             Logs.error.commandActionNotFound.replaceAll('{COMMAND_NAME}', name),

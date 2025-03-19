@@ -21,15 +21,13 @@ export class WebhookService {
     this.app.post('/webhook/channel', async (req, res) => {
       try {
         // Get data from request
-        const { channelId, message, embed, secret } = req.body
+        const { channelId, message, embed } = req.body
 
         // Simple validation
         if (!channelId || (!message && !embed)) {
-          return res
-            .status(400)
-            .send({
-              error: 'Missing required fields: channelId and message or embed',
-            })
+          return res.status(400).send({
+            error: 'Missing required fields: channelId and message or embed',
+          })
         }
 
         // // Security check - validate a secret key
@@ -69,15 +67,13 @@ export class WebhookService {
     this.app.post('/webhook/user', async (req, res) => {
       try {
         // Get data from request
-        const { userId, message, embed, secret } = req.body
+        const { userId, message, embed } = req.body
 
         // Simple validation
         if (!userId || (!message && !embed)) {
-          return res
-            .status(400)
-            .send({
-              error: 'Missing required fields: channelId and message or embed',
-            })
+          return res.status(400).send({
+            error: 'Missing required fields: channelId and message or embed',
+          })
         }
 
         // // Security check - validate a secret key

@@ -11,8 +11,8 @@ import { FormatUtils, InteractionUtils, ShardUtils } from '../../utils/index.js'
 import { Command, CommandDeferType } from '../index.js'
 
 const require = createRequire(import.meta.url)
-let Config = require('../../../config/config.json')
-let TsConfig = require('../../../tsconfig.json')
+const Config = require('../../../config/config.json')
+const TsConfig = require('../../../tsconfig.json')
 
 export class DevCommand implements Command {
   public names = [Lang.getRef('chatCommands.dev', Language.Default)]
@@ -30,7 +30,7 @@ export class DevCommand implements Command {
       return
     }
 
-    let args = {
+    const args = {
       command: intr.options.getString(
         Lang.getRef('arguments.command', Language.Default),
       ) as DevCommandName,
@@ -38,7 +38,7 @@ export class DevCommand implements Command {
 
     switch (args.command) {
       case DevCommandName.INFO: {
-        let shardCount = intr.client.shard?.count ?? 1
+        const shardCount = intr.client.shard?.count ?? 1
         let serverCount: number
         if (intr.client.shard) {
           try {
@@ -58,7 +58,7 @@ export class DevCommand implements Command {
           serverCount = intr.client.guilds.cache.size
         }
 
-        let memory = process.memoryUsage()
+        const memory = process.memoryUsage()
 
         await InteractionUtils.send(
           intr,

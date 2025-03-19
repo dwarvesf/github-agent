@@ -42,15 +42,15 @@ import {
 import { Trigger } from './triggers/index.js'
 
 const require = createRequire(import.meta.url)
-let Config = require('../config/config.json')
-let Logs = require('../lang/logs.json')
+const Config = require('../config/config.json')
+const Logs = require('../lang/logs.json')
 
 async function start(): Promise<void> {
   // Services
-  let eventDataService = new EventDataService()
+  const eventDataService = new EventDataService()
 
   // Client
-  let client = new CustomClient({
+  const client = new CustomClient({
     intents: Config.client.intents,
     partials: (Config.client.partials as string[]).map(
       (partial) => Partials[partial],
@@ -64,7 +64,7 @@ async function start(): Promise<void> {
   })
 
   // Commands
-  let commands: Command[] = [
+  const commands: Command[] = [
     // Chat Commands
     new DevCommand(),
     new HelpCommand(),
@@ -82,37 +82,37 @@ async function start(): Promise<void> {
   ]
 
   // Buttons
-  let buttons: Button[] = [
+  const buttons: Button[] = [
     // TODO: Add new buttons here
   ]
 
   // Reactions
-  let reactions: Reaction[] = [
+  const reactions: Reaction[] = [
     // TODO: Add new reactions here
   ]
 
   // Triggers
-  let triggers: Trigger[] = [
+  const triggers: Trigger[] = [
     // TODO: Add new triggers here
   ]
 
   // Event handlers
-  let guildJoinHandler = new GuildJoinHandler(eventDataService)
-  let guildLeaveHandler = new GuildLeaveHandler()
-  let commandHandler = new CommandHandler(commands, eventDataService)
-  let buttonHandler = new ButtonHandler(buttons, eventDataService)
-  let triggerHandler = new TriggerHandler(triggers, eventDataService)
-  let messageHandler = new MessageHandler(triggerHandler)
-  let reactionHandler = new ReactionHandler(reactions, eventDataService)
-  let modalHandler = new ModalHandler()
+  const guildJoinHandler = new GuildJoinHandler(eventDataService)
+  const guildLeaveHandler = new GuildLeaveHandler()
+  const commandHandler = new CommandHandler(commands, eventDataService)
+  const buttonHandler = new ButtonHandler(buttons, eventDataService)
+  const triggerHandler = new TriggerHandler(triggers, eventDataService)
+  const messageHandler = new MessageHandler(triggerHandler)
+  const reactionHandler = new ReactionHandler(reactions, eventDataService)
+  const modalHandler = new ModalHandler()
 
   // Jobs
-  let jobs: Job[] = [
+  const jobs: Job[] = [
     // TODO: Add new jobs here
   ]
 
   // Bot
-  let bot = new Bot(
+  const bot = new Bot(
     Config.client.token,
     client,
     guildJoinHandler,
@@ -128,9 +128,9 @@ async function start(): Promise<void> {
   // Register
   if (process.argv[2] == 'commands') {
     try {
-      let rest = new REST({ version: '10' }).setToken(Config.client.token)
-      let commandRegistrationService = new CommandRegistrationService(rest)
-      let localCmds = [
+      const rest = new REST({ version: '10' }).setToken(Config.client.token)
+      const commandRegistrationService = new CommandRegistrationService(rest)
+      const localCmds = [
         ...Object.values(ChatCommandMetadata).sort((a, b) =>
           a.name > b.name ? 1 : -1,
         ),
@@ -160,7 +160,7 @@ async function start(): Promise<void> {
   webhookService.start()
 }
 
-process.on('unhandledRejection', (reason, _promise) => {
+process.on('unhandledRejection', (reason) => {
   Logger.error(Logs.error.unhandledRejection, reason)
 })
 
