@@ -1,7 +1,7 @@
-import { Step, Workflow } from '@mastra/core/workflows';
-import { getOrgOpenPRsTool, prsSchema } from '../tools/github';
-import { z } from 'zod';
-import { analyzePRsAgent } from '../agents';
+import { Step, Workflow } from '@mastra/core/workflows'
+import { getOrgOpenPRsTool, prsSchema } from '../tools/github'
+import { z } from 'zod'
+import { analyzePRsAgent } from '../agents'
 
 const analyzePRs = new Step({
   id: 'analyze-prs',
@@ -10,37 +10,37 @@ const analyzePRs = new Step({
   inputSchema: prsSchema,
   execute: async ({ context, mastra }) => {
     const prs =
-      context?.getStepResult<z.infer<typeof prsSchema>>('get-org-open-prs');
+      context?.getStepResult<z.infer<typeof prsSchema>>('get-org-open-prs')
 
     if (!prs || prs.length === 0) {
-      throw new Error('PRs data not found');
+      throw new Error('PRs data not found')
     }
 
-    console.log('>>>', 'prs', JSON.stringify(prs, null, 2));
+    console.log('>>>', 'prs', JSON.stringify(prs, null, 2))
     const prompt = `Based on the following pull requests, help me determine if they need to be notified:
     ${JSON.stringify(prs, null, 2)}
-    `;
+    `
 
     const response = await analyzePRsAgent.generate([
       {
         role: 'user',
         content: prompt,
       },
-    ]);
-    console.log('>>>', 'response', response);
+    ])
+    console.log('>>>', 'response', response)
 
     return {
       prs: response.text,
-    };
+    }
   },
-});
+})
 
 const notifyDeveloperPRRequestWorkflow = new Workflow({
   name: 'Notify Developer PR Request',
 })
   .step(getOrgOpenPRsTool)
-  .then(analyzePRs);
+  .then(analyzePRs)
 
-notifyDeveloperPRRequestWorkflow.commit();
+notifyDeveloperPRRequestWorkflow.commit()
 
-export { notifyDeveloperPRRequestWorkflow };
+export { notifyDeveloperPRRequestWorkflow }

@@ -1,18 +1,18 @@
-import { Pool, PoolConfig, PoolClient } from "pg";
-import { parse } from "pg-connection-string";
-import { drizzle } from "drizzle-orm/node-postgres";
-import dotenv from "dotenv";
+import { Pool, PoolConfig, PoolClient } from 'pg'
+import { parse } from 'pg-connection-string'
+import { drizzle } from 'drizzle-orm/node-postgres'
+import dotenv from 'dotenv'
 
 // Load environment variables
-dotenv.config();
+dotenv.config()
 
 // Connection configuration
 const getConnectionConfig = (): PoolConfig => {
-  const connectionString = process.env.DATABASE_URL;
+  const connectionString = process.env.DATABASE_URL
 
   if (connectionString) {
     // Parse connection string if provided
-    const config = parse(connectionString);
+    const config = parse(connectionString)
     return {
       host: config.host || undefined,
       port: config.port ? parseInt(config.port, 10) : 5432,
@@ -20,74 +20,74 @@ const getConnectionConfig = (): PoolConfig => {
       user: config.user || undefined,
       password: config.password || undefined,
       ssl:
-        process.env.DATABASE_SSL === "true"
+        process.env.DATABASE_SSL === 'true'
           ? { rejectUnauthorized: false }
           : undefined,
-    };
+    }
   }
 
   // Fallback to individual environment variables
   return {
-    host: process.env.DATABASE_HOST || "localhost",
+    host: process.env.DATABASE_HOST || 'localhost',
     port: process.env.DATABASE_PORT
       ? parseInt(process.env.DATABASE_PORT, 10)
       : 5432,
-    database: process.env.DATABASE_NAME || "github_agent",
-    user: process.env.DATABASE_USER || "postgres",
-    password: process.env.DATABASE_PASSWORD || "postgres",
+    database: process.env.DATABASE_NAME || 'github_agent',
+    user: process.env.DATABASE_USER || 'postgres',
+    password: process.env.DATABASE_PASSWORD || 'postgres',
     ssl:
-      process.env.DATABASE_SSL === "true"
+      process.env.DATABASE_SSL === 'true'
         ? { rejectUnauthorized: false }
         : undefined,
-  };
-};
+  }
+}
 
 // Create a singleton pool
-let pool: Pool | null = null;
+let pool: Pool | null = null
 
 /**
  * Get the database connection pool
  */
 export const getPool = (): Pool => {
   if (!pool) {
-    pool = new Pool(getConnectionConfig());
+    pool = new Pool(getConnectionConfig())
 
     // Handle errors
-    pool.on("error", (err) => {
-      console.error("Unexpected error on idle client", err);
-    });
+    pool.on('error', (err) => {
+      console.error('Unexpected error on idle client', err)
+    })
 
     // Log connection success
-    pool.on("connect", () => {
-      console.log("Connected to PostgreSQL database");
-    });
+    pool.on('connect', () => {
+      console.log('Connected to PostgreSQL database')
+    })
   }
 
-  return pool;
-};
+  return pool
+}
 
 /**
  * Get a database client from the pool
  */
 export const getClient = async (): Promise<PoolClient> => {
-  const pool = getPool();
-  return await pool.connect();
-};
+  const pool = getPool()
+  return await pool.connect()
+}
 
 /**
  * Close the database connection pool
  */
 export const closePool = async (): Promise<void> => {
   if (pool) {
-    await pool.end();
-    pool = null;
-    console.log("Database connection pool closed");
+    await pool.end()
+    pool = null
+    console.log('Database connection pool closed')
   }
-};
+}
 
 /**
  * Get a drizzle ORM instance with the pool
  */
 export const getDrizzle = () => {
-  return drizzle(getPool());
-};
+  return drizzle(getPool())
+}

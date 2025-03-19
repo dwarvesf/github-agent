@@ -1,6 +1,7 @@
 # @packages/db
 
-A database package for handling PostgreSQL connections and operations in the GitHub Agent monorepo.
+A database package for handling PostgreSQL connections and operations in the
+GitHub Agent monorepo.
 
 ## Features
 
@@ -11,7 +12,8 @@ A database package for handling PostgreSQL connections and operations in the Git
 
 ## Installation
 
-This package is part of the GitHub Agent monorepo and is not published to npm. It is meant to be used internally by other packages in the monorepo.
+This package is part of the GitHub Agent monorepo and is not published to npm.
+It is meant to be used internally by other packages in the monorepo.
 
 ```sh
 # From the root of the monorepo
@@ -24,70 +26,71 @@ pnpm install
 
 ```typescript
 // In any other package or app in the monorepo
-import { getPool, getDrizzle, Repository } from "@packages/db";
+import { getPool, getDrizzle, Repository } from '@packages/db'
 ```
 
 ### Basic connection
 
 ```typescript
-import { getPool, closePool } from "@packages/db";
+import { getPool, closePool } from '@packages/db'
 
 // Get a connection pool
-const pool = getPool();
+const pool = getPool()
 
 // Use the pool
-const result = await pool.query("SELECT NOW()");
-console.log(result.rows);
+const result = await pool.query('SELECT NOW()')
+console.log(result.rows)
 
 // Close the pool when done
-await closePool();
+await closePool()
 ```
 
 ### Using Drizzle ORM
 
 ```typescript
-import { getDrizzle, users } from "@packages/db";
+import { getDrizzle, users } from '@packages/db'
 
 // Get a Drizzle instance
-const db = getDrizzle();
+const db = getDrizzle()
 
 // Query users
-const allUsers = await db.select().from(users);
-console.log(allUsers);
+const allUsers = await db.select().from(users)
+console.log(allUsers)
 ```
 
 ### Using the Repository
 
 ```typescript
-import { Repository } from "@packages/db";
+import { Repository } from '@packages/db'
 
 // Find all users
-const allUsers = await Repository.findAllUsers();
+const allUsers = await Repository.findAllUsers()
 
 // Find a user by ID
-const user = await Repository.findUserById(1);
+const user = await Repository.findUserById(1)
 
 // Create a new user
 const newUser = await Repository.createUser({
-  email: "user@example.com",
-  username: "user123",
-  name: "Example User",
-});
+  email: 'user@example.com',
+  username: 'user123',
+  name: 'Example User',
+})
 
 // Update a user
 const updatedUser = await Repository.updateUser(1, {
-  bio: "This is my updated bio",
-});
+  bio: 'This is my updated bio',
+})
 
 // Delete a user
-const deleted = await Repository.deleteUser(1);
+const deleted = await Repository.deleteUser(1)
 ```
 
 ## Environment Variables
 
 The package supports the following environment variables:
 
-- `DATABASE_URL`: Full PostgreSQL connection string (takes precedence if provided)
+- `DATABASE_URL`: Full PostgreSQL connection string (takes precedence if
+  provided)
 - `DATABASE_HOST`: PostgreSQL host (default: 'localhost')
 - `DATABASE_PORT`: PostgreSQL port (default: 5432)
 - `DATABASE_NAME`: Database name (default: 'github_agent')

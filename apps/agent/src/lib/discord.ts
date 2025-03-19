@@ -1,22 +1,22 @@
-import dotenv from 'dotenv';
+import dotenv from 'dotenv'
 
 // Load environment variables
-dotenv.config();
+dotenv.config()
 
 // Discord API configuration
-const DISCORD_BOT_BASE_URL = `${process.env.DISCORD_BOT_BASE_URL}/webhook`;
-export const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID || '';
+const DISCORD_BOT_BASE_URL = `${process.env.DISCORD_BOT_BASE_URL}/webhook`
+export const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID || ''
 
 /**
  * Discord client for making requests to the Discord webhook
  */
 class DiscordClient {
-  private headers: HeadersInit;
+  private headers: HeadersInit
 
   constructor() {
     this.headers = {
       'Content-Type': 'application/json',
-    };
+    }
   }
 
   /**
@@ -30,9 +30,9 @@ class DiscordClient {
     message,
     embed,
   }: {
-    channelId: string;
-    message?: string;
-    embed?: Record<string, unknown>;
+    channelId: string
+    message?: string
+    embed?: Record<string, unknown>
   }): Promise<string> {
     const response = await fetch(`${DISCORD_BOT_BASE_URL}/channel`, {
       method: 'POST',
@@ -42,13 +42,13 @@ class DiscordClient {
         message,
         embed,
       }),
-    });
+    })
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`HTTP error! status: ${response.status}`)
     }
 
-    return await response.text();
+    return await response.text()
   }
 
   /**
@@ -62,9 +62,9 @@ class DiscordClient {
     userId,
     embed,
   }: {
-    userId: string;
-    message?: string;
-    embed?: Record<string, unknown>;
+    userId: string
+    message?: string
+    embed?: Record<string, unknown>
   }): Promise<string> {
     const response = await fetch(`${DISCORD_BOT_BASE_URL}/user`, {
       method: 'POST',
@@ -74,15 +74,15 @@ class DiscordClient {
         message,
         embed,
       }),
-    });
+    })
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`HTTP error! status: ${response.status}`)
     }
 
-    return await response.text();
+    return await response.text()
   }
 }
 
 // Export a singleton instance
-export const discordClient = new DiscordClient();
+export const discordClient = new DiscordClient()

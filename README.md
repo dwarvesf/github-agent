@@ -1,6 +1,7 @@
 # GitHub Agent
 
-A monorepo containing applications for GitHub automation and Discord integration.
+A monorepo containing applications for GitHub automation and Discord
+integration.
 
 ## Project Structure
 
@@ -59,8 +60,7 @@ To build all apps and packages, run the following command:
 
 ```
 
-cd my-turborepo
-pnpm build
+cd my-turborepo pnpm build
 
 ```
 
@@ -70,8 +70,7 @@ To develop all apps and packages, run the following command:
 
 ```
 
-cd my-turborepo
-pnpm dev
+cd my-turborepo pnpm dev
 
 ```
 
