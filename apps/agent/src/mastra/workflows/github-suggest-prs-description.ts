@@ -1,25 +1,26 @@
 import { Step, Workflow } from '@mastra/core/workflows';
-import { getPRListTool, PullRequest } from '../tools';
+import { getTodayPRListTool } from '../tools';
 import * as z from 'zod';
 import { discordClient } from '../../lib/discord';
 import { groupBy } from '../../utils/array';
 import { discordGithubMap } from './github-notify-developer-about-pr-status';
 import { suggestPRDescriptionAgent } from '../agents/analyze-github-prs';
+import { PullRequest } from '../../lib/type';
 
 const suggestPRsDescription = new Workflow({
   name: 'Suggest improvements for PR descriptions',
 })
-  .step(getPRListTool)
+  .step(getTodayPRListTool)
   .then(
     new Step({
-      id: 'notify-pr-issues',
-      description: 'Notify developers about PR content issues',
+      id: 'suggest-pr-description',
+      description: 'Suggest improvements for PR descriptions',
       inputSchema: z.object({}),
       outputSchema: z.object({}),
       execute: async ({ context }) => {
         // get PRs 
         const output = context?.getStepResult<{ list: PullRequest[] }>(
-            getPRListTool.id,
+            getTodayPRListTool.id,
           );
   
         // group PRs by author, map author -> PRs
@@ -34,8 +35,6 @@ const suggestPRsDescription = new Workflow({
               const prompt = `Based on the following pull request, help me determine if it needs to be improved:
                 ${JSON.stringify({title: pr.title, body: pr.body}, null, 2)}`;
 
-
-              console.log('>>>', 'prompt', prompt);
               // call to agent
               const agentResponse = await suggestPRDescriptionAgent.generate([
                 {
@@ -44,15 +43,12 @@ const suggestPRsDescription = new Workflow({
                 },
               ]);
 
-              console.log('>>>', 'agent response', agentResponse);
-
               // convert agent's response to json
               const json = JSON.parse(agentResponse.text);
-              console.log('>>>', 'json', json);
 
               // if needed suggestion, send a message to Discord
-              if (json.suggestion_needed) {
-                const discordUserId = discordGithubMap[author as keyof typeof discordGithubMap];
+              const discordUserId = discordGithubMap[author as keyof typeof discordGithubMap];
+              if (json.suggestion_needed && discordUserId) {
                 const message = `Hey <@${discordUserId}>, your PR needs some improvements:\n\n**Title**: ${json.suggest_title}\n\n**Description**: ${json.suggest_body}`;
                 // const embed = {
                 //     title: `Hey <@${discordUserId}>, your PR needs some improvements`,
@@ -66,9 +62,12 @@ const suggestPRsDescription = new Workflow({
                 const discordResponse = await discordClient.sendMessageToUser({
                   userId: discordUserId,
                   message: message,
+                }).then((res) => {
+                  console.log('>>>', 'discord response', res);
+                  return res;
+                }).catch((err) => {
+                  console.log('>>>', 'discord error', err);
                 });
-
-                console.log('>>>', 'discord response', discordResponse);
                 return discordResponse;
               }
             }
