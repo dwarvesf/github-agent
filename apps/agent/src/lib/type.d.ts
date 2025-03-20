@@ -1,20 +1,20 @@
 export interface PullRequest {
-  number: number;
-  title: string;
-  url: string;
-  author: string;
-  createdAt: string;
-  updatedAt: string;
-  draft: boolean;
-  isWaitingForReview: boolean;
-  hasMergeConflicts: boolean;
-  isWIP: boolean;
-  isMerged: boolean;
-  labels: string[];
-  reviewers: string[];
-  hasComments: boolean;
-  hasReviews: boolean;
-  body: string;
+  number: number
+  title: string
+  url: string
+  author: string
+  createdAt: string
+  updatedAt: string
+  draft: boolean
+  isWaitingForReview: boolean
+  hasMergeConflicts: boolean
+  isWIP: boolean
+  isMerged: boolean
+  labels: string[]
+  reviewers: string[]
+  hasComments: boolean
+  hasReviews: boolean
+  body: string
 }
 
 interface Author {

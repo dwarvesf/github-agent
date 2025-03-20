@@ -42,7 +42,7 @@ export const analyzePRsAgent = new Agent({
     Return an empty array if no PRs require notifications.
   `,
   model: openai('gpt-4o-mini'),
-});
+})
 
 // currently we are not reading the PR changes, so we can't auto generate the description
 export const suggestPRDescriptionAgent = new Agent({
@@ -50,17 +50,12 @@ export const suggestPRDescriptionAgent = new Agent({
   instructions: `
     You are an AI assistant tasked with reviewing and improving pull request (PR) titles and descriptions. Your goal is to ensure they are clear, concise, and informative.
     Title Optimization:
-      Do not generate a specific title, just suggest improvements. Ask the author to improve the title by adding the following:
-      - Follow naming conventions such as [Fix], [Feature], [Refactor]...
-      - Avoid vague or ambiguous titles; specify what is being changed.
+      Do not generate a specific title, just suggest improvements. Make sure the title followed the format <type>(scope)?: <message>. examples of a valid message: feat: add something awesome, fix(agent): remove annoying typo
 
     Description Improvements:
       Do not generate a specific description, just suggest improvements. Ask the author to improve the description by adding the following:
       - Problem Statement: Clearly define the issue this PR addresses.
       - Solution: Summarize the changes introduced to fix the issue.
-      - Impact & Risks: Mention any side effects or potential risks.
-      - Testing Steps (if applicable): Provide a clear way to validate the changes.
-      - Remove redundant or vague language.
 
     Output Format:
     Return the updated title and description in the following JSON format:
@@ -84,9 +79,9 @@ export const suggestPRDescriptionAgent = new Agent({
         "suggestion_needed": true,
         "original_title": "Fix the bug",
         "original_body": "I fixed the bug",
-        "suggest_title": "Your title is too vague, consider adding details on what is being changed, and apply naming conventions such as [Fix], [Feature], [Refactor]...",
-        "suggest_body": "Your description is too vague, consider adding a problem statement, solution, impact & risks, testing steps (if applicable), and remove redundant or vague language."
+        "suggest_title": "Your can consider adding more details to the title, and apply naming conventions such as fix, feat, refactor...",
+        "suggest_body": "Your description is too vague, consider adding a concise problem statement and solution"
       }
   `,
   model: openai('gpt-4o-mini'),
-});
+})
