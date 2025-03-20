@@ -11,6 +11,60 @@ const discordGithubMap = {
   'R-Jim': '797044001579597846',
 }
 
+async function handleMergeConflicts(discordUserId: string, prs: PullRequest[]) {
+  const hasMergedConflictsPRs = prs.filter(
+    (pr: PullRequest) => pr.hasMergeConflicts,
+  )
+  // Has merge conflicts
+  if (hasMergedConflictsPRs.length > 0) {
+    const isPlural = hasMergedConflictsPRs.length > 1
+    const embed = {
+      title: `🚧 your ${isPlural ? 'PRs have' : 'PR has'} merge conflicts`,
+      color: 15158332,
+      fields: hasMergedConflictsPRs.map((pr) => ({
+        name: `#${pr.number} ${pr.title}`,
+        value: `Created at: ${new Date(pr.createdAt).toISOString().split('T')[0]} | [link](${pr.url})`,
+        inline: false,
+      })),
+    }
+
+    await discordClient.sendMessageToUser({
+      userId: discordUserId,
+      message: '',
+      embed,
+    })
+  }
+}
+
+async function handleWaitingForReview(
+  discordUserId: string,
+  prs: PullRequest[],
+) {
+  // Waiting for review
+  const watingForReviewPrs = prs.filter(
+    (pr: PullRequest) => pr.isWaitingForReview && !pr.hasMergeConflicts,
+  )
+
+  if (watingForReviewPrs.length > 0) {
+    const isPlural = watingForReviewPrs.length > 1
+    const embed = {
+      title: `👀 ${isPlural ? ' are' : ' is'} your pull request${isPlural ? 's' : ''} ready for review?`,
+      color: 3447003,
+      fields: watingForReviewPrs.map((pr) => ({
+        name: `#${pr.number} ${pr.title}`,
+        value: `Created at: ${new Date(pr.createdAt).toISOString().split('T')[0]} | [link](${pr.url})`,
+        inline: false,
+      })),
+    }
+
+    await discordClient.sendMessageToUser({
+      userId: discordUserId,
+      message: '',
+      embed,
+    })
+  }
+}
+
 const notifyDeveloperAboutPRStatus = new Workflow({
   name: 'Notify developer about PR status',
 })
@@ -33,54 +87,11 @@ const notifyDeveloperAboutPRStatus = new Workflow({
             const discordUserId =
               discordGithubMap[author as keyof typeof discordGithubMap]
             if (discordUserId) {
-              const hasMergedConflictsPRs = prs.filter(
-                (pr: PullRequest) => pr.hasMergeConflicts,
-              )
+              // Notify developer if their PR has merge conflicts
+              await handleMergeConflicts(discordUserId, prs)
 
-              // Has merge conflicts
-              if (hasMergedConflictsPRs.length > 0) {
-                const isPlural = hasMergedConflictsPRs.length > 1
-                const embed = {
-                  title: `🚧 your ${isPlural ? 'PRs have' : 'PR has'} merge conflicts`,
-                  color: 15158332,
-                  fields: hasMergedConflictsPRs.map((pr) => ({
-                    name: `#${pr.number} ${pr.title}`,
-                    value: `Created at: ${new Date(pr.createdAt).toISOString().split('T')[0]} | [link](${pr.url})`,
-                    inline: false,
-                  })),
-                }
-
-                await discordClient.sendMessageToUser({
-                  userId: discordUserId,
-                  message: '',
-                  embed,
-                })
-              }
-
-              // Waiting for review
-              const watingForReviewPrs = prs.filter(
-                (pr: PullRequest) =>
-                  pr.isWaitingForReview && !pr.hasMergeConflicts,
-              )
-
-              if (watingForReviewPrs.length > 0) {
-                const isPlural = watingForReviewPrs.length > 1
-                const embed = {
-                  title: `👀 ${isPlural ? ' are' : ' is'} your pull request${isPlural ? 's' : ''} ready for review?`,
-                  color: 3447003,
-                  fields: watingForReviewPrs.map((pr) => ({
-                    name: `#${pr.number} ${pr.title}`,
-                    value: `Created at: ${new Date(pr.createdAt).toISOString().split('T')[0]} | [link](${pr.url})`,
-                    inline: false,
-                  })),
-                }
-
-                await discordClient.sendMessageToUser({
-                  userId: discordUserId,
-                  message: '',
-                  embed,
-                })
-              }
+              // Notify developer if their PR needs to tag for review
+              await handleWaitingForReview(discordUserId, prs)
             }
           }),
         )
