@@ -60,7 +60,7 @@ export const getPrDetailsTool = createTool({
       hasComments: pr.comments > 0 || pr.review_comments > 0,
       hasReviews: pr.reviews && pr.reviews.length > 0,
       body: pr.body,
-    };
+    }
   },
 })
 
