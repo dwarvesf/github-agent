@@ -2,6 +2,7 @@ import { createTool } from '@mastra/core/tools'
 import { z } from 'zod'
 import { githubClient } from '../../lib/github'
 import { formatDate } from '../../utils/datetime'
+import { jsonArrayToCSV } from '../../utils/array'
 
 export const prsSchema = z.array(
   z.object({
@@ -26,7 +27,7 @@ export const getOrgOpenPRsTool = createTool({
   outputSchema: prsSchema,
   execute: async ({ context }) => {
     console.log('>>>', 'getOrgOpenPRsTool.context', context)
-    const prs = await githubClient.getOrgOpenPRs('github-agent')
+    const prs = await githubClient.getOrgOpenPRs('playground')
 
     return prs.map((pr) => ({
       number: pr.number,
@@ -83,34 +84,34 @@ export const getPrDetailsTool = createTool({
   },
 })
 
+const prListSchema = z.object({
+  list: z.array(
+    z.object({
+      number: z.number(),
+      title: z.string(),
+      url: z.string(),
+      author: z.string(),
+      createdAt: z.string(),
+      updatedAt: z.string(),
+      draft: z.boolean(),
+      isWIP: z.boolean(),
+      hasMergeConflicts: z.boolean(),
+      isWaitingForReview: z.boolean(),
+      labels: z.array(z.string()),
+      reviewers: z.array(z.string()),
+      hasComments: z.boolean(),
+      hasReviews: z.boolean(),
+    }),
+  ),
+})
+
 export const getTodayPRListTool = createTool({
   id: 'get-daily-pr-list-agent',
   description: 'Get a list of current pull requests',
   inputSchema: z.object({}),
-  outputSchema: z
-    .object({
-      list: z.array(
-        z.object({
-          number: z.number(),
-          title: z.string(),
-          url: z.string(),
-          author: z.string(),
-          createdAt: z.string(),
-          updatedAt: z.string(),
-          draft: z.boolean(),
-          isWIP: z.boolean(),
-          hasMergeConflicts: z.boolean(),
-          isWaitingForReview: z.boolean(),
-          labels: z.array(z.string()),
-          reviewers: z.array(z.string()),
-          hasComments: z.boolean(),
-          hasReviews: z.boolean(),
-        }),
-      ),
-    })
-    .describe('PR JSON list'),
+  outputSchema: prListSchema.describe('PR JSON list'),
   execute: async () => {
-    const prs = await githubClient.getOrgPRs('github-agent', {
+    const prs = await githubClient.getOrgPRs('playground', {
       from: formatDate(new Date()),
     })
 
@@ -159,30 +160,9 @@ export const getPullRequestTool = createTool({
       )
       .optional(),
   }),
-  outputSchema: z
-    .object({
-      list: z.array(
-        z.object({
-          number: z.number(),
-          title: z.string(),
-          url: z.string(),
-          author: z.string(),
-          createdAt: z.string(),
-          updatedAt: z.string(),
-          draft: z.boolean(),
-          isWaitingForReview: z.boolean(),
-          isWIP: z.boolean(),
-          hasMergeConflicts: z.boolean(),
-          labels: z.array(z.string()),
-          reviewers: z.array(z.string()),
-          hasComments: z.boolean(),
-          hasReviews: z.boolean(),
-        }),
-      ),
-    })
-    .describe('PR JSON list'),
+  outputSchema: prListSchema.describe('PR JSON list'),
   execute: async ({ context }) => {
-    const prs = await githubClient.getOrgPRs('github-agent', {
+    const prs = await githubClient.getOrgPRs('playground', {
       reviewerId: context.reviewerId,
       commenterId: context.commenterId,
       from: context.fromDate,
@@ -259,6 +239,99 @@ export const getCommitsTool = createTool({
         url: c.html_url,
         message: c.commit.message,
       })),
+    }
+  },
+})
+
+export const getUserActivitiesTool = createTool({
+  id: 'get-user-activities-agent',
+  description: 'List user activities in unstructured format',
+  inputSchema: z.object({
+    authorId: z.string().describe('Reviewer ID'),
+    fromDate: z
+      .string()
+      .describe(
+        'From date where the open PRs are created or the closed PRs are merged',
+      )
+      .optional(),
+    toDate: z
+      .string()
+      .describe(
+        'To date where the open PRs are created or the closed PRs are merged',
+      )
+      .optional(),
+  }),
+  outputSchema: z.object({ summary: z.string() }),
+  execute: async ({ context }) => {
+    const prs = await githubClient.getOrgPRs('playground', {
+      from: context.fromDate,
+      to: context.toDate,
+      authorId: context.authorId,
+    })
+
+    const openPRs = prs.filter(
+      (pr) => pr.merged_at === null && !githubClient.isWIP(pr),
+    )
+
+    const mergedPRs = prs.filter((pr) => pr.merged_at !== null)
+
+    const wipPRs = prs.filter((pr) => githubClient.isWIP(pr))
+
+    const rawParticipatedPRs = await githubClient.getOrgPRs('playground', {
+      from: context.fromDate,
+      to: context.toDate,
+      reviewerId: context.authorId,
+    })
+
+    const participatedPRs = rawParticipatedPRs.filter((pr) => {
+      return !prs.find((p) => p.number === pr.number)
+    })
+
+    const rawNeedYouToReviewPRs = await githubClient.getOrgPRs('playground', {
+      from: context.fromDate,
+      to: context.toDate,
+      reviewerId: context.authorId,
+    })
+
+    const needYouToReviewPRs = rawNeedYouToReviewPRs.filter((pr) => {
+      return githubClient.isWaitingForReview(pr)
+    })
+
+    const commits = await githubClient.getRepoCommits('playground', {
+      from: context.fromDate,
+      to: context.toDate,
+      authorId: context.authorId,
+    })
+
+    return {
+      summary: `
+      ### Summary
+      - 1/ Open PRs: ${openPRs.length}
+      - 2/ Merged PRs: ${mergedPRs.length}
+      - 3/ WIP PRs: ${wipPRs.length}
+      - 4/ Participated PRs: ${participatedPRs.length}
+      - 5/ Need you to review: ${needYouToReviewPRs.length}
+      - 6/ Commit count: ${commits.length}
+      ---
+
+      ### Merged PRs:
+      ${jsonArrayToCSV(mergedPRs)}
+
+      ### Open PRs:
+      ${jsonArrayToCSV(openPRs)}
+
+      ### WIP PRs:
+      ${jsonArrayToCSV(wipPRs)}
+
+      ### Participated PRs:
+      ${jsonArrayToCSV(participatedPRs)}
+
+      ### Need you to review:
+      ${jsonArrayToCSV(needYouToReviewPRs)}
+
+      ### Commits:
+      ${jsonArrayToCSV(commits)}
+      `,
     }
   },
 })
