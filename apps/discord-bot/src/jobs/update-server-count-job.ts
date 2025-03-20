@@ -40,7 +40,11 @@ export class UpdateServerCountJob extends Job {
     await this.shardManager.broadcastEval(
       (client, context) => {
         const customClient = client as CustomClient
-        return customClient.setPresence(context.type, context.name, context.url)
+        return customClient.setPresence(
+          context.type as unknown as Exclude<ActivityType, ActivityType.Custom>,
+          context.name,
+          context.url,
+        )
       },
       { context: { type, name, url } },
     )
