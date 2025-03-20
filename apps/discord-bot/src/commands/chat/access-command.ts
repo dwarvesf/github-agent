@@ -11,7 +11,6 @@ import {
 import { RateLimiter } from 'discord.js-rate-limiter'
 
 import { Language } from '../../models/enum-helpers/index.js'
-import { EventData } from '../../models/internal-models.js'
 import { Lang } from '../../services/index.js'
 import { Command, CommandDeferType } from '../index.js'
 

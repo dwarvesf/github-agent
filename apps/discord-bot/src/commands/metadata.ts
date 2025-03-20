@@ -74,11 +74,26 @@ export const ChatCommandMetadata: {
     name: Lang.getRef('chatCommands.accessKey', Language.Default),
     name_localizations: Lang.getRefLocalizationMap('chatCommands.accessKey'),
     description: Lang.getRef('commandDescs.accessKey', Language.Default),
-    description_localizations: Lang.getRefLocalizationMap(
-      'commandDescs.accessKey',
-    ),
+    description_localizations: Lang.getRefLocalizationMap('commandDescs.accessKey'),
     dm_permission: true,
     default_member_permissions: undefined,
+  },
+  ASK: {
+    type: ApplicationCommandType.ChatInput,
+    name: Lang.getRef('chatCommands.ask', Language.Default),
+    name_localizations: Lang.getRefLocalizationMap('chatCommands.ask'),
+    description: Lang.getRef('commandDescs.ask', Language.Default),
+    description_localizations: Lang.getRefLocalizationMap('commandDescs.ask'),
+    dm_permission: true,
+    default_member_permissions: PermissionsBitField.resolve([
+      PermissionFlagsBits.Administrator,
+    ]).toString(),
+    options: [
+      {
+        ...Args.PROMPT,
+        required: true,
+      }
+    ],
   },
 }
 
