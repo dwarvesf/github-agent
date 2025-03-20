@@ -33,8 +33,8 @@ const getConnectionConfig = (): PoolConfig => {
       ? parseInt(process.env.DATABASE_PORT, 10)
       : 5432,
     database: process.env.DATABASE_NAME || 'github_agent',
-    user: process.env.DATABASE_USER || 'postgres',
-    password: process.env.DATABASE_PASSWORD || 'postgres',
+    user: process.env.DATABASE_USER || 'agent_user',
+    password: process.env.DATABASE_PASSWORD || 'agent_password',
     ssl:
       process.env.DATABASE_SSL === 'true'
         ? { rejectUnauthorized: false }
@@ -71,7 +71,12 @@ export const getPool = (): Pool => {
  */
 export const getClient = async (): Promise<PoolClient> => {
   const pool = getPool()
-  return await pool.connect()
+  const client = await pool.connect()
+
+  // Set search path to use the agent schema
+  await client.query('SET search_path TO agent_schema')
+
+  return client
 }
 
 /**
@@ -89,5 +94,8 @@ export const closePool = async (): Promise<void> => {
  * Get a drizzle ORM instance with the pool
  */
 export const getDrizzle = () => {
-  return drizzle(getPool())
+  const db = drizzle(getPool(), {
+    schema: { schema: 'agent_schema' },
+  })
+  return db
 }

@@ -6,7 +6,10 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "mastra dev",
     "lint": "eslint . --cache --ext .js,.jsx,.ts,.tsx",
-    "lint:fix": "eslint . --fix --cache --ext .js,.jsx,.ts,.tsx"
+    "lint:fix": "eslint . --fix --cache --ext .js,.jsx,.ts,.tsx",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push:pg",
+    "db:studio": "drizzle-kit studio"
   },
   "keywords": [],
   "author": "",
@@ -16,15 +19,21 @@
   "dependencies": {
     "@ai-sdk/openai": "^1.2.1",
     "@mastra/core": "^0.4.4",
-    "@packages/db": "workspace:*",
     "date-fns": "^4.1.0",
+    "dayjs": "^1.11.13",
     "dotenv": "^16.4.5",
+    "drizzle-kit": "^0.20.14",
+    "drizzle-orm": "^0.29.5",
     "mastra": "^0.2.8",
+    "nanoid": "^5.1.5",
+    "pg": "^8.11.3",
+    "pg-connection-string": "^2.6.2",
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@types/pg": "^8.11.2",
+    "@packages/eslint-config": "workspace:*",
     "@packages/typescript-config": "workspace:*",
-    "@packages/eslint-config": "workspace:*"
+    "@types/pg": "^8.11.2",
+    "tsup": "^8.0.2"
   }
 }

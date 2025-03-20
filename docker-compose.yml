@@ -1,4 +1,4 @@
-version: "3.8"
+version: '3.8'
 
 services:
   postgres:
@@ -10,13 +10,11 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: github_agent
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Initialize database schemas and users
-      - ./docker/postgres/init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,9 +24,9 @@ services:
       - DISCORD_BOT_ID=${DISCORD_BOT_ID}
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
     ports:
-      - "3001:3001"
-      - "3000:3000"
-      - "5000:5000"
+      - '3001:3001'
+      - '3000:3000'
+      - '5000:5000'
     volumes:
       - ./config.json:/config/config.json
 
