@@ -215,6 +215,19 @@ export const getPullRequestTool = createTool({
   },
 })
 
+const getCommitsToolOutputSchema = z.object({
+  list: z.array(
+    z.object({
+      sha: z.string(),
+      author: z.string(),
+      url: z.string(),
+      message: z.string(),
+    }),
+  ),
+})
+
+export type CommitsToolOutputSchema = z.infer<typeof getCommitsToolOutputSchema>
+
 export const getCommitsTool = createTool({
   id: 'get-commits',
   description: 'Get a list of commits from a repo',
@@ -229,11 +242,9 @@ export const getCommitsTool = createTool({
       .describe('To date where the commits were created')
       .optional(),
   }),
-  outputSchema: z
-    .object({
-      list: z.array(z.object({})),
-    })
-    .describe('List of commits in JSON format'),
+  outputSchema: getCommitsToolOutputSchema.describe(
+    'List of commits in JSON format',
+  ),
   execute: async ({ context }) => {
     const commits = await githubClient.getRepoCommits('playground', {
       from: context.fromDate,

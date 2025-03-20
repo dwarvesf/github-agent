@@ -1,5 +1,7 @@
 import { createTool } from '@mastra/core/tools'
 import * as z from 'zod'
+import { CommitsToolOutputSchema } from './github'
+import { escapeSpecialCharactersForMarkdown } from '../../utils/string'
 
 function jsonToMarkdownTable(jsonArray: any[]): string {
   if (!Array.isArray(jsonArray) || jsonArray.length === 0) {
@@ -39,6 +41,31 @@ export const formatJSONListToMarkdownTable = createTool({
 
     return {
       markdown: markdown,
+    }
+  },
+})
+
+export const formatCommitList = createTool({
+  id: 'format-commits-to-markdown-list-agent',
+  description: 'format a list of commits to markdown format',
+  inputSchema: z.object({
+    list: z.string().describe('JSON list'),
+  }),
+  outputSchema: z.object({
+    markdown: z.string().describe('Markdown commit list'),
+  }),
+  execute: async ({ context }) => {
+    const list = (JSON.parse(context.list) ??
+      []) as CommitsToolOutputSchema['list']
+
+    const markdown = list
+      .map((commit) => {
+        return `- [[${commit.sha}](${commit.url})] ${escapeSpecialCharactersForMarkdown(commit.message)} by @${commit.author}`
+      })
+      .join('\n')
+
+    return {
+      markdown,
     }
   },
 })
