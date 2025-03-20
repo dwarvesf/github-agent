@@ -232,3 +232,67 @@ curl -X POST http://localhost:3000/webhook/channel \
     }
   }'
 ```
+
+**Table**
+
+<img width="350" alt="image" src="img/table.png">
+
+```bash
+curl -X POST http://localhost:3000/webhook/channel \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channelId": "964734967517167616",
+    "embed": {
+      "color": 3447003,
+      "fields": [
+        {
+          "name": "Table",
+          "value": "`Header 1     ` `Header 2     ` `URL    ` `Header 4     `\n`Cell   1     ` `Cell   2     ` ` `[**Link**](http://example.com) ` ` `Cell   4     `\n`Cell   1     ` `Cell   2     ` ` `[**Link**](http://example.com) ` ` `Cell   4     `\n`Cell   1     ` `Cell   2     ` ` `[**Link**](http://example.com) ` ` `Cell   4     `",
+          "inline": false
+        }
+      ]
+    }
+  }'
+```
+
+**List**
+
+<img width="350" alt="image" src="img/list.png">
+
+```bash
+curl -X POST http://localhost:3000/webhook/channel \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channelId": "964734967517167616",
+    "embed": {
+      "color": 3447003,
+      "fields": [
+        {
+          "name": "`List:`",
+          "value": "∟ Item 1 (232 msg)\n∟ Item 2 (199 msg)\n∟ Item 3 (160 msg)",
+          "inline": false
+        }
+      ]
+    }
+  }'
+```
+
+<img width="350" alt="image" src="img/list2.png">
+
+```bash
+curl -X POST http://localhost:3000/webhook/channel \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channelId": "964734967517167616",
+    "embed": {
+      "color": 3447003,
+      "fields": [
+        {
+          "name": "**List:**",
+          "value": "`Item 1   ` Value\n`Item 2   ` Value (⬆️%)\n`Item 3   ` Value **3**\n`Item 1   ` Value",
+          "inline": false
+        }
+      ]
+    }
+  }'
+```

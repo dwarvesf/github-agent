@@ -177,7 +177,7 @@ async function* getStreamedResponse(question: string): AsyncGenerator<string, vo
 
 function processResponse(response: string): APIEmbedField[] {
   const fields: APIEmbedField[] = [];
-  const maxChunkSize = 1024;
+  const maxChunkSize = 800;
   const lines = response.split('\n');
   let currentChunk = '';
   let isTable = false;
