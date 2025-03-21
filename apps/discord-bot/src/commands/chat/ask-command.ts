@@ -1,13 +1,14 @@
-import {
-  ChatInputCommandInteraction,
-  PermissionsString,
-} from 'discord.js'
+import { ChatInputCommandInteraction, PermissionsString } from 'discord.js'
 
 import { EventData } from '../../models/internal-models.js'
 import { Language } from '../../models/enum-helpers/index.js'
 import { Lang } from '../../services/index.js'
 import { InteractionUtils } from '../../utils/index.js'
-import { Command, CommandDeferType, ProcessResponseToEmbedFields } from '../index.js'
+import {
+  Command,
+  CommandDeferType,
+  processResponseToEmbedFields,
+} from '../index.js'
 import dotenv from 'dotenv'
 dotenv.config()
 
@@ -69,7 +70,11 @@ export class AskCommand implements Command {
         response += chunk
       }
 
-      const processedResponse = await ProcessResponseToEmbedFields(intr.client, intr.guildId, `**Question**: \`${question}\`\n\n${response}`)
+      const processedResponse = await processResponseToEmbedFields(
+        intr.client,
+        intr.guildId,
+        `**Question**: \`${question}\`\n\n${response}`,
+      )
 
       // Set the embed color to 5737479 when the stream is complete
       const finalEmbed = Lang.getEmbed('displayEmbeds.askResponse', data.lang, {
@@ -202,4 +207,3 @@ async function* getStreamedResponse(
     throw error
   }
 }
-
