@@ -3,22 +3,15 @@
     "displayEmbeds": {
       "welcome": {
         "title": "Thank you for using {{COM:bot.name}}!",
-        "description": [
-          "{{REF:bot.description}}"
-        ],
+        "description": ["{{REF:bot.description}}"],
         "fields": [
           {
             "name": "Important {{REF:fields.commands}}",
-            "value": [
-              "{{CMD_LINK_HELP}} - {{REF:commandDescs.help}}"
-            ]
+            "value": ["{{CMD_LINK_HELP}} - {{REF:commandDescs.help}}"]
           },
           {
             "name": "{{REF:fields.links}}",
-            "value": [
-              "{{REF:links.docsEmbed}}",
-              "{{REF:links.supportEmbed}}"
-            ]
+            "value": ["{{REF:links.docsEmbed}}", "{{REF:links.supportEmbed}}"]
           }
         ]
       },
@@ -30,9 +23,7 @@
         "fields": [
           {
             "name": "{{REF:fields.links}}",
-            "value": [
-              "{{REF:links.supportEmbed}}"
-            ]
+            "value": ["{{REF:links.supportEmbed}}"]
           }
         ]
       },
@@ -56,10 +47,7 @@
           },
           {
             "name": "{{REF:fields.links}}",
-            "value": [
-              "{{REF:links.docsEmbed}}",
-              "{{REF:links.supportEmbed}}"
-            ]
+            "value": ["{{REF:links.docsEmbed}}", "{{REF:links.supportEmbed}}"]
           }
         ]
       },
@@ -94,9 +82,7 @@
           },
           {
             "name": "Created With",
-            "value": [
-              "{{REF:links.templateEmbed}}"
-            ]
+            "value": ["{{REF:links.templateEmbed}}"]
           }
         ]
       },
@@ -152,8 +138,13 @@
         "description": "The access key you provided is not correct. Please try again or contact an administrator."
       },
       "askResponse": {
-        "title": "Ask Agent❓",
-        "fields": []
+        "title": "🤖 Github agent",
+        "fields": [
+          {
+            "name": "Question",
+            "value": ["{{QUESTION}}"]
+          }
+        ]
       }
     },
     "validationEmbeds": {

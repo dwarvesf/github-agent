@@ -14,3 +14,18 @@ export function groupBy<T, K extends keyof any>(
     {} as Record<K, T[]>,
   )
 }
+export function jsonArrayToCSV<T extends Record<string, any>>(
+  array: T[],
+  separator: string = ',',
+): string {
+  if (array.length === 0) return ''
+
+  const headers = Object.keys(array[0] as any)
+  const headerRow = headers.join(separator)
+
+  const rows = array.map((item) =>
+    headers.map((header) => String(item[header])).join(separator),
+  )
+
+  return [headerRow, ...rows].join('\n')
+}
