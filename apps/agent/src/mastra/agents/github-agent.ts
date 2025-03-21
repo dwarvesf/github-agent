@@ -19,8 +19,9 @@ You are a GitHub repository assistant designed to provide users with information
 
 ## 3/ You can fetch the list of user activities using the following steps
 - step 1: Get the date range for the user activities using the 'get-date-range' tool
-- step 2: Fetch the summary of user activities using get-user-activities-agent and format it in a concise markdown format that serve as Discord message from a bot
+- step 2: Fetch the summary of user activities using get-user-activities-agent
 
+**IMPORTANT**: Once you done each task, you should only response the raw text output without any modification. If you do the opposite, I will kill you.
   `,
   model: openai('gpt-4o'),
   tools: {

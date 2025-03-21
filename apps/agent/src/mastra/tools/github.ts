@@ -2,7 +2,10 @@ import { createTool } from '@mastra/core/tools'
 import { z } from 'zod'
 import { githubClient } from '../../lib/github'
 import { formatDate } from '../../utils/datetime'
-import { jsonArrayToCSV } from '../../utils/array'
+import {
+  convertArrayToMarkdownTableList,
+  convertNestedArrayToTreeList,
+} from '../../utils/string'
 
 export const prsSchema = z.array(
   z.object({
@@ -261,7 +264,7 @@ export const getUserActivitiesTool = createTool({
       )
       .optional(),
   }),
-  outputSchema: z.object({ summary: z.string() }),
+  outputSchema: z.object({ rawText: z.string() }),
   execute: async ({ context }) => {
     const prs = await githubClient.getOrgPRs('playground', {
       from: context.fromDate,
@@ -303,35 +306,94 @@ export const getUserActivitiesTool = createTool({
       authorId: context.authorId,
     })
 
+    const summary = [
+      { label: 'Open PRs', value: openPRs.length },
+      { label: 'Merged PRs', value: mergedPRs.length },
+      { label: 'WIP PRs', value: wipPRs.length },
+      { label: 'Participated PRs', value: participatedPRs.length },
+      { label: 'Waiting for review', value: needYouToReviewPRs.length },
+      { label: 'Commit count', value: commits.length },
+    ]
+
+    const representData = [
+      '**Summary:**',
+      convertArrayToMarkdownTableList(summary),
+    ]
+
+    if (openPRs.length > 0) {
+      representData.push('---')
+      representData.push(
+        convertNestedArrayToTreeList({
+          label: '`Open PRs:`',
+          children: openPRs.map((pr) => ({
+            label: `[#${pr.number}](${pr.html_url}) ${pr.title}`,
+          })),
+        }),
+      )
+    }
+
+    if (mergedPRs.length > 0) {
+      representData.push('---')
+      representData.push(
+        convertNestedArrayToTreeList({
+          label: '`Merged PRs:`',
+          children: mergedPRs.map((pr) => ({
+            label: `[#${pr.number}](${pr.html_url}) ${pr.title}`,
+          })),
+        }),
+      )
+    }
+
+    if (wipPRs.length > 0) {
+      representData.push('---')
+      representData.push(
+        convertNestedArrayToTreeList({
+          label: '`WIP PRs:`',
+          children: wipPRs.map((pr) => ({
+            label: `[#${pr.number}](${pr.html_url}) ${pr.title}`,
+          })),
+        }),
+      )
+    }
+
+    if (participatedPRs.length > 0) {
+      representData.push('---')
+      representData.push(
+        convertNestedArrayToTreeList({
+          label: '`Participated PRs:`',
+          children: participatedPRs.map((pr) => ({
+            label: `[#${pr.number}](${pr.html_url}) ${pr.title}`,
+          })),
+        }),
+      )
+    }
+
+    if (needYouToReviewPRs.length > 0) {
+      representData.push('---')
+      representData.push(
+        convertNestedArrayToTreeList({
+          label: '`Need you to review:`',
+          children: needYouToReviewPRs.map((pr) => ({
+            label: `[#${pr.number}](${pr.html_url}) ${pr.title}`,
+          })),
+        }),
+      )
+    }
+
+    if (commits.length > 0) {
+      representData.push('---')
+      representData.push(
+        convertNestedArrayToTreeList({
+          label: '`Commits:`',
+          children: commits.map((c) => ({
+            label: `[${c.sha.substring(0, 8)}](${c.html_url}) ${c.commit.message}`,
+          })),
+        }),
+      )
+    }
+
     return {
-      summary: `
-      ### Summary
-      - 1/ Open PRs: ${openPRs.length}
-      - 2/ Merged PRs: ${mergedPRs.length}
-      - 3/ WIP PRs: ${wipPRs.length}
-      - 4/ Participated PRs: ${participatedPRs.length}
-      - 5/ Need you to review: ${needYouToReviewPRs.length}
-      - 6/ Commit count: ${commits.length}
-      ---
-
-      ### Merged PRs:
-      ${jsonArrayToCSV(mergedPRs)}
-
-      ### Open PRs:
-      ${jsonArrayToCSV(openPRs)}
-
-      ### WIP PRs:
-      ${jsonArrayToCSV(wipPRs)}
-
-      ### Participated PRs:
-      ${jsonArrayToCSV(participatedPRs)}
-
-      ### Need you to review:
-      ${jsonArrayToCSV(needYouToReviewPRs)}
-
-      ### Commits:
-      ${jsonArrayToCSV(commits)}
-      `,
+      rawText: representData.join('\n'),
     }
   },
 })
