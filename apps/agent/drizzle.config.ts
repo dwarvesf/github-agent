@@ -1,19 +1,12 @@
 import type { Config } from 'drizzle-kit'
-import dotenv from 'dotenv'
-
-// Load environment variables
-dotenv.config()
-
-// Determine the DATABASE_URL from environment variables
-// eslint-disable-next-line turbo/no-undeclared-env-vars
-const connectionString = process.env.DATABASE_URL
+import { DB_CONNECTION } from './src/config'
 
 export default {
   schema: './src/db/schema',
   out: './migrations',
   driver: 'pg',
   dbCredentials: {
-    connectionString: connectionString!,
+    connectionString: DB_CONNECTION.DATABASE_URL!,
   },
   verbose: true,
   strict: true,

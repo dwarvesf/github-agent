@@ -84,6 +84,9 @@ importers:
       '@types/pg':
         specifier: ^8.11.2
         version: 8.11.11
+      eslint:
+        specifier: ^9.20.1
+        version: 9.21.0(jiti@2.4.2)
       tsup:
         specifier: ^8.0.2
         version: 8.4.0(@swc/core@1.11.7(@swc/helpers@0.5.15))(jiti@2.4.2)(tsx@4.19.3)(typescript@5.8.2)(yaml@2.7.0)

@@ -1,14 +1,11 @@
 import { Pool, PoolConfig, PoolClient } from 'pg'
 import { parse } from 'pg-connection-string'
 import { drizzle } from 'drizzle-orm/node-postgres'
-import dotenv from 'dotenv'
-
-// Load environment variables
-dotenv.config()
+import { DB_CONNECTION } from '../config'
 
 // Connection configuration
 const getConnectionConfig = (): PoolConfig => {
-  const connectionString = process.env.DATABASE_URL
+  const connectionString = DB_CONNECTION.DATABASE_URL
 
   if (connectionString) {
     // Parse connection string if provided
@@ -19,26 +16,20 @@ const getConnectionConfig = (): PoolConfig => {
       database: config.database || undefined,
       user: config.user || undefined,
       password: config.password || undefined,
-      ssl:
-        process.env.DATABASE_SSL === 'true'
-          ? { rejectUnauthorized: false }
-          : undefined,
+      ssl: DB_CONNECTION.DATABASE_SSL
+        ? { rejectUnauthorized: false }
+        : undefined,
     }
   }
 
   // Fallback to individual environment variables
   return {
-    host: process.env.DATABASE_HOST || 'localhost',
-    port: process.env.DATABASE_PORT
-      ? parseInt(process.env.DATABASE_PORT, 10)
-      : 5432,
-    database: process.env.DATABASE_NAME || 'github_agent',
-    user: process.env.DATABASE_USER || 'agent_user',
-    password: process.env.DATABASE_PASSWORD || 'agent_password',
-    ssl:
-      process.env.DATABASE_SSL === 'true'
-        ? { rejectUnauthorized: false }
-        : undefined,
+    host: DB_CONNECTION.DATABASE_HOST,
+    port: DB_CONNECTION.DATABASE_PORT,
+    database: DB_CONNECTION.DATABASE_NAME,
+    user: DB_CONNECTION.DATABASE_USER,
+    password: DB_CONNECTION.DATABASE_PASSWORD,
+    ssl: DB_CONNECTION.DATABASE_SSL ? { rejectUnauthorized: false } : undefined,
   }
 }
 

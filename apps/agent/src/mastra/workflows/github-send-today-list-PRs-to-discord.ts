@@ -1,9 +1,9 @@
 import { Step, Workflow } from '@mastra/core/workflows'
 import { getTodayPRListTool } from '../tools'
 import * as z from 'zod'
-import { DISCORD_CHANNEL_ID, discordClient } from '../../lib/discord'
+import { discordClient } from '../../lib/discord'
 import { PullRequest } from '../../lib/type'
-import { GITHUB_OWNER, GITHUB_REPO } from '../../lib/github'
+import { DISCORD_CONFIGURATION, GITHUB_CONFIGURATION } from '../../config'
 
 const getStatusEmoji = (pr: PullRequest): string => {
   if (pr.isWIP) return '🚧'
@@ -43,26 +43,26 @@ const sendTodayPRListToDiscordWorkflow = new Workflow({
 
         if (fields.length === 0) {
           return await discordClient.sendMessageToChannel({
-            channelId: DISCORD_CHANNEL_ID,
+            channelId: DISCORD_CONFIGURATION.DISCORD_CHANNEL_ID,
             embed: {
               title: '🏖️ Github daily report',
               description: 'No PRs found today',
               color: 3447003,
               footer: {
-                text: `${GITHUB_OWNER}/${GITHUB_REPO}`,
+                text: `${GITHUB_CONFIGURATION.GITHUB_OWNER}/${GITHUB_CONFIGURATION.GITHUB_REPO}`,
               },
             },
           })
         }
 
         return await discordClient.sendMessageToChannel({
-          channelId: DISCORD_CHANNEL_ID,
+          channelId: DISCORD_CONFIGURATION.DISCORD_CHANNEL_ID,
           embed: {
             title: '📌 Github daily report',
             color: 3447003,
             fields,
             footer: {
-              text: `${GITHUB_OWNER}/${GITHUB_REPO}`,
+              text: `${GITHUB_CONFIGURATION.GITHUB_OWNER}/${GITHUB_CONFIGURATION.GITHUB_REPO}`,
             },
           },
         })
