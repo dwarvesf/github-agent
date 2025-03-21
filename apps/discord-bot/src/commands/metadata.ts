@@ -74,7 +74,9 @@ export const ChatCommandMetadata: {
     name: Lang.getRef('chatCommands.accessKey', Language.Default),
     name_localizations: Lang.getRefLocalizationMap('chatCommands.accessKey'),
     description: Lang.getRef('commandDescs.accessKey', Language.Default),
-    description_localizations: Lang.getRefLocalizationMap('commandDescs.accessKey'),
+    description_localizations: Lang.getRefLocalizationMap(
+      'commandDescs.accessKey',
+    ),
     dm_permission: true,
     default_member_permissions: undefined,
   },
@@ -92,7 +94,7 @@ export const ChatCommandMetadata: {
       {
         ...Args.PROMPT,
         required: true,
-      }
+      },
     ],
   },
 }

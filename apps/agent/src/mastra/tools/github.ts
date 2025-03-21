@@ -286,7 +286,7 @@ export const getUserActivitiesTool = createTool({
       reviewerId: context.authorId,
     })
 
-    const participatedPRs = rawParticipatedPRs.filter((pr) => {
+    const needToReviewPRs = rawParticipatedPRs.filter((pr) => {
       return !prs.find((p) => p.number === pr.number)
     })
 
@@ -307,21 +307,24 @@ export const getUserActivitiesTool = createTool({
     })
 
     const summary = [
-      { label: 'Open PRs', value: openPRs.length },
-      { label: 'Merged PRs', value: mergedPRs.length },
-      { label: 'WIP PRs', value: wipPRs.length },
-      { label: 'Participated PRs', value: participatedPRs.length },
-      { label: 'Waiting for review', value: needYouToReviewPRs.length },
-      { label: 'Commit count', value: commits.length },
+      { label: 'Open PRs', value: `**${openPRs.length}**` },
+      { label: 'Merged PRs', value: `**${mergedPRs.length}**` },
+      { label: 'WIP PRs', value: `**${wipPRs.length}**` },
+      { label: 'Need to review', value: `**${needToReviewPRs.length}**` },
+      {
+        label: 'Need to assign reviewer',
+        value: `**${needYouToReviewPRs.length}**`,
+      },
+      { label: 'Commit count', value: `**${commits.length}**` },
     ]
 
     const representData = [
-      '**Summary:**',
-      convertArrayToMarkdownTableList(summary),
+      '**📊 Summary:**',
+      convertArrayToMarkdownTableList(summary, false),
     ]
 
     if (openPRs.length > 0) {
-      representData.push('---')
+      representData.push('\n')
       representData.push(
         convertNestedArrayToTreeList({
           label: '`Open PRs:`',
@@ -333,10 +336,10 @@ export const getUserActivitiesTool = createTool({
     }
 
     if (mergedPRs.length > 0) {
-      representData.push('---')
+      representData.push('\n')
       representData.push(
         convertNestedArrayToTreeList({
-          label: '`Merged PRs:`',
+          label: '\n`Merged PRs:`',
           children: mergedPRs.map((pr) => ({
             label: `[#${pr.number}](${pr.html_url}) ${pr.title}`,
           })),
@@ -345,10 +348,9 @@ export const getUserActivitiesTool = createTool({
     }
 
     if (wipPRs.length > 0) {
-      representData.push('---')
       representData.push(
         convertNestedArrayToTreeList({
-          label: '`WIP PRs:`',
+          label: '\n`WIP PRs:`',
           children: wipPRs.map((pr) => ({
             label: `[#${pr.number}](${pr.html_url}) ${pr.title}`,
           })),
@@ -356,12 +358,11 @@ export const getUserActivitiesTool = createTool({
       )
     }
 
-    if (participatedPRs.length > 0) {
-      representData.push('---')
+    if (needToReviewPRs.length > 0) {
       representData.push(
         convertNestedArrayToTreeList({
-          label: '`Participated PRs:`',
-          children: participatedPRs.map((pr) => ({
+          label: '\n`Need to review:`',
+          children: needToReviewPRs.map((pr) => ({
             label: `[#${pr.number}](${pr.html_url}) ${pr.title}`,
           })),
         }),
@@ -369,10 +370,9 @@ export const getUserActivitiesTool = createTool({
     }
 
     if (needYouToReviewPRs.length > 0) {
-      representData.push('---')
       representData.push(
         convertNestedArrayToTreeList({
-          label: '`Need you to review:`',
+          label: '\n`Need to assign reviewer:`',
           children: needYouToReviewPRs.map((pr) => ({
             label: `[#${pr.number}](${pr.html_url}) ${pr.title}`,
           })),
@@ -381,10 +381,10 @@ export const getUserActivitiesTool = createTool({
     }
 
     if (commits.length > 0) {
-      representData.push('---')
+      representData.push('\n')
       representData.push(
         convertNestedArrayToTreeList({
-          label: '`Commits:`',
+          label: '\n`Commits:`',
           children: commits.map((c) => ({
             label: `[${c.sha.substring(0, 8)}](${c.html_url}) ${c.commit.message}`,
           })),
@@ -393,7 +393,10 @@ export const getUserActivitiesTool = createTool({
     }
 
     return {
-      rawText: representData.join('\n'),
+      rawText: representData
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim(),
     }
   },
 })

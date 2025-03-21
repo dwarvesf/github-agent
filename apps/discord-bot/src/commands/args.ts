@@ -12,7 +12,9 @@ export class Args {
     name: Lang.getRef('arguments.command', Language.Default),
     name_localizations: Lang.getRefLocalizationMap('arguments.command'),
     description: Lang.getRef('argDescs.devCommand', Language.Default),
-    description_localizations: Lang.getRefLocalizationMap('argDescs.devCommand'),
+    description_localizations: Lang.getRefLocalizationMap(
+      'argDescs.devCommand',
+    ),
     type: ApplicationCommandOptionType.String,
     choices: [
       {
@@ -21,31 +23,39 @@ export class Args {
         value: DevCommandName.INFO,
       },
     ],
-  };
+  }
   public static readonly HELP_OPTION: APIApplicationCommandBasicOption = {
     name: Lang.getRef('arguments.option', Language.Default),
     name_localizations: Lang.getRefLocalizationMap('arguments.option'),
     description: Lang.getRef('argDescs.helpOption', Language.Default),
-    description_localizations: Lang.getRefLocalizationMap('argDescs.helpOption'),
+    description_localizations: Lang.getRefLocalizationMap(
+      'argDescs.helpOption',
+    ),
     type: ApplicationCommandOptionType.String,
     choices: [
       {
         name: Lang.getRef('helpOptionDescs.contactSupport', Language.Default),
-        name_localizations: Lang.getRefLocalizationMap('helpOptionDescs.contactSupport'),
+        name_localizations: Lang.getRefLocalizationMap(
+          'helpOptionDescs.contactSupport',
+        ),
         value: HelpOption.CONTACT_SUPPORT,
       },
       {
         name: Lang.getRef('helpOptionDescs.commands', Language.Default),
-        name_localizations: Lang.getRefLocalizationMap('helpOptionDescs.commands'),
+        name_localizations: Lang.getRefLocalizationMap(
+          'helpOptionDescs.commands',
+        ),
         value: HelpOption.COMMANDS,
       },
     ],
-  };
+  }
   public static readonly INFO_OPTION: APIApplicationCommandBasicOption = {
     name: Lang.getRef('arguments.option', Language.Default),
     name_localizations: Lang.getRefLocalizationMap('arguments.option'),
     description: Lang.getRef('argDescs.helpOption', Language.Default),
-    description_localizations: Lang.getRefLocalizationMap('argDescs.helpOption'),
+    description_localizations: Lang.getRefLocalizationMap(
+      'argDescs.helpOption',
+    ),
     type: ApplicationCommandOptionType.String,
     choices: [
       {
@@ -59,12 +69,14 @@ export class Args {
         value: InfoOption.TRANSLATE,
       },
     ],
-  };
+  }
   public static readonly PROMPT: APIApplicationCommandBasicOption = {
     name: Lang.getRef('arguments.promptText', Language.Default),
     name_localizations: Lang.getRefLocalizationMap('arguments.promptText'),
     description: Lang.getRef('argDescs.promptText', Language.Default),
-    description_localizations: Lang.getRefLocalizationMap('argDescs.promptText'),
+    description_localizations: Lang.getRefLocalizationMap(
+      'argDescs.promptText',
+    ),
     type: ApplicationCommandOptionType.String,
-  };
+  }
 }

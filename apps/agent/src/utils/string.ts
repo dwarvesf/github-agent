@@ -18,11 +18,14 @@ export const escapeSpecialCharactersForMarkdown = (input: string): string => {
 
 export const convertArrayToMarkdownTableList = (
   array: Array<{ label: string; value: string | number }>,
+  sameWidthLabels: boolean = true,
 ): string => {
   const maxKeyLength = Math.max(...array.map(({ label }) => label.length))
   return array
     .map(({ label, value }) => {
-      const padding = ' '.repeat(maxKeyLength - label.length + 1)
+      const padding = !sameWidthLabels
+        ? ''
+        : ' '.repeat(maxKeyLength - label.length + 1)
       return `\`${label}:${padding}\`  ${value}\n`
     })
     .join('')

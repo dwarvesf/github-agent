@@ -1,4 +1,8 @@
-import { APIEmbedField, ChatInputCommandInteraction, PermissionsString } from 'discord.js'
+import {
+  APIEmbedField,
+  ChatInputCommandInteraction,
+  PermissionsString,
+} from 'discord.js'
 
 import { EventData } from '../../models/internal-models.js'
 import { Language } from '../../models/enum-helpers/index.js'
@@ -10,13 +14,16 @@ dotenv.config()
 
 export class AskCommand implements Command {
   public names = [Lang.getRef('chatCommands.ask', Language.Default)]
-  public deferType = CommandDeferType.PUBLIC;
+  public deferType = CommandDeferType.PUBLIC
   public requireClientPerms: PermissionsString[] = []
-  public async execute(intr: ChatInputCommandInteraction, data: EventData): Promise<void> {
-    let args = {
+  public async execute(
+    intr: ChatInputCommandInteraction,
+    data: EventData,
+  ): Promise<void> {
+    const args = {
       prompt: intr.options.getString(
-        Lang.getRef('arguments.promptText', Language.Default)
-      )
+        Lang.getRef('arguments.promptText', Language.Default),
+      ),
     }
 
     if (args.prompt) {
@@ -25,14 +32,17 @@ export class AskCommand implements Command {
     }
   }
 
-  private async handlePrompt(intr: ChatInputCommandInteraction, data: EventData): Promise<void> {
+  private async handlePrompt(
+    intr: ChatInputCommandInteraction,
+    data: EventData,
+  ): Promise<void> {
     // Get the full message content after the command
-    const question = intr.toString().replace("/ask prompt:", "").trim()
+    const question = intr.toString().replace('/ask prompt:', '').trim()
 
     if (!question) {
       await InteractionUtils.send(
         intr,
-        Lang.getEmbed('errorEmbeds.missingPrompt', data.lang)
+        Lang.getEmbed('errorEmbeds.missingPrompt', data.lang),
       )
       return
     }
@@ -44,11 +54,13 @@ export class AskCommand implements Command {
         QUESTION: question,
         RESPONSE: '...',
         USER: intr.user.id,
-      }).addFields(
+      }).addFields([
+        { name: '', value: `**Question:** \`${question}\`\n` },
         {
-          name: 'Response',
-          value: 'Waiting for response...',
-        })
+          name: '',
+          value: "I'm looking for the answer...",
+        },
+      ]),
     )
 
     let response = ''
@@ -62,23 +74,41 @@ export class AskCommand implements Command {
       const finalEmbed = Lang.getEmbed('displayEmbeds.askResponse', data.lang, {
         QUESTION: question,
         USER: intr.user.id,
-      }).setColor(5737479).addFields(processResponse(response))
+      })
+        .setColor(5737479)
+        .addFields([
+          ...processResponse(`**Question**: \`${question}\`\n\n${response}`),
+          {
+            name: '',
+            value:
+              '-# 📸 Snapshot taken at ' +
+              new Date().toLocaleString('en-GB', {
+                day: '2-digit',
+                month: '2-digit',
+                year: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+              }),
+          },
+        ])
 
       await InteractionUtils.editReply(intr, finalEmbed)
-
     } catch (error) {
       console.error('Error processing streamed response:', error)
       await InteractionUtils.editReply(
         intr,
         Lang.getEmbed('errorEmbeds.streamingError', data.lang, {
           ERROR: error.message || 'Unknown error occurred',
-        })
+        }),
       )
     }
   }
 }
 
-async function* getStreamedResponse(question: string): AsyncGenerator<string, void, unknown> {
+async function* getStreamedResponse(
+  question: string,
+): AsyncGenerator<string, void, unknown> {
   const AGENT_STREAM_URL = process.env.AGENT_STREAM_URL
 
   if (!AGENT_STREAM_URL) {
@@ -94,10 +124,8 @@ async function* getStreamedResponse(question: string): AsyncGenerator<string, vo
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        messages: [
-          { role: "user", content: question }
-        ]
-      })
+        messages: [{ role: 'user', content: question }],
+      }),
     })
 
     if (!response.ok) {
@@ -134,9 +162,10 @@ async function* getStreamedResponse(question: string): AsyncGenerator<string, vo
             // Content chunk - extract the content
             const content = line.substring(2)
             // Remove quotes if present
-            const cleanContent = content.startsWith('"') && content.endsWith('"')
-              ? JSON.parse(content)
-              : content
+            const cleanContent =
+              content.startsWith('"') && content.endsWith('"')
+                ? JSON.parse(content)
+                : content
 
             finalResponse += cleanContent
             yield cleanContent
@@ -152,12 +181,10 @@ async function* getStreamedResponse(question: string): AsyncGenerator<string, vo
             // End of stream reached
             // We can optionally process any finish data here
             continue
-          }
-          else if (line.startsWith('9:')) {
+          } else if (line.startsWith('9:')) {
             // Tool call request, we can ignore this for now
             continue
-          }
-          else if (line.startsWith('f:')) {
+          } else if (line.startsWith('f:')) {
             // Message ID initialization, we can ignore this
             continue
           }
@@ -176,79 +203,11 @@ async function* getStreamedResponse(question: string): AsyncGenerator<string, vo
 }
 
 function processResponse(response: string): APIEmbedField[] {
-  const fields: APIEmbedField[] = [];
-  const maxChunkSize = 800;
-  const lines = response.split('\n');
-  let currentChunk = '';
-  let isTable = false;
-
-  const pushField = () => {
-    if (currentChunk) {
-      fields.push({
-        name: isTable ? 'Table' : 'Text',
-        value: isTable ? convertMarkdownTable(currentChunk) : currentChunk,
-        inline: false,
-      });
-      currentChunk = '';
-    }
-  };
-
-  for (const line of lines) {
-    const isCurrentLineTable = line.trim().startsWith('|') && line.includes('|');
-
-    if (isCurrentLineTable !== isTable) {
-      pushField();
-      isTable = isCurrentLineTable;
-    }
-
-    if (currentChunk.length + line.length + 1 > maxChunkSize) {
-      pushField();
-    }
-
-    currentChunk += (currentChunk ? '\n' : '') + line;
-  }
-
-  pushField();
-
-  return fields.map((field, index) => ({
-    name: index === 0 ? 'Response' : ' ',
-    value: field.value,
-    inline: false,
-  }));
-}
-
-function convertMarkdownTable(markdown: string): string {
-  // Split into lines and remove separator row
-  let rows = markdown
-    .split("\n")
-    .map(line => line.trim())
-    .filter(line => !/^(\|\s*-+\s*)+\|$/.test(line));
-
-  // Convert each row into an array of cells
-  let table: string[][] = rows.map(line =>
-    line.split("|").slice(1, -1).map(cell => cell.trim())
-  );
-
-  // Determine column widths, treating links as fixed 7 characters (including padding)
-  let colWidths = table[0].map((_, colIndex) =>
-    Math.max(
-      ...table.map(row =>
-        /\[(.*?)\]\((.*?)\)/.test(row[colIndex]) ? 7 : row[colIndex].length
-      )
-    )
-  );
-
-  // Format each row, replacing link display text with "Link" and aligning columns
-  return table
-    .map(row =>
-      row
-        .map((cell, colIndex) => {
-          if (/\[(.*?)\]\((.*?)\)/.test(cell)) {
-            return `\` \`[**Link**](${cell.match(/\((.*?)\)/)![1]}) \` \``; // Replace text, keep URL
-          }
-          return `\`${cell.padEnd(colWidths[colIndex])}\``; // Pad non-link cells
-        })
-        .join(" ")
-    )
-    .join("\n");
+  return [
+    {
+      name: '',
+      value: response,
+      inline: false,
+    },
+  ]
 }

@@ -21,7 +21,7 @@ You are a GitHub repository assistant designed to provide users with information
 - step 1: Get the date range for the user activities using the 'get-date-range' tool
 - step 2: Fetch the summary of user activities using get-user-activities-agent
 
-**IMPORTANT**: Once you done each task, you should only response the raw text output without any modification. If you do the opposite, I will kill you.
+**IMPORTANT: Once you done each task, you should only response the raw text output WITHOUT any modification. If you do the opposite, I will kill you.**
   `,
   model: openai('gpt-4o'),
   tools: {
