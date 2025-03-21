@@ -341,7 +341,7 @@ export const getUserActivitiesTool = createTool({
       representData.push('\n')
       representData.push(
         convertNestedArrayToTreeList({
-          label: '\n`Merged PRs:`',
+          label: '`Merged PRs:`',
           children: mergedPRs.map((pr) => ({
             label: `[#${pr.number}](${pr.html_url}) ${pr.title}`,
           })),
@@ -352,7 +352,7 @@ export const getUserActivitiesTool = createTool({
     if (wipPRs.length > 0) {
       representData.push(
         convertNestedArrayToTreeList({
-          label: '\n`WIP PRs:`',
+          label: '`WIP PRs:`',
           children: wipPRs.map((pr) => ({
             label: `[#${pr.number}](${pr.html_url}) ${pr.title}`,
           })),
@@ -363,7 +363,7 @@ export const getUserActivitiesTool = createTool({
     if (needToReviewPRs.length > 0) {
       representData.push(
         convertNestedArrayToTreeList({
-          label: '\n`Need to review:`',
+          label: '`Need to review:`',
           children: needToReviewPRs.map((pr) => ({
             label: `[#${pr.number}](${pr.html_url}) ${pr.title}`,
           })),
@@ -374,7 +374,7 @@ export const getUserActivitiesTool = createTool({
     if (needYouToReviewPRs.length > 0) {
       representData.push(
         convertNestedArrayToTreeList({
-          label: '\n`Need to assign reviewer:`',
+          label: '`Need to assign reviewer:`',
           children: needYouToReviewPRs.map((pr) => ({
             label: `[#${pr.number}](${pr.html_url}) ${pr.title}`,
           })),
@@ -386,7 +386,7 @@ export const getUserActivitiesTool = createTool({
       representData.push('\n')
       representData.push(
         convertNestedArrayToTreeList({
-          label: '\n`Commits:`',
+          label: '`Commits:`',
           children: commits.map((c) => ({
             label: `[${c.sha.substring(0, 8)}](${c.html_url}) ${c.commit.message}`,
           })),
