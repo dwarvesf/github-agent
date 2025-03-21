@@ -1,10 +1,5 @@
+import { GITHUB_CONFIGURATION } from '../config'
 import { Commit } from './type'
-
-// GitHub API configuration
-const GITHUB_API_URL = 'https://api.github.com'
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN
-export const GITHUB_OWNER = process.env.GITHUB_OWNER
-export const GITHUB_REPO = process.env.GITHUB_REPO as string
 
 interface PullRequest {
   number: number
@@ -50,26 +45,12 @@ class GitHubClient {
   private repo: string
 
   constructor() {
-    if (!GITHUB_TOKEN) {
-      throw new Error('GITHUB_TOKEN environment variable is not set')
-    }
-
-    if (!GITHUB_OWNER) {
-      throw new Error('GITHUB_OWNER environment variable is not set')
-    }
-
-    if (!GITHUB_REPO) {
-      throw new Error(
-        'GITHUB_REPO environment variable is not set (needed for some operations)',
-      )
-    }
-
     this.headers = {
-      Authorization: `token ${GITHUB_TOKEN}`,
+      Authorization: `token ${GITHUB_CONFIGURATION.GITHUB_TOKEN}`,
       Accept: 'application/vnd.github.v3+json',
     }
-    this.owner = GITHUB_OWNER
-    this.repo = GITHUB_REPO
+    this.owner = GITHUB_CONFIGURATION.GITHUB_OWNER
+    this.repo = GITHUB_CONFIGURATION.GITHUB_REPO
   }
 
   /**
@@ -82,7 +63,7 @@ class GitHubClient {
     if (repo) {
       query += ` repo:${repo}`
     }
-    const url = `${GITHUB_API_URL}/search/issues?q=${encodeURIComponent(query)}&sort=updated&order=desc`
+    const url = `${GITHUB_CONFIGURATION.GITHUB_API_URL}/search/issues?q=${encodeURIComponent(query)}&sort=updated&order=desc`
 
     try {
       const response = await fetch(url, { headers: this.headers })
@@ -106,7 +87,7 @@ class GitHubClient {
         const prNumber = parseInt(urlParts[urlParts.length - 1], 10)
 
         // Get full PR details
-        const prUrl = `${GITHUB_API_URL}/repos/${this.owner}/${repoName}/pulls/${prNumber}`
+        const prUrl = `${GITHUB_CONFIGURATION.GITHUB_API_URL}/repos/${this.owner}/${repoName}/pulls/${prNumber}`
         const prResponse = await fetch(prUrl, { headers: this.headers })
 
         if (prResponse.ok) {
@@ -130,7 +111,7 @@ class GitHubClient {
    */
   async getPrDetails(prNumber: number): Promise<PullRequest> {
     // Get the PR details
-    const prUrl = `${GITHUB_API_URL}/repos/${this.owner}/${this.repo}/pulls/${prNumber}`
+    const prUrl = `${GITHUB_CONFIGURATION.GITHUB_API_URL}/repos/${this.owner}/${this.repo}/pulls/${prNumber}`
     const prResponse = await fetch(prUrl, { headers: this.headers })
 
     if (!prResponse.ok) {
@@ -142,7 +123,7 @@ class GitHubClient {
     const pr = (await prResponse.json()) as PullRequest
 
     // Get reviews
-    const reviewsUrl = `${GITHUB_API_URL}/repos/${this.owner}/${this.repo}/pulls/${prNumber}/reviews`
+    const reviewsUrl = `${GITHUB_CONFIGURATION.GITHUB_API_URL}/repos/${this.owner}/${this.repo}/pulls/${prNumber}/reviews`
     const reviewsResponse = await fetch(reviewsUrl, { headers: this.headers })
 
     const reviews = await reviewsResponse.json()
@@ -297,7 +278,7 @@ class GitHubClient {
 
   // Helper function to fetch PRs from the GitHub search API
   private async fetchPRs(query: string): Promise<PullRequest[]> {
-    const url = `${GITHUB_API_URL}/search/issues?q=${encodeURIComponent(query)}&sort=updated&order=desc`
+    const url = `${GITHUB_CONFIGURATION.GITHUB_API_URL}/search/issues?q=${encodeURIComponent(query)}&sort=updated&order=desc`
 
     const response = await fetch(url, { headers: this.headers })
 
@@ -320,7 +301,7 @@ class GitHubClient {
     const urlParts = item.html_url.split('/')
     const repoName = urlParts[urlParts.length - 3]
     const prNumber = parseInt(urlParts[urlParts.length - 1], 10)
-    const prUrl = `${GITHUB_API_URL}/repos/${this.owner}/${repoName}/pulls/${prNumber}`
+    const prUrl = `${GITHUB_CONFIGURATION.GITHUB_API_URL}/repos/${this.owner}/${repoName}/pulls/${prNumber}`
 
     const prResponse = await fetch(prUrl, { headers: this.headers })
 
@@ -359,7 +340,7 @@ class GitHubClient {
         queryParams.append('until', `${to}T23:59:59Z`)
       }
 
-      const url = `${GITHUB_API_URL}/repos/${this.owner}/${repo}/commits?${queryParams.toString()}`
+      const url = `${GITHUB_CONFIGURATION.GITHUB_API_URL}/repos/${this.owner}/${repo}/commits?${queryParams.toString()}`
       const response = await fetch(url, { headers: this.headers })
 
       if (!response.ok) {

@@ -1,6 +1,4 @@
-// Discord API configuration
-const DISCORD_BOT_BASE_URL = `${process.env.DISCORD_BOT_BASE_URL}/webhook`
-export const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID || ''
+import { DISCORD_CONFIGURATION } from '../config'
 
 /**
  * Discord client for making requests to the Discord webhook
@@ -29,15 +27,18 @@ class DiscordClient {
     message?: string
     embed?: Record<string, unknown>
   }): Promise<string> {
-    const response = await fetch(`${DISCORD_BOT_BASE_URL}/channel`, {
-      method: 'POST',
-      headers: this.headers,
-      body: JSON.stringify({
-        channelId,
-        message,
-        embed,
-      }),
-    })
+    const response = await fetch(
+      `${DISCORD_CONFIGURATION.DISCORD_BOT_BASE_URL}/channel`,
+      {
+        method: 'POST',
+        headers: this.headers,
+        body: JSON.stringify({
+          channelId,
+          message,
+          embed,
+        }),
+      },
+    )
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -61,15 +62,18 @@ class DiscordClient {
     message?: string
     embed?: Record<string, unknown>
   }): Promise<string> {
-    const response = await fetch(`${DISCORD_BOT_BASE_URL}/user`, {
-      method: 'POST',
-      headers: this.headers,
-      body: JSON.stringify({
-        userId,
-        message,
-        embed,
-      }),
-    })
+    const response = await fetch(
+      `${DISCORD_CONFIGURATION.DISCORD_BOT_BASE_URL}/user`,
+      {
+        method: 'POST',
+        headers: this.headers,
+        body: JSON.stringify({
+          userId,
+          message,
+          embed,
+        }),
+      },
+    )
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
