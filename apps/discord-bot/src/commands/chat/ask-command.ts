@@ -1,5 +1,4 @@
 import {
-  APIEmbedField,
   ChatInputCommandInteraction,
   PermissionsString,
 } from 'discord.js'
@@ -8,7 +7,7 @@ import { EventData } from '../../models/internal-models.js'
 import { Language } from '../../models/enum-helpers/index.js'
 import { Lang } from '../../services/index.js'
 import { InteractionUtils } from '../../utils/index.js'
-import { Command, CommandDeferType } from '../index.js'
+import { Command, CommandDeferType, ProcessResponseToEmbedFields } from '../index.js'
 import dotenv from 'dotenv'
 dotenv.config()
 
@@ -70,6 +69,8 @@ export class AskCommand implements Command {
         response += chunk
       }
 
+      const processedResponse = await ProcessResponseToEmbedFields(intr.client, intr.guildId, `**Question**: \`${question}\`\n\n${response}`)
+
       // Set the embed color to 5737479 when the stream is complete
       const finalEmbed = Lang.getEmbed('displayEmbeds.askResponse', data.lang, {
         QUESTION: question,
@@ -77,7 +78,7 @@ export class AskCommand implements Command {
       })
         .setColor(5737479)
         .addFields([
-          ...processResponse(`**Question**: \`${question}\`\n\n${response}`),
+          ...processedResponse,
           {
             name: '',
             value:
@@ -202,83 +203,3 @@ async function* getStreamedResponse(
   }
 }
 
-function processResponse(response: string): APIEmbedField[] {
-  const fields: APIEmbedField[] = []
-  const maxChunkSize = 800
-  const lines = response.split('\n')
-  let currentChunk = ''
-  let isTable = false
-
-  const pushField = () => {
-    if (currentChunk) {
-      fields.push({
-        name: isTable ? 'Table' : 'Text',
-        value: isTable ? convertMarkdownTable(currentChunk) : currentChunk,
-        inline: false,
-      })
-      currentChunk = ''
-    }
-  }
-
-  for (const line of lines) {
-    const isCurrentLineTable = line.trim().startsWith('|') && line.includes('|')
-
-    if (isCurrentLineTable !== isTable) {
-      pushField()
-      isTable = isCurrentLineTable
-    }
-
-    if (currentChunk.length + line.length + 1 > maxChunkSize) {
-      pushField()
-    }
-
-    currentChunk += (currentChunk ? '\n' : '') + line
-  }
-
-  pushField()
-
-  return fields.map((field) => ({
-    name: '',
-    value: field.value,
-    inline: false,
-  }))
-}
-
-function convertMarkdownTable(markdown: string): string {
-  // Split into lines and remove separator row
-  const rows = markdown
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => !/^(\|\s*-+\s*)+\|$/.test(line))
-
-  // Convert each row into an array of cells
-  const table: string[][] = rows.map((line) =>
-    line
-      .split('|')
-      .slice(1, -1)
-      .map((cell) => cell.trim()),
-  )
-
-  // Determine column widths, treating links as fixed 7 characters (including padding)
-  const colWidths = table[0].map((_, colIndex) =>
-    Math.max(
-      ...table.map((row) =>
-        /\[(.*?)\]\((.*?)\)/.test(row[colIndex]) ? 7 : row[colIndex].length,
-      ),
-    ),
-  )
-
-  // Format each row, replacing link display text with "Link" and aligning columns
-  return table
-    .map((row) =>
-      row
-        .map((cell, colIndex) => {
-          if (/\[(.*?)\]\((.*?)\)/.test(cell)) {
-            return `\` \`[**Link**](${cell.match(/\((.*?)\)/)![1]}) \` \`` // Replace text, keep URL
-          }
-          return `\`${cell.padEnd(colWidths[colIndex])}\`` // Pad non-link cells
-        })
-        .join(' '),
-    )
-    .join('\n')
-}
