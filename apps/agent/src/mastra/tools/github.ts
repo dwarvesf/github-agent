@@ -29,6 +29,7 @@ export const getOrgOpenPRsTool = createTool({
     const prs = await githubClient.getOrgOpenPRs('github-agent')
 
     return prs.map((pr) => ({
+      body: pr.body,
       number: pr.number,
       title: pr.title,
       url: pr.html_url,
@@ -61,6 +62,7 @@ export const getPrDetailsTool = createTool({
     reviewers: z.array(z.string()),
     hasComments: z.boolean(),
     hasReviews: z.boolean(),
+    body: z.string(),
   }),
   execute: async ({ context }) => {
     const pr = await githubClient.getPrDetails(context.prNumber)
@@ -79,6 +81,7 @@ export const getPrDetailsTool = createTool({
       reviewers: pr.requested_reviewers.map((reviewer) => reviewer.login),
       hasComments: pr.comments > 0 || pr.review_comments > 0,
       hasReviews: pr.reviews && pr.reviews.length > 0,
+      body: pr.body,
     }
   },
 })
@@ -105,6 +108,7 @@ export const getTodayPRListTool = createTool({
           reviewers: z.array(z.string()),
           hasComments: z.boolean(),
           hasReviews: z.boolean(),
+          body: z.string(),
         }),
       ),
     })
@@ -132,6 +136,7 @@ export const getTodayPRListTool = createTool({
         reviewers: pr.requested_reviewers.map((reviewer) => reviewer.login),
         hasComments: pr.comments > 0 || pr.review_comments > 0,
         hasReviews: pr.reviews && pr.reviews.length > 0,
+        body: pr.body,
       })),
     }
   },
@@ -177,6 +182,7 @@ export const getPullRequestTool = createTool({
           reviewers: z.array(z.string()),
           hasComments: z.boolean(),
           hasReviews: z.boolean(),
+          body: z.string(),
         }),
       ),
     })
@@ -210,6 +216,7 @@ export const getPullRequestTool = createTool({
         reviewers: pr.requested_reviewers.map((reviewer) => reviewer.login),
         hasComments: pr.comments > 0 || pr.review_comments > 0,
         hasReviews: pr.reviews && pr.reviews.length > 0,
+        body: pr.body,
       })),
     }
   },

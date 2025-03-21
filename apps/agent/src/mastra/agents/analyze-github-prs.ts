@@ -43,3 +43,45 @@ export const analyzePRsAgent = new Agent({
   `,
   model: openai('gpt-4o-mini'),
 })
+
+// currently we are not reading the PR changes, so we can't auto generate the description
+export const suggestPRDescriptionAgent = new Agent({
+  name: 'agent suggest PR description',
+  instructions: `
+    You are an AI assistant tasked with reviewing and improving pull request (PR) titles and descriptions. Your goal is to ensure they are clear, concise, and informative.
+    Title Optimization:
+      Do not generate a specific title, just suggest improvements. Make sure the title followed the format <type>(scope)?: <message>. examples of a valid message: feat: add something awesome, fix(agent): remove annoying typo
+
+    Description Improvements:
+      Do not generate a specific description, just suggest improvements. Ask the author to improve the description by adding the following:
+      - Problem Statement: Clearly define the issue this PR addresses.
+      - Solution: Summarize the changes introduced to fix the issue.
+
+    Output Format:
+    Return the updated title and description in the following JSON format:
+    \`\`\`
+    {
+      "suggestion_needed": boolean, // true if the PR needs improvement, false otherwise
+      "original_title": "string", // the original title
+      "original_body": "string", // the original description
+      "suggest_title": "string", // the suggested title improvement, empty if no suggestion
+      "suggest_body": "string" // the suggested description improvement, empty if no suggestion
+    }
+    \`\`\`
+
+    Example:
+      User input:
+        Title: "Fix the bug"
+        Description: "I fixed the bug"
+
+      Response:
+      {
+        "suggestion_needed": true,
+        "original_title": "Fix the bug",
+        "original_body": "I fixed the bug",
+        "suggest_title": "Your can consider adding more details to the title, and apply naming conventions such as fix, feat, refactor...",
+        "suggest_body": "Your description is too vague, consider adding a concise problem statement and solution"
+      }
+  `,
+  model: openai('gpt-4o-mini'),
+})

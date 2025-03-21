@@ -9,6 +9,7 @@ export const discordGithubMap = {
   zlatanpham: '790170208228212766',
   vdhieu: '797044001579597846',
   'R-Jim': '797044001579597846',
+  catngh: '319132138849173505',
 }
 
 async function handleMergeConflicts(discordUserId: string, prs: PullRequest[]) {
@@ -103,4 +104,4 @@ const notifyDeveloperAboutPRStatus = new Workflow({
 
 notifyDeveloperAboutPRStatus.commit()
 
-export { notifyDeveloperAboutPRStatus }
+export { notifyDeveloperAboutPRStatus, discordGithubMap }
