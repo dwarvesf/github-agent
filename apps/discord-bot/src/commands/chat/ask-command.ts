@@ -203,11 +203,82 @@ async function* getStreamedResponse(
 }
 
 function processResponse(response: string): APIEmbedField[] {
-  return [
-    {
-      name: '',
-      value: response,
-      inline: false,
-    },
-  ]
+  const fields: APIEmbedField[] = []
+  const maxChunkSize = 800
+  const lines = response.split('\n')
+  let currentChunk = ''
+  let isTable = false
+
+  const pushField = () => {
+    if (currentChunk) {
+      fields.push({
+        name: isTable ? 'Table' : 'Text',
+        value: isTable ? convertMarkdownTable(currentChunk) : currentChunk,
+        inline: false,
+      })
+      currentChunk = ''
+    }
+  }
+
+  for (const line of lines) {
+    const isCurrentLineTable = line.trim().startsWith('|') && line.includes('|')
+
+    if (isCurrentLineTable !== isTable) {
+      pushField()
+      isTable = isCurrentLineTable
+    }
+
+    if (currentChunk.length + line.length + 1 > maxChunkSize) {
+      pushField()
+    }
+
+    currentChunk += (currentChunk ? '\n' : '') + line
+  }
+
+  pushField()
+
+  return fields.map((field) => ({
+    name: '',
+    value: field.value,
+    inline: false,
+  }))
+}
+
+function convertMarkdownTable(markdown: string): string {
+  // Split into lines and remove separator row
+  const rows = markdown
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => !/^(\|\s*-+\s*)+\|$/.test(line))
+
+  // Convert each row into an array of cells
+  const table: string[][] = rows.map((line) =>
+    line
+      .split('|')
+      .slice(1, -1)
+      .map((cell) => cell.trim()),
+  )
+
+  // Determine column widths, treating links as fixed 7 characters (including padding)
+  const colWidths = table[0].map((_, colIndex) =>
+    Math.max(
+      ...table.map((row) =>
+        /\[(.*?)\]\((.*?)\)/.test(row[colIndex]) ? 7 : row[colIndex].length,
+      ),
+    ),
+  )
+
+  // Format each row, replacing link display text with "Link" and aligning columns
+  return table
+    .map((row) =>
+      row
+        .map((cell, colIndex) => {
+          if (/\[(.*?)\]\((.*?)\)/.test(cell)) {
+            return `\` \`[**Link**](${cell.match(/\((.*?)\)/)![1]}) \` \`` // Replace text, keep URL
+          }
+          return `\`${cell.padEnd(colWidths[colIndex])}\`` // Pad non-link cells
+        })
+        .join(' '),
+    )
+    .join('\n')
 }

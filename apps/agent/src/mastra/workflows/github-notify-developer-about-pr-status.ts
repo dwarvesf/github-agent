@@ -4,12 +4,7 @@ import * as z from 'zod'
 import { discordClient } from '../../lib/discord'
 import { groupBy } from '../../utils/array'
 import { PullRequest } from '../../lib/type'
-
-export const discordGithubMap = {
-  zlatanpham: '790170208228212766',
-  vdhieu: '797044001579597846',
-  'R-Jim': '797044001579597846',
-}
+import { DISCORD_GITHUB_MAP } from '../../constants/discord'
 
 async function handleMergeConflicts(discordUserId: string, prs: PullRequest[]) {
   const hasMergedConflictsPRs = prs.filter(
@@ -85,7 +80,7 @@ const notifyDeveloperAboutPRStatus = new Workflow({
         await Promise.all(
           Object.entries(byAuthor).map(async ([author, prs]) => {
             const discordUserId =
-              discordGithubMap[author as keyof typeof discordGithubMap]
+              DISCORD_GITHUB_MAP[author as keyof typeof DISCORD_GITHUB_MAP]
             if (discordUserId) {
               // Notify developer if their PR has merge conflicts
               await handleMergeConflicts(discordUserId, prs)

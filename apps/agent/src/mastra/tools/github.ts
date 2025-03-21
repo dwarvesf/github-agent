@@ -108,6 +108,8 @@ const prListSchema = z.object({
   ),
 })
 
+export type PRListOutputSchema = z.infer<typeof prListSchema>
+
 export const getTodayPRListTool = createTool({
   id: 'get-daily-pr-list-agent',
   description: 'Get a list of current pull requests',
