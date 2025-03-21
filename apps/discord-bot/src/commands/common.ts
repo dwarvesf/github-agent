@@ -6,7 +6,7 @@ const hardCodeIDMap = {
   vdhieu: '797044001579597846',
 }
 
-export function ReplaceGitHubMentions(
+export function replaceGitHubMentions(
   text: string,
   idMap: Record<string, string> = hardCodeIDMap,
 ): [string, Set<string>] {
@@ -24,7 +24,16 @@ export function ReplaceGitHubMentions(
   ]
 }
 
-export async function GetUsername(
+export function replaceDiscordMentions(
+  text: string,
+  idMap: Record<string, string> = hardCodeIDMap,
+): string {
+  return text.replace(/<@?(\d+)>/g, (match, discordId) => {
+    return "@"+(Object.entries(idMap).find(([_, v]) => v === discordId)?.[0] || match)
+  })
+}
+
+export async function getUsername(
   client: Client,
   user_id: string,
   guild_id?: string,
@@ -57,7 +66,7 @@ export async function processResponseToEmbedFields(
 ): Promise<APIEmbedField[]> {
   const fields: APIEmbedField[] = []
   const maxChunkSize = 800
-  const [lines, discordIDs] = ReplaceGitHubMentions(response)
+  const [lines, discordIDs] = replaceGitHubMentions(response)
   let currentChunk = ''
   let isTable = false
   const idUsernameMap = await mapDiscordUsernameToID(
@@ -95,8 +104,6 @@ export async function processResponseToEmbedFields(
   }
 
   pushField()
-
-  console.log(fields)
 
   return fields.map((field) => ({
     name: '',
@@ -166,7 +173,7 @@ async function mapDiscordUsernameToID(
 
   await Promise.all(
     Array.from(ids).map(async (id) => {
-      const username = await GetUsername(client, id, guildID)
+      const username = await getUsername(client, id, guildID)
       resultMap.set(id, username)
     }),
   )
