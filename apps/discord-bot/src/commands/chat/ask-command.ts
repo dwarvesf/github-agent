@@ -10,6 +10,7 @@ import {
   processResponseToEmbedFields,
 } from '../index.js'
 import dotenv from 'dotenv'
+import { replaceDiscordMentions } from '../common.js'
 dotenv.config()
 
 export class AskCommand implements Command {
@@ -37,7 +38,7 @@ export class AskCommand implements Command {
     data: EventData,
   ): Promise<void> {
     // Get the full message content after the command
-    const question = intr.toString().replace('/ask prompt:', '').trim()
+    const question = intr.toString().replace('/ask prompt:', '').trim() 
 
     if (!question) {
       await InteractionUtils.send(
@@ -51,11 +52,10 @@ export class AskCommand implements Command {
     await InteractionUtils.send(
       intr,
       Lang.getEmbed('displayEmbeds.askResponse', data.lang, {
-        QUESTION: question,
         RESPONSE: '...',
         USER: intr.user.id,
       }).addFields([
-        { name: '', value: `**Question:** \`${question}\`\n` },
+        { name: '', value: `**Question**: ${formatQuestionWithUserMention(question)}\n` },
         {
           name: '',
           value: "I'm looking for the answer...",
@@ -66,19 +66,18 @@ export class AskCommand implements Command {
     let response = ''
     try {
       // Process the stream
-      for await (const chunk of getStreamedResponse(question)) {
+      for await (const chunk of getStreamedResponse(`I am <@${intr.user.id}>, ${question}`)) {
         response += chunk
       }
 
       const processedResponse = await processResponseToEmbedFields(
         intr.client,
         intr.guildId,
-        `**Question**: \`${question}\`\n\n${response}`,
+        `**Question**: ${formatQuestionWithUserMention(question)}\n\n${response}`,
       )
 
       // Set the embed color to 5737479 when the stream is complete
       const finalEmbed = Lang.getEmbed('displayEmbeds.askResponse', data.lang, {
-        QUESTION: question,
         USER: intr.user.id,
       })
         .setColor(5737479)
@@ -122,6 +121,8 @@ async function* getStreamedResponse(
     yield 'Error: API endpoint not configured properly. Please contact an administrator.'
     return
   }
+
+  question = replaceDiscordMentions(question)
 
   try {
     const response = await fetch(AGENT_STREAM_URL, {
@@ -206,4 +207,8 @@ async function* getStreamedResponse(
     yield `Error: ${error.message || 'Failed to get response'}`
     throw error
   }
+}
+
+function formatQuestionWithUserMention(question: string): string {
+  return `\` ${question.replace(/(<@?\d+>)/g, '`$1`')} \``;
 }

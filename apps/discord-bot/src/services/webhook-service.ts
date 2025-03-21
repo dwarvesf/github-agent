@@ -2,7 +2,7 @@ import express from 'express'
 import bodyParser from 'body-parser'
 import { Client } from 'discord.js'
 import { Logger } from '../services/index.js'
-import { ReplaceGitHubMentions } from '../commands/index.js'
+import { replaceGitHubMentions } from '../commands/index.js'
 
 interface MessagePayload {
   content?: string
@@ -40,13 +40,13 @@ export class WebhookService {
     const payload: MessagePayload = {}
 
     if (request.message) {
-      payload.content = ReplaceGitHubMentions(request.message)[0]
+      payload.content = replaceGitHubMentions(request.message)[0]
     }
 
     if (request.embed) {
       // Process embed description if it exists
       if (request.embed.description) {
-        request.embed.description = ReplaceGitHubMentions(
+        request.embed.description = replaceGitHubMentions(
           request.embed.description,
         )[0]
       }
@@ -56,7 +56,7 @@ export class WebhookService {
         request.embed.fields = request.embed.fields.map((field) => ({
           ...field,
           value: field.value
-            ? ReplaceGitHubMentions(field.value)[0]
+            ? replaceGitHubMentions(field.value)[0]
             : field.value,
         }))
       }
