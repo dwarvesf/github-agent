@@ -176,42 +176,79 @@ async function* getStreamedResponse(question: string): AsyncGenerator<string, vo
 }
 
 function processResponse(response: string): APIEmbedField[] {
-  const fields: APIEmbedField[] = []
-  const maxChunkSize = 1024
-  const lines = response.split('\n')
-  let currentChunk = ''
-  let isTable = false
+  const fields: APIEmbedField[] = [];
+  const maxChunkSize = 800;
+  const lines = response.split('\n');
+  let currentChunk = '';
+  let isTable = false;
+
+  const pushField = () => {
+    if (currentChunk) {
+      fields.push({
+        name: isTable ? 'Table' : 'Text',
+        value: isTable ? convertMarkdownTable(currentChunk) : currentChunk,
+        inline: false,
+      });
+      currentChunk = '';
+    }
+  };
 
   for (const line of lines) {
-    if (line.trim().startsWith('|') && line.includes('|')) {
-      if (!isTable && currentChunk.length > 0) {
-        fields.push({ name: 'Text', value: currentChunk, inline: false })
-        currentChunk = ''
-      }
-      isTable = true
-    } else {
-      if (isTable && currentChunk.length > 0) {
-        fields.push({ name: 'Table', value: currentChunk, inline: false })
-        currentChunk = ''
-      }
-      isTable = false
+    const isCurrentLineTable = line.trim().startsWith('|') && line.includes('|');
+
+    if (isCurrentLineTable !== isTable) {
+      pushField();
+      isTable = isCurrentLineTable;
     }
 
     if (currentChunk.length + line.length + 1 > maxChunkSize) {
-      fields.push({ name: isTable ? 'Table' : 'Text', value: currentChunk, inline: false })
-      currentChunk = ''
+      pushField();
     }
 
-    currentChunk += (currentChunk ? '\n' : '') + line
+    currentChunk += (currentChunk ? '\n' : '') + line;
   }
 
-  if (currentChunk) {
-    fields.push({ name: isTable ? 'Table' : 'Text', value: currentChunk, inline: false })
-  }
+  pushField();
 
   return fields.map((field, index) => ({
-    name: index === 0 ? "Response" : field.name.replaceAll('Text', ' ').replaceAll('Table', ' '),
+    name: index === 0 ? 'Response' : ' ',
     value: field.value,
-    inline: false
-  }))
+    inline: false,
+  }));
+}
+
+function convertMarkdownTable(markdown: string): string {
+  // Split into lines and remove separator row
+  let rows = markdown
+    .split("\n")
+    .map(line => line.trim())
+    .filter(line => !/^(\|\s*-+\s*)+\|$/.test(line));
+
+  // Convert each row into an array of cells
+  let table: string[][] = rows.map(line =>
+    line.split("|").slice(1, -1).map(cell => cell.trim())
+  );
+
+  // Determine column widths, treating links as fixed 7 characters (including padding)
+  let colWidths = table[0].map((_, colIndex) =>
+    Math.max(
+      ...table.map(row =>
+        /\[(.*?)\]\((.*?)\)/.test(row[colIndex]) ? 7 : row[colIndex].length
+      )
+    )
+  );
+
+  // Format each row, replacing link display text with "Link" and aligning columns
+  return table
+    .map(row =>
+      row
+        .map((cell, colIndex) => {
+          if (/\[(.*?)\]\((.*?)\)/.test(cell)) {
+            return `\` \`[**Link**](${cell.match(/\((.*?)\)/)![1]}) \` \``; // Replace text, keep URL
+          }
+          return `\`${cell.padEnd(colWidths[colIndex])}\``; // Pad non-link cells
+        })
+        .join(" ")
+    )
+    .join("\n");
 }
