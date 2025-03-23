@@ -119,6 +119,7 @@ export const getTodayPRListTool = createTool({
     const prs = await githubClient.getOrgPRs('playground', {
       from: formatDate(new Date()),
     })
+    console.log('>>> TEST', prs)
 
     return {
       list: prs.map((pr) => ({
