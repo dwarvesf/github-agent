@@ -8,7 +8,7 @@ dotenv.config()
 const GITHUB_API_URL = 'https://api.github.com'
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN
 export const GITHUB_OWNER = process.env.GITHUB_OWNER
-export const GITHUB_REPO = process.env.GITHUB_REPO
+export const GITHUB_REPO = process.env.GITHUB_REPO || 'playground'
 
 interface PullRequest {
   number: number
@@ -225,7 +225,7 @@ class GitHubClient {
   }
 
   // https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests
-  async getOrgPRs(
+  async getRepoPRs(
     repo: string,
     params?: {
       isOpen?: boolean
