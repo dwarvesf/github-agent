@@ -1,6 +1,6 @@
 import { createTool } from '@mastra/core/tools'
 import { z } from 'zod'
-import { githubClient } from '../../lib/github'
+import { GITHUB_REPO, githubClient } from '../../lib/github'
 import { formatDate } from '../../utils/datetime'
 import {
   convertArrayToMarkdownTableList,
@@ -20,31 +20,6 @@ export const prsSchema = z.array(
     labels: z.array(z.string()),
   }),
 )
-
-export const getOrgOpenPRsTool = createTool({
-  id: 'get-org-open-prs',
-  description: 'Get open pull requests across the organization',
-  inputSchema: z.object({
-    repo: z.string().optional(),
-  }),
-  outputSchema: prsSchema,
-  execute: async ({ context }) => {
-    console.log('>>>', 'getOrgOpenPRsTool.context', context)
-    const prs = await githubClient.getOrgOpenPRs('playground')
-
-    return prs.map((pr) => ({
-      number: pr.number,
-      title: pr.title,
-      url: pr.html_url,
-      author: pr.user.login,
-      createdAt: pr.created_at,
-      updatedAt: pr.updated_at,
-      draft: pr.draft,
-      reviewers: pr.requested_reviewers.map((reviewer) => reviewer.login),
-      labels: pr.labels.map((label) => label.name),
-    }))
-  },
-})
 
 export const getPrDetailsTool = createTool({
   id: 'get-pr-details',
@@ -116,7 +91,7 @@ export const getTodayPRListTool = createTool({
   inputSchema: z.object({}),
   outputSchema: prListSchema.describe('PR JSON list'),
   execute: async () => {
-    const prs = await githubClient.getOrgPRs('playground', {
+    const prs = await githubClient.getRepoPRs(GITHUB_REPO, {
       from: formatDate(new Date()),
     })
 
@@ -167,7 +142,7 @@ export const getPullRequestTool = createTool({
   }),
   outputSchema: prListSchema.describe('PR JSON list'),
   execute: async ({ context }) => {
-    const prs = await githubClient.getOrgPRs('playground', {
+    const prs = await githubClient.getRepoPRs(GITHUB_REPO, {
       reviewerId: context.reviewerId,
       commenterId: context.commenterId,
       from: context.fromDate,
@@ -231,7 +206,7 @@ export const getCommitsTool = createTool({
     'List of commits in JSON format',
   ),
   execute: async ({ context }) => {
-    const commits = await githubClient.getRepoCommits('playground', {
+    const commits = await githubClient.getRepoCommits(GITHUB_REPO, {
       from: context.fromDate,
       to: context.toDate,
       authorId: context.authorId,
@@ -268,7 +243,7 @@ export const getUserActivitiesTool = createTool({
   }),
   outputSchema: z.object({ rawText: z.string() }),
   execute: async ({ context }) => {
-    const prs = await githubClient.getOrgPRs('playground', {
+    const prs = await githubClient.getRepoPRs(GITHUB_REPO, {
       from: context.fromDate,
       to: context.toDate,
       authorId: context.authorId,
@@ -282,7 +257,7 @@ export const getUserActivitiesTool = createTool({
 
     const wipPRs = prs.filter((pr) => githubClient.isWIP(pr))
 
-    const rawParticipatedPRs = await githubClient.getOrgPRs('playground', {
+    const rawParticipatedPRs = await githubClient.getRepoPRs(GITHUB_REPO, {
       from: context.fromDate,
       to: context.toDate,
       reviewerId: context.authorId,
@@ -292,7 +267,7 @@ export const getUserActivitiesTool = createTool({
       return !prs.find((p) => p.number === pr.number)
     })
 
-    const rawNeedYouToReviewPRs = await githubClient.getOrgPRs('playground', {
+    const rawNeedYouToReviewPRs = await githubClient.getRepoPRs(GITHUB_REPO, {
       from: context.fromDate,
       to: context.toDate,
       reviewerId: context.authorId,
@@ -302,7 +277,7 @@ export const getUserActivitiesTool = createTool({
       return githubClient.isWaitingForReview(pr)
     })
 
-    const commits = await githubClient.getRepoCommits('playground', {
+    const commits = await githubClient.getRepoCommits(GITHUB_REPO, {
       from: context.fromDate,
       to: context.toDate,
       authorId: context.authorId,
