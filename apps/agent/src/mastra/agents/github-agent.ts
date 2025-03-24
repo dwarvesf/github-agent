@@ -25,7 +25,6 @@ You are a GitHub repository assistant designed to provide users with information
   `,
   model: openai('gpt-4o'),
   tools: {
-    formatJSONListToMarkdownTable: tools.formatJSONListToMarkdownTable,
     formatCommitList: tools.formatCommitList,
     formatPullRequestList: tools.formatPullRequestList,
     getPullRequestTool: tools.getPullRequestTool,
