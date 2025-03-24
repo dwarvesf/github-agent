@@ -29,7 +29,10 @@ export function replaceDiscordMentions(
   idMap: Record<string, string> = hardCodeIDMap,
 ): string {
   return text.replace(/<@?(\d+)>/g, (match, discordId) => {
-    return "@"+(Object.entries(idMap).find(([_, v]) => v === discordId)?.[0] || match)
+    return (
+      '@' +
+      (Object.entries(idMap).find(([_, v]) => v === discordId)?.[0] || match)
+    )
   })
 }
 

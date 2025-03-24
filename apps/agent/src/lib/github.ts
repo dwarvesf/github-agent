@@ -8,7 +8,7 @@ dotenv.config()
 const GITHUB_API_URL = 'https://api.github.com'
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN
 export const GITHUB_OWNER = process.env.GITHUB_OWNER
-export const GITHUB_REPO = process.env.GITHUB_REPO || 'playground'
+export const GITHUB_REPO = process.env.GITHUB_REPO as string
 
 interface PullRequest {
   number: number

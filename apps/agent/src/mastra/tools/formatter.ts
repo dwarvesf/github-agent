@@ -5,7 +5,6 @@ import {
   convertNestedArrayToTreeList,
   escapeSpecialCharactersForMarkdown,
 } from '../../utils/string'
-import { DISCORD_GITHUB_MAP } from '../../constants/discord'
 
 function jsonToMarkdownTable(jsonArray: any[]): string {
   if (!Array.isArray(jsonArray) || jsonArray.length === 0) {

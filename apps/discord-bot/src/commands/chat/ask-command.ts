@@ -38,7 +38,7 @@ export class AskCommand implements Command {
     data: EventData,
   ): Promise<void> {
     // Get the full message content after the command
-    const question = intr.toString().replace('/ask prompt:', '').trim() 
+    const question = intr.toString().replace('/ask prompt:', '').trim()
 
     if (!question) {
       await InteractionUtils.send(
@@ -55,7 +55,10 @@ export class AskCommand implements Command {
         RESPONSE: '...',
         USER: intr.user.id,
       }).addFields([
-        { name: '', value: `**Question**: ${formatQuestionWithUserMention(question)}\n` },
+        {
+          name: '',
+          value: `**Question**: ${formatQuestionWithUserMention(question)}\n`,
+        },
         {
           name: '',
           value: "I'm looking for the answer...",
@@ -66,7 +69,9 @@ export class AskCommand implements Command {
     let response = ''
     try {
       // Process the stream
-      for await (const chunk of getStreamedResponse(`I am <@${intr.user.id}>, ${question}`)) {
+      for await (const chunk of getStreamedResponse(
+        `I am <@${intr.user.id}>, ${question}`,
+      )) {
         response += chunk
       }
 
@@ -210,5 +215,5 @@ async function* getStreamedResponse(
 }
 
 function formatQuestionWithUserMention(question: string): string {
-  return `\` ${question.replace(/(<@?\d+>)/g, '`$1`')} \``;
+  return `\` ${question.replace(/(<@?\d+>)/g, '`$1`')} \``
 }
