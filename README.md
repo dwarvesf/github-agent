@@ -36,8 +36,8 @@ development teams on GitHub. Key features:
 
 - Node.js (v20.0+)
 - pnpm (v8.0+)
+- GitHub Token & OpenAI API Key (for agent app)
 - Discord Bot Token (for discord-bot app)
-- GitHub Token (for agent app)
 
 ### Setup
 
@@ -54,19 +54,31 @@ cd github-agent
 pnpm install
 ```
 
-3. Copy environment files:
+3. Obtain service tokens:
+
+- Get your [OpenAI API key](https://platform.openai.com/api-keys) (or the LLM
+  provider of your choice)
+
+- Get your [GitHub API token](https://github.com/settings/tokens) with necessary
+  permissions to access the desired repositories
+
+- Create a
+  [Discord app](https://discord.com/developers/docs/quick-start/getting-started)
+  and obtain the token and ID
+
+4. Copy environment files:
 
 ```bash
 cp apps/agent/.env.example apps/agent/.env
 cp apps/discord-bot/.env.example apps/discord-bot/.env
 ```
 
-4. Configure environment variables:
+5. Configure environment variables:
 
 - Set up GitHub tokens and configurations in `apps/agent/.env`
 - Configure Discord bot settings in `apps/discord-bot/.env`
 
-5. Start development:
+6. Start development:
 
 ```bash
 pnpm dev
