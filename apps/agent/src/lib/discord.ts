@@ -1,8 +1,3 @@
-import dotenv from 'dotenv'
-
-// Load environment variables
-dotenv.config()
-
 // Discord API configuration
 const DISCORD_BOT_BASE_URL = `${process.env.DISCORD_BOT_BASE_URL}/webhook`
 export const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID || ''

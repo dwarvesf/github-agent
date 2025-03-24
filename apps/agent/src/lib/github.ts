@@ -1,8 +1,4 @@
-import dotenv from 'dotenv'
 import { Commit } from './type'
-
-// Load environment variables
-dotenv.config()
 
 // GitHub API configuration
 const GITHUB_API_URL = 'https://api.github.com'
