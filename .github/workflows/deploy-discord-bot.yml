@@ -1,0 +1,33 @@
+name: Deploy Discord Bot to Fly.io
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/discord-bot/**'
+      - '.github/workflows/deploy-discord-bot.yml'
+  # Allow manual triggering
+  workflow_dispatch:
+
+# Environment variables available to all jobs and steps in this workflow
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  deploy:
+    name: Deploy Discord Bot
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        run: |
+          echo "Deploying Discord bot to Fly.io..."
+          fly deploy --config apps/discord-bot/fly.toml --ha=false
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
