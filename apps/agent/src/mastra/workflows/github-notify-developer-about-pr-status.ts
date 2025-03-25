@@ -1,12 +1,10 @@
 import { Step, Workflow } from '@mastra/core/workflows'
 import { getTodayPRListTool } from '../tools'
-import * as z from 'zod'
 import { discordClient } from '../../lib/discord'
 import { groupBy } from '../../utils/array'
 import { PullRequest } from '../../lib/type'
-import { DISCORD_GITHUB_MAP } from '../../constants/discord'
 
-async function handleMergeConflicts(discordUserId: string, prs: PullRequest[]) {
+async function handleMergeConflicts(githubId: string, prs: PullRequest[]) {
   const hasMergedConflictsPRs = prs.filter(
     (pr: PullRequest) => pr.hasMergeConflicts,
   )
@@ -24,17 +22,14 @@ async function handleMergeConflicts(discordUserId: string, prs: PullRequest[]) {
     }
 
     await discordClient.sendMessageToUser({
-      userId: discordUserId,
+      userId: githubId,
       message: '',
       embed,
     })
   }
 }
 
-async function handleWaitingForReview(
-  discordUserId: string,
-  prs: PullRequest[],
-) {
+async function handleWaitingForReview(githubId: string, prs: PullRequest[]) {
   // Waiting for review
   const watingForReviewPrs = prs.filter(
     (pr: PullRequest) => pr.isWaitingForReview && !pr.hasMergeConflicts,
@@ -53,7 +48,7 @@ async function handleWaitingForReview(
     }
 
     await discordClient.sendMessageToUser({
-      userId: discordUserId,
+      userId: githubId,
       message: '',
       embed,
     })
@@ -68,8 +63,6 @@ const notifyDeveloperAboutPRStatus = new Workflow({
     new Step({
       id: 'send-to-discord',
       description: 'Send PR list to Discord',
-      inputSchema: z.object({}),
-      outputSchema: z.object({}),
       execute: async ({ context }) => {
         const output = context?.getStepResult<{ list: PullRequest[] }>(
           getTodayPRListTool.id,
@@ -79,15 +72,11 @@ const notifyDeveloperAboutPRStatus = new Workflow({
 
         await Promise.all(
           Object.entries(byAuthor).map(async ([author, prs]) => {
-            const discordUserId =
-              DISCORD_GITHUB_MAP[author as keyof typeof DISCORD_GITHUB_MAP]
-            if (discordUserId) {
-              // Notify developer if their PR has merge conflicts
-              await handleMergeConflicts(discordUserId, prs)
+            // Notify developer if their PR has merge conflicts
+            await handleMergeConflicts(author, prs)
 
-              // Notify developer if their PR needs to tag for review
-              await handleWaitingForReview(discordUserId, prs)
-            }
+            // Notify developer if their PR needs to tag for review
+            await handleWaitingForReview(author, prs)
           }),
         )
 
