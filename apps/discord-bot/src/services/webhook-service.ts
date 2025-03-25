@@ -3,6 +3,8 @@ import bodyParser from 'body-parser'
 import { Client } from 'discord.js'
 import { Logger } from '../services/index.js'
 import { replaceGitHubMentions } from '../commands/index.js'
+import { RootController } from '../controllers/root-controller.js'
+import { Controller } from '../controllers/index.js'
 
 interface MessagePayload {
   content?: string
@@ -157,6 +159,17 @@ export class WebhookService {
   }
 
   private setupRoutes(): void {
+    // Register controllers
+    const controllers: Controller[] = [
+      new RootController(),
+    ]
+
+    controllers.forEach(controller => {
+      controller.register()
+      this.app.use(controller.path, controller.router)
+    })
+
+    // Register webhook routes
     this.app.post('/webhook/channel', this.handleChannelMessage)
     this.app.post('/webhook/user', this.handleUserMessage)
   }
