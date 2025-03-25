@@ -1,4 +1,5 @@
 import { getOneLineCommit } from '../utils/string'
+import { getDaysDifference } from '../utils/datetime'
 import { Commit } from './type'
 
 // GitHub API configuration
@@ -75,13 +76,21 @@ class GitHubClient {
 
   /**
    * Get open pull requests across the organization
+   * @param repo Optional repository name to filter PRs
+   * @param authorId Optional author login to filter PRs by creator
    */
-  async getOrgOpenPRs(repo?: string): Promise<PullRequest[]> {
+  async getOrgOpenPRs(
+    repo?: string,
+    authorId?: string,
+  ): Promise<PullRequest[]> {
     // Using the search API to get all open PRs in the organization
     // https://docs.github.com/en/rest/search/search?apiVersion=2022-11-28#search-issues-and-pull-requests
     let query = `is:pr is:open org:${this.owner}`
     if (repo) {
       query += ` repo:${repo}`
+    }
+    if (authorId) {
+      query += ` author:${authorId}`
     }
     const url = `${GITHUB_API_URL}/search/issues?q=${encodeURIComponent(query)}&sort=updated&order=desc`
 
@@ -378,6 +387,92 @@ class GitHubClient {
       }))
     } catch (error) {
       console.error('Error fetching repository commits:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get open PRs that have been inactive (no updates or comments) for a specified period
+   * @param repo Repository name
+   * @param inactiveDays Number of days without activity to consider PR as inactive
+   * @returns Array of inactive pull requests
+   */
+  async getInactivePRs(
+    repo: string,
+    inactiveDays: number = 3,
+  ): Promise<PullRequest[]> {
+    try {
+      // Get all open PRs
+      const openPRs = await this.getRepoPRs(repo, {
+        isOpen: true,
+        isMerged: false,
+      })
+      const now = new Date()
+
+      // Filter PRs based on last activity
+      const inactivePRs = openPRs.filter((pr) => {
+        // Get the most recent date between updated_at and the latest review
+        const lastUpdated = new Date(pr.updated_at)
+        if (pr.reviews && pr.reviews.length > 0) {
+          const lastReviewDate = new Date(
+            Math.max(
+              ...pr.reviews.map((r) => new Date(r.submitted_at).getTime()),
+            ),
+          )
+          if (lastReviewDate > lastUpdated) {
+            return getDaysDifference(now, lastReviewDate) >= inactiveDays
+          }
+        }
+
+        return getDaysDifference(now, lastUpdated) >= inactiveDays
+      })
+
+      return inactivePRs
+    } catch (error) {
+      console.error('Error fetching inactive PRs:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get inactive PRs across all repositories in the organization
+   * @param repo Optional repository name to filter PRs
+   * @param params Optional parameters
+   * @param params.inactiveDays Number of days without activity to consider PR as inactive (default: 3)
+   * @param params.authorId Optional author login to filter PRs by creator
+   * @returns Array of inactive pull requests
+   */
+  async getOrgInactivePRs(
+    repo?: string,
+    params?: { inactiveDays?: number; authorId?: string },
+  ): Promise<PullRequest[]> {
+    const { inactiveDays = 3, authorId } = params || {}
+    try {
+      // Get all open PRs across the organization
+      const openPRs = await this.getOrgOpenPRs(repo, authorId)
+      const now = new Date()
+
+      // Filter PRs based on last activity
+      const inactivePRs = openPRs.filter((pr) => {
+        // Get the most recent date between updated_at and the latest review
+        const lastUpdated = new Date(pr.updated_at)
+        if (pr.reviews && pr.reviews.length > 0) {
+          const lastReviewDate = new Date(
+            Math.max(
+              ...pr.reviews.map((r) => new Date(r.submitted_at).getTime()),
+            ),
+          )
+          if (lastReviewDate > lastUpdated) {
+            return getDaysDifference(now, lastReviewDate) >= inactiveDays
+          }
+        }
+
+        return getDaysDifference(now, lastUpdated) >= inactiveDays
+      })
+
+      return inactivePRs
+    } catch (error) {
+      console.error('Error fetching organization inactive PRs:', error)
       throw error
     }
   }
