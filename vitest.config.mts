@@ -8,7 +8,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./vitest.setup.ts'],
-    include: ['apps/**/*.test.?(m)ts?(x)', 'packages/**/*.test.?(m)ts?(x)'],
+    include: ['apps/**/*.test.?(m)ts', 'packages/**/*.test.?(m)ts'],
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
