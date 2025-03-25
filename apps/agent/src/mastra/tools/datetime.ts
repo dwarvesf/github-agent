@@ -13,6 +13,102 @@ import {
 } from 'date-fns'
 import { formatDate } from '../../utils/datetime'
 
+// Helper function to parse relative time expressions
+export const parseRelativeTime = (
+  expr: string,
+): { from: Date; to: Date | null } | null => {
+  const today = new Date()
+  expr = expr.toLowerCase().trim()
+
+  // Single day cases
+  switch (expr) {
+    case 'today':
+      return { from: today, to: null }
+    case 'yesterday':
+      return { from: subDays(today, 1), to: subDays(today, 1) }
+  }
+
+  // Handle "this" periods
+  if (expr === 'this month') {
+    return { from: startOfMonth(today), to: today }
+  }
+  if (expr === 'this year') {
+    return { from: startOfYear(today), to: today }
+  }
+
+  // Handle "last X days" or "past X days"
+  const daysMatch = expr.match(/^(?:last|past)\s+(\d+)\s+days?$/)
+  if (daysMatch && typeof daysMatch[1] === 'string') {
+    const days = parseInt(daysMatch[1])
+    return {
+      from: subDays(today, days),
+      to: today,
+    }
+  }
+
+  // Handle "X days ago"
+  const daysAgoMatch = expr.match(/^(\d+)\s+days?\s+ago$/)
+  if (daysAgoMatch && typeof daysAgoMatch[1] === 'string') {
+    const days = parseInt(daysAgoMatch[1])
+    const date = subDays(today, days)
+    return { from: date, to: date }
+  }
+
+  // Handle "past week"
+  if (expr === 'past week') {
+    return {
+      from: subDays(today, 7),
+      to: today,
+    }
+  }
+
+  // Handle "last month" and "X months ago"
+  const monthsAgoMatch = expr.match(/^(\d+)\s+months?\s+ago$/)
+  if (monthsAgoMatch && typeof monthsAgoMatch[1] === 'string') {
+    const months = parseInt(monthsAgoMatch[1])
+    const date = subMonths(today, months)
+    return { from: date, to: date }
+  }
+
+  if (expr === 'last month') {
+    const lastMonth = subMonths(today, 1)
+    return {
+      from: startOfMonth(lastMonth),
+      to: endOfMonth(lastMonth),
+    }
+  }
+
+  // Handle "last X months" or "past X months"
+  const monthsMatch = expr.match(/^(?:last|past)\s+(\d+)\s+months?$/)
+  if (monthsMatch && typeof monthsMatch[1] === 'string') {
+    const months = parseInt(monthsMatch[1])
+    return {
+      from: startOfMonth(subMonths(today, months)),
+      to: endOfMonth(subMonths(today, 1)),
+    }
+  }
+
+  // Handle "last year" and "past X years"
+  if (expr === 'last year') {
+    const lastYear = subYears(today, 1)
+    return {
+      from: startOfYear(lastYear),
+      to: endOfYear(lastYear),
+    }
+  }
+
+  const yearsMatch = expr.match(/^(?:last|past)\s+(\d+)\s+years?$/)
+  if (yearsMatch && typeof yearsMatch[1] === 'string') {
+    const years = parseInt(yearsMatch[1])
+    return {
+      from: startOfYear(subYears(today, years)),
+      to: endOfYear(subYears(today, 1)),
+    }
+  }
+
+  return null
+}
+
 const extractDateRangeFromTextAgent = new Agent({
   name: 'Date Range Extractor',
   instructions: `Extract date range from text and return in JSON format {from: string}.
@@ -51,103 +147,6 @@ export const getDateRangeTool = createTool({
 
     const parseJSON = JSON.parse(response.text)
     const { from } = parseJSON
-
-    const today = new Date()
-
-    // Helper function to parse relative time expressions
-    const parseRelativeTime = (
-      expr: string,
-    ): { from: Date; to: Date | null } | null => {
-      expr = expr.toLowerCase().trim()
-
-      // Single day cases
-      switch (expr) {
-        case 'today':
-          return { from: today, to: null }
-        case 'yesterday':
-          return { from: subDays(today, 1), to: subDays(today, 1) }
-      }
-
-      // Handle "this" periods
-      if (expr === 'this month') {
-        return { from: startOfMonth(today), to: today }
-      }
-      if (expr === 'this year') {
-        return { from: startOfYear(today), to: today }
-      }
-
-      // Handle "last X days" or "past X days"
-      const daysMatch = expr.match(/^(?:last|past)\s+(\d+)\s+days?$/)
-      if (daysMatch && typeof daysMatch[1] === 'string') {
-        const days = parseInt(daysMatch[1])
-        return {
-          from: subDays(today, days),
-          to: today,
-        }
-      }
-
-      // Handle "X days ago"
-      const daysAgoMatch = expr.match(/^(\d+)\s+days?\s+ago$/)
-      if (daysAgoMatch && typeof daysAgoMatch[1] === 'string') {
-        const days = parseInt(daysAgoMatch[1])
-        const date = subDays(today, days)
-        return { from: date, to: date }
-      }
-
-      // Handle "past week"
-      if (expr === 'past week') {
-        return {
-          from: subDays(today, 7),
-          to: today,
-        }
-      }
-
-      // Handle "last month" and "X months ago"
-      const monthsAgoMatch = expr.match(/^(\d+)\s+months?\s+ago$/)
-      if (monthsAgoMatch && typeof monthsAgoMatch[1] === 'string') {
-        const months = parseInt(monthsAgoMatch[1])
-        const date = subMonths(today, months)
-        return { from: date, to: date }
-      }
-
-      if (expr === 'last month') {
-        const lastMonth = subMonths(today, 1)
-        return {
-          from: startOfMonth(lastMonth),
-          to: endOfMonth(lastMonth),
-        }
-      }
-
-      // Handle "last X months" or "past X months"
-      const monthsMatch = expr.match(/^(?:last|past)\s+(\d+)\s+months?$/)
-      if (monthsMatch && typeof monthsMatch[1] === 'string') {
-        const months = parseInt(monthsMatch[1])
-        return {
-          from: startOfMonth(subMonths(today, months)),
-          to: endOfMonth(subMonths(today, 1)),
-        }
-      }
-
-      // Handle "last year" and "past X years"
-      if (expr === 'last year') {
-        const lastYear = subYears(today, 1)
-        return {
-          from: startOfYear(lastYear),
-          to: endOfYear(lastYear),
-        }
-      }
-
-      const yearsMatch = expr.match(/^(?:last|past)\s+(\d+)\s+years?$/)
-      if (yearsMatch && typeof yearsMatch[1] === 'string') {
-        const years = parseInt(yearsMatch[1])
-        return {
-          from: startOfYear(subYears(today, years)),
-          to: endOfYear(subYears(today, 1)),
-        }
-      }
-
-      return null
-    }
 
     // Process the date range
     const dateRange = parseRelativeTime(from)
