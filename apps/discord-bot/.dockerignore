@@ -1,0 +1,7 @@
+# flyctl launch added from .gitignore
+fly.toml
+
+# Don't ignore config examples
+!config/config.example.json
+!config/bot-sites.example.json
+!config/debug.example.json
