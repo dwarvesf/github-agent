@@ -1,5 +1,5 @@
 import { createTool } from '@mastra/core/tools'
-import * as z from 'zod'
+import { z } from 'zod'
 import { CommitsToolOutputSchema, PRListOutputSchema } from './github'
 import {
   convertNestedArrayToTreeList,

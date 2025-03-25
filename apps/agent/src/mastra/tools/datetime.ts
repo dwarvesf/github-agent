@@ -1,6 +1,6 @@
 import { Agent } from '@mastra/core'
 import { createTool } from '@mastra/core/tools'
-import * as z from 'zod'
+import { z } from 'zod'
 import { openai } from '@ai-sdk/openai'
 import {
   subDays,

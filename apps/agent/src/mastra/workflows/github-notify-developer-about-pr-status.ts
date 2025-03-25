@@ -1,6 +1,6 @@
 import { Step, Workflow } from '@mastra/core/workflows'
 import { getTodayPRListTool } from '../tools'
-import * as z from 'zod'
+import { z } from 'zod'
 import { discordClient } from '../../lib/discord'
 import { groupBy } from '../../utils/array'
 import { PullRequest } from '../../lib/type'

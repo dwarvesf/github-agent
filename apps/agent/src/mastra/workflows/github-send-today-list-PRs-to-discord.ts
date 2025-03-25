@@ -1,5 +1,5 @@
 import { Step, Workflow } from '@mastra/core/workflows'
-import * as z from 'zod'
+import { z } from 'zod'
 import { DISCORD_CHANNEL_ID, discordClient } from '../../lib/discord'
 import { GITHUB_OWNER, GITHUB_REPO, githubClient } from '../../lib/github'
 import {
