@@ -1,0 +1,37 @@
+name: Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+
+      - name: Install environment
+        uses: ./.github/actions/setup-env
+
+      - name: Run tests
+        run: pnpm test:run
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+
+      - name: Install environment
+        uses: ./.github/actions/setup-env
+
+      - name: Run ESLint
+        run: pnpm lint
