@@ -12,6 +12,7 @@ const prListSchema = z.object({
     z.object({
       number: z.number(),
       title: z.string(),
+      body: z.string(),
       url: z.string(),
       author: z.string(),
       createdAt: z.string(),
@@ -46,6 +47,7 @@ export const getTodayPRListTool = createTool({
         title: pr.title,
         url: pr.html_url,
         author: pr.user.login,
+        body: pr.body,
         createdAt: pr.created_at,
         updatedAt: pr.updated_at,
         mergedAt: pr.merged_at,
@@ -101,6 +103,7 @@ export const getPullRequestTool = createTool({
       list: prs.map((pr) => ({
         number: pr.number,
         title: pr.title,
+        body: pr.body,
         url: pr.html_url,
         author: pr.user.login,
         createdAt: pr.created_at,

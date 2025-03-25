@@ -60,6 +60,46 @@ async function handleWaitingForReview(
   }
 }
 
+async function handleUnconventionalTitleOrDescription(
+  discordUserId: string,
+  prs: PullRequest[],
+) {
+  const readyToCheckPRs = prs.filter((pr: PullRequest) => !pr.isWIP)
+
+  const wrongConventionPRs = readyToCheckPRs.filter((pr: PullRequest) => {
+    // TODO: Add more checks
+    // - check if title follows `type(scope?): message`
+    // - check if description include clear description of the problem and solution
+    return !pr.body
+  })
+
+  if (wrongConventionPRs.length > 0) {
+    const notifyMessage =
+      '\n\n• Ensure title follows: `type(scope?): message`\n• Include a clear description of the problem and solution'
+
+    const listInText = wrongConventionPRs
+      .map((pr) => `[#${pr.number}](${pr.url}): ${pr.title}`)
+      .join('\n')
+
+    const embed = {
+      title: `📝 Improve PR clarity`,
+      color: 15158332,
+      description: `${listInText}${notifyMessage}`,
+      inline: false,
+    }
+
+    await discordClient.sendMessageToUser({
+      userId: discordUserId,
+      message: '',
+      embed,
+    })
+
+    return wrongConventionPRs
+  }
+
+  return []
+}
+
 const notifyDeveloperAboutPRStatus = new Workflow({
   name: 'Notify developer about PR status',
 })
@@ -87,6 +127,8 @@ const notifyDeveloperAboutPRStatus = new Workflow({
 
               // Notify developer if their PR needs to tag for review
               await handleWaitingForReview(discordUserId, prs)
+
+              await handleUnconventionalTitleOrDescription(discordUserId, prs)
             }
           }),
         )

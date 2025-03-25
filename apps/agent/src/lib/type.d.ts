@@ -1,6 +1,7 @@
 export interface PullRequest {
   number: number
   title: string
+  body: string
   url: string
   author: string
   createdAt: string
