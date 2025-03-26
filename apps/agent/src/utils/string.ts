@@ -41,7 +41,7 @@ export const convertNestedArrayToTreeList = (node: TreeNode): string => {
   const result: string[] = []
   const traverse = (node: TreeNode, level: number) => {
     const padding = ' '.repeat(((level || 1) - 1) * 2)
-    result.push(`${padding}${level > 0 ? '∟' : ''} ${node.label}`)
+    result.push(`${padding}${level > 0 ? '∟ ' : ''}${node.label}`)
     node.children?.forEach((child) => traverse(child, level + 1))
   }
   traverse(node, level)
