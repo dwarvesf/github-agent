@@ -76,6 +76,7 @@ interface Parent {
 interface Commit {
   sha: string
   node_id: string
+  message: string
   commit: CommitDetails
   url: string
   html_url: string

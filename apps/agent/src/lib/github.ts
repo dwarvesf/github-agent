@@ -1,3 +1,4 @@
+import { getOneLineCommit } from '../utils/string'
 import { Commit } from './type'
 
 // GitHub API configuration
@@ -263,8 +264,8 @@ class GitHubClient {
             dateFilter = ` created:<=${to}`
           }
         }
-        const openQuery = `is:pr is:open org:${this.owner}${
-          repo ? ` repo:${repo}` : ''
+        const openQuery = `is:pr is:open ${
+          repo ? ` repo:${this.owner}/${repo}` : ''
         }${reviewerFilter}${authorFilter}${commenterFilter}${dateFilter}`
         const openPrs = await this.fetchPRs(openQuery)
         prs.push(...openPrs)
@@ -281,9 +282,10 @@ class GitHubClient {
             dateFilter = ` merged:<=${to}`
           }
         }
-        const mergedQuery = `is:pr is:merged org:${this.owner}${
-          repo ? ` repo:${repo}` : ''
+        const mergedQuery = `is:pr is:merged ${
+          repo ? ` repo:${this.owner}/${repo}` : ''
         }${reviewerFilter}${authorFilter}${commenterFilter}${dateFilter}`
+        console.log('mergedQuery', mergedQuery)
         const mergedPrs = await this.fetchPRs(mergedQuery)
         prs.push(...mergedPrs)
       }
@@ -368,7 +370,12 @@ class GitHubClient {
         )
       }
 
-      return await response.json()
+      const list = await response.json()
+
+      return list.map((item: any) => ({
+        ...item,
+        message: getOneLineCommit(item.commit.message),
+      }))
     } catch (error) {
       console.error('Error fetching repository commits:', error)
       throw error
