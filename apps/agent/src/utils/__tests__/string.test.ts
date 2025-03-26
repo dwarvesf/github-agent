@@ -3,6 +3,7 @@ import {
   convertArrayToMarkdownTableList,
   convertNestedArrayToTreeList,
   escapeSpecialCharactersForMarkdown,
+  prTitleFormatValid,
 } from '../string'
 
 describe('escapeSpecialCharactersForMarkdown', () => {
@@ -75,5 +76,34 @@ describe('convertNestedArrayToTreeList', () => {
     }
     const expected = 'Root\n∟ Child 1\n  ∟ Grandchild 1\n∟ Child 2'
     expect(convertNestedArrayToTreeList(input)).toBe(expected)
+  })
+})
+
+describe('prTitleFormatValid', () => {
+  it('valid formats', () => {
+    expect(prTitleFormatValid('feat: add login feature')).toBe(true)
+    expect(prTitleFormatValid('fix(parser): resolve issue')).toBe(true)
+    expect(prTitleFormatValid('123(scope): numeric type')).toBe(true)
+    expect(prTitleFormatValid('fix(scope-123): special chars')).toBe(true)
+    expect(prTitleFormatValid('feat(verylongscope): long message')).toBe(true)
+  })
+
+  it('invalid formats', () => {
+    expect(prTitleFormatValid('feat add login feature')).toBe(false)
+    expect(prTitleFormatValid(': missing type')).toBe(false)
+    expect(prTitleFormatValid('feat(scope)missing colon')).toBe(false)
+    expect(prTitleFormatValid('feat() message')).toBe(false)
+    expect(prTitleFormatValid(' feat: leading space')).toBe(false)
+    expect(prTitleFormatValid('feat: trailing space ')).toBe(false)
+    expect(prTitleFormatValid('fix(scope) :space before colon')).toBe(false)
+    expect(prTitleFormatValid('')).toBe(false)
+    expect(prTitleFormatValid('feat:')).toBe(false)
+    expect(prTitleFormatValid('feat: ')).toBe(false)
+    expect(prTitleFormatValid('feat(): message')).toBe(false)
+    expect(prTitleFormatValid('(): message')).toBe(false)
+    expect(prTitleFormatValid('feat(scope with space): valid')).toBe(false)
+    expect(prTitleFormatValid('fix(scope!): invalid chars')).toBe(false)
+    expect(prTitleFormatValid('fix(scope): multi: colon')).toBe(false)
+    expect(prTitleFormatValid('fix(scope):')).toBe(false)
   })
 })

@@ -6,7 +6,10 @@ import { groupBy } from '../../utils/array'
 import { PullRequest } from '../../lib/type'
 import { DISCORD_GITHUB_MAP } from '../../constants/discord'
 import { suggestPRDescriptionAgent } from '../agents/analyze-github-prs'
-import { convertNestedArrayToTreeList } from '../../utils/string'
+import {
+  convertNestedArrayToTreeList,
+  prTitleFormatValid,
+} from '../../utils/string'
 
 async function handleMergeConflicts(discordUserId: string, prs: PullRequest[]) {
   const hasMergedConflictsPRs = prs.filter(
@@ -67,7 +70,6 @@ async function handleUnconventionalTitleOrDescription(
   prs: PullRequest[],
 ) {
   const readyToCheckPRs = prs.filter((pr: PullRequest) => !pr.isWIP)
-  const titleFormatRegex = /^([a-zA-Z]+)(\([\w-]+(,[\w-]+)*\))?\:\s(.+)$/
 
   // Check all PR descriptions in one batch
   let prsNeedingDescriptionImprovement: PullRequest[] = []
@@ -90,10 +92,6 @@ async function handleUnconventionalTitleOrDescription(
       try {
         const prsNeedingImprovement = JSON.parse(agentResponse.text) as string[]
         if (Array.isArray(prsNeedingImprovement)) {
-          // test
-          prsNeedingImprovement.push(
-            'https://github.com/dwarvesf/github-agent/pull/12',
-          )
           prsNeedingDescriptionImprovement = readyToCheckPRs.filter((pr) =>
             prsNeedingImprovement.includes(pr.url),
           )
@@ -110,7 +108,7 @@ async function handleUnconventionalTitleOrDescription(
 
   // Check for invalid titles
   const invalidTitlePRs = readyToCheckPRs.filter(
-    (pr) => !titleFormatRegex.test(pr.title),
+    (pr) => !prTitleFormatValid(pr.title),
   )
 
   // Combine both sets of PRs using Set to remove duplicates
