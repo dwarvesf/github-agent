@@ -1,74 +1,45 @@
 import { openai } from '@ai-sdk/openai'
 import { Agent } from '@mastra/core/agent'
 
-export const analyzePRsAgent = new Agent({
-  name: 'agent analyze PRs',
-  instructions: `
-    You are an expert in analyzing pull requests. Your task is to analyze a list of pull requests and determine which ones need reminder notifications based on specific criteria.
-
-    ## Process:
-
-    1. **Apply Eligibility Filters** to each PR in the provided list:
-      - PR must be in WAITING-FOR_REVIEWER status
-      - PR is not a Work In Progress (no "WIP" in title, labels, or description)
-      - PR has no review activity (no assigned reviewers, no comments, or tagging)
-      - PR has been open for 1 hour or more
-
-    2. **Check Notification Status**:
-      - Verify that the PR hasn't already been notified in the current scheduler run
-
-    3. **For Each Eligible PR, Compose a Personalized Notification**:
-      - Create a helpful, friendly message for the PR owner
-      - Include relevant context and clear next steps
-
-    ## Output Format:
-
-    For each PR that needs a notification, return a structured object with the following properties:
-
-    \`\`\`json
-    {
-      "pr_id": "string",           // The unique identifier for the PR
-      "repo": "string",            // The repository name
-      "owner": "string",           // The PR owner's username
-      "message": "string",         // The personalized notification message
-      "urgency": "low|medium|high", // Urgency level based on PR age and context
-      "notification_channel": "slack|email|github", // Preferred notification channel
-      "tags": ["string"],          // Any relevant tags for this notification
-      "suggested_reviewers": ["string"], // Optional list of suggested reviewers
-      "last_activity_timestamp": "string" // ISO timestamp of last activity
-    }
-    \`\`\`
-
-    Return an empty array if no PRs require notifications.
-  `,
-  model: openai('gpt-4o-mini'),
-})
-
 // currently we are not reading the PR changes, so we can't auto generate the description
 export const suggestPRDescriptionAgent = new Agent({
   name: 'agent suggest PR description',
   instructions: `
-    You are an AI assistant tasked with reviewing and improving pull request (PR) descriptions. Your goal is to ensure they are clear, concise, and informative.
-    
-    Description Improvements:
-      Do not generate a specific description, just determine if the description needs improvement or not. A description only needs suggestions if it's empty or missing a clear problem statement or ticket link.
+    You are an AI assistant tasked with reviewing multiple pull request (PR) descriptions. Your goal is to ensure they are clear enough.
+    A description needs improvement if it's empty, missing a clear problem statement, or lacks sufficient context about the changes.
+
+    Guidelines for good PR descriptions:
+    - Should explain the problem being solved or include an issue ticket url
+    - Should describe the solution approach
+
+    Input Format:
+    You will receive an array of PRs, each containing:
+    - url: PR url
+    - title: PR title
+    - body: PR description
 
     Output Format:
-      Return the updated title and description in the following JSON format:
-      \`\`\`
-      {
-        "suggestion_needed": boolean, // true if the PR description needs improvement, false otherwise
-      }
-      \`\`\`
+    Return a JSON array containing the PR numbers that need description improvements.
+    Example: ["https://github.com/dwarvesf/github-agent/pull/31", "https://github.com/dwarvesf/github-agent/pull/12"]
 
-    Example:
-      User input:
-        Description: "I fixed the bug"
-
-      Response:
+    Example Input:
+    [
       {
-        "suggestion_needed": true
+        "url": "https://github.com/dwarvesf/github-agent/pull/31",
+        "title": "fix(auth): handle login errors",
+        "body": "I fixed the bug"
+      },
+      {
+        "url": "https://github.com/dwarvesf/github-agent/pull/12",
+        "title": "feat(api): add user endpoints",
+        "body": "This PR adds new user management endpoints with proper validation and error handling. Includes:\n- GET /users\n- POST /users\n- PUT /users/:id"
       }
+    ]
+
+    Example Output:
+    ["https://github.com/dwarvesf/github-agent/pull/31"]
+
+    Only return the array of PR urls. No additional explanation needed.
   `,
   model: openai('gpt-4o-mini'),
 })

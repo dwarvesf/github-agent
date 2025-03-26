@@ -69,41 +69,63 @@ async function handleUnconventionalTitleOrDescription(
   const readyToCheckPRs = prs.filter((pr: PullRequest) => !pr.isWIP)
   const titleFormatRegex = /^([a-zA-Z]+)(\([\w-]+(,[\w-]+)*\))?\:\s(.+)$/
 
-  const wrongConventionPRs = await Promise.all(
-    readyToCheckPRs.map(async (pr: PullRequest) => {
-      // use agent to check if PR description is good
-      const prompt = `Based on the following pull request, help me determine if it needs to be improved:
-        ${JSON.stringify({ title: pr.title, body: pr.body }, null, 2)}`
+  // Check all PR descriptions in one batch
+  let prsNeedingDescriptionImprovement: PullRequest[] = []
 
-      // call to agent
+  if (readyToCheckPRs.length > 0) {
+    try {
       const agentResponse = await suggestPRDescriptionAgent.generate([
         {
           role: 'user',
-          content: prompt,
+          content: JSON.stringify(
+            readyToCheckPRs.map((pr) => ({
+              url: pr.url,
+              title: pr.title,
+              body: pr.body,
+            })),
+          ),
         },
       ])
 
-      const agentResponseText = JSON.parse(agentResponse.text) as {
-        suggestion_needed: boolean
+      try {
+        const prsNeedingImprovement = JSON.parse(agentResponse.text) as string[]
+        if (Array.isArray(prsNeedingImprovement)) {
+          // test
+          prsNeedingImprovement.push(
+            'https://github.com/dwarvesf/github-agent/pull/12',
+          )
+          prsNeedingDescriptionImprovement = readyToCheckPRs.filter((pr) =>
+            prsNeedingImprovement.includes(pr.url),
+          )
+        } else {
+          console.error('Invalid response format from LLM:', agentResponse.text)
+        }
+      } catch (parseError) {
+        console.error('Failed to parse LLM response:', parseError)
       }
+    } catch (agentError) {
+      console.error('Failed to get LLM suggestions:', agentError)
+    }
+  }
 
-      // if either title or description is not good
-      if (
-        !titleFormatRegex.test(pr.title) ||
-        agentResponseText.suggestion_needed
-      ) {
-        return pr
-      }
-      return null
-    }),
-  ).then((results) => results.filter((pr): pr is PullRequest => pr !== null))
+  // Check for invalid titles
+  const invalidTitlePRs = readyToCheckPRs.filter(
+    (pr) => !titleFormatRegex.test(pr.title),
+  )
+
+  // Combine both sets of PRs using Set to remove duplicates
+  const wrongConventionPRs = Array.from(
+    new Set([...invalidTitlePRs, ...prsNeedingDescriptionImprovement]),
+  )
 
   if (wrongConventionPRs.length > 0) {
     const notifyMessage =
       '\n\n• Ensure title follows: `type(scope?): message`\n• Include a clear description of the problem and solution'
 
     const listInText = wrongConventionPRs
-      .map((pr) => `[#${pr.number}](${pr.url}) | ${pr.title}`)
+      .map((pr) => {
+        return `[#${pr.number}](${pr.url}) | ${pr.title}`
+      })
       .join('\n')
 
     const embed = {
@@ -118,11 +140,9 @@ async function handleUnconventionalTitleOrDescription(
       message: '',
       embed,
     })
-
-    return wrongConventionPRs
   }
 
-  return []
+  return wrongConventionPRs
 }
 
 const notifyDeveloperAboutPRStatus = new Workflow({
@@ -140,21 +160,22 @@ const notifyDeveloperAboutPRStatus = new Workflow({
           getTodayPRListTool.id,
         )
 
-        const byAuthor = groupBy(output?.list || [], (pr) => pr.author)
+        const byAuthor = groupBy(
+          output?.list || [],
+          (pr: PullRequest) => pr.author,
+        )
 
         await Promise.all(
           Object.entries(byAuthor).map(async ([author, prs]) => {
             const discordUserId =
               DISCORD_GITHUB_MAP[author as keyof typeof DISCORD_GITHUB_MAP]
             if (discordUserId) {
-              // Notify developer if their PR has merge conflicts
-              await handleMergeConflicts(discordUserId, prs)
-
-              // Notify developer if their PR needs to tag for review
-              await handleWaitingForReview(discordUserId, prs)
-
-              // Notify developer, if their PR description needs improvement
-              await handleUnconventionalTitleOrDescription(discordUserId, prs)
+              await handleMergeConflicts(discordUserId, prs as PullRequest[])
+              await handleWaitingForReview(discordUserId, prs as PullRequest[])
+              await handleUnconventionalTitleOrDescription(
+                discordUserId,
+                prs as PullRequest[],
+              )
             }
           }),
         )
