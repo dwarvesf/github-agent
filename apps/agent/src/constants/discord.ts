@@ -3,4 +3,5 @@ export const DISCORD_GITHUB_MAP = {
   vdhieu: '797044001579597846',
   'R-Jim': '797044001579597846',
   chinhld: '757540075159420948',
+  catngh: '319132138849173505',
 }

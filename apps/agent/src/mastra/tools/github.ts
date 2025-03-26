@@ -58,6 +58,7 @@ export const getTodayPRListTool = createTool({
         reviewers: pr.requested_reviewers.map((reviewer) => reviewer.login),
         hasComments: pr.comments > 0 || pr.review_comments > 0,
         hasReviews: pr.reviews && pr.reviews.length > 0,
+        body: pr.body,
       })),
     }
   },
@@ -115,6 +116,7 @@ export const getPullRequestTool = createTool({
         reviewers: pr.requested_reviewers.map((reviewer) => reviewer.login),
         hasComments: pr.comments > 0 || pr.review_comments > 0,
         hasReviews: pr.reviews && pr.reviews.length > 0,
+        body: pr.body,
       })),
     }
   },

@@ -14,6 +14,7 @@ export interface PullRequest {
   reviewers: string[]
   hasComments: boolean
   hasReviews: boolean
+  body: string
 }
 
 interface Author {

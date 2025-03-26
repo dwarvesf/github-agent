@@ -53,3 +53,9 @@ export const getOneLineCommit = (originCommit: string): string => {
 
   return lines[0] || ''
 }
+
+export const prTitleFormatValid = (title: string): boolean => {
+  const titleFormatRegex =
+    /^[a-zA-Z0-9]+(\([a-zA-Z0-9\-_]+\))?: [a-zA-Z0-9]+(?: [a-zA-Z0-9]+)*$/
+  return titleFormatRegex.test(title)
+}
