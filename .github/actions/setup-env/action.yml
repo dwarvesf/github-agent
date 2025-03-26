@@ -1,0 +1,34 @@
+
+name: Prepare environment
+
+inputs:
+  enable-turbo-cache:
+    description: 'Enable CI turbo caching'
+    required: false
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Pnpm
+      uses: pnpm/action-setup@v4
+
+    - name: Setup Node.js 20
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'pnpm'
+
+    - name: Install Packages
+      shell: bash
+      run: pnpm install --frozen-lockfile
+      env:
+        CI: true
+
+    - name: Cache turbo
+      uses: actions/cache@v3
+      if: inputs.enable-turbo-cache == 'true'
+      with:
+        path: node_modules/.cache/turbo
+        key: ${{ runner.os }}-turbo-${{ github.sha }}
+        restore-keys: |
+            ${{ runner.os }}-turbo-

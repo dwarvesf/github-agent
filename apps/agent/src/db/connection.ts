@@ -5,7 +5,6 @@ import dotenv from 'dotenv'
 
 // Load environment variables
 dotenv.config()
-
 // Connection configuration
 const getConnectionConfig = (): PoolConfig => {
   const connectionString = process.env.DATABASE_URL

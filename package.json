@@ -7,7 +7,9 @@
     "lint": "turbo run lint",
     "lint:fix": "turbo run lint:fix",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "test": "vitest --passWithNoTests --isolate",
+    "test:run": "vitest run --passWithNoTests --isolate"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.0",
@@ -18,7 +20,9 @@
     "prettier": "^3.5.3",
     "tsx": "^4.19.3",
     "turbo": "^2.4.4",
-    "typescript": "5.8.2"
+    "typescript": "5.8.2",
+    "vitest": "^3.0.9",
+    "vitest-fetch-mock": "^0.4.5"
   },
   "packageManager": "pnpm@10.0.0",
   "engines": {
@@ -27,6 +31,10 @@
   "pnpm": {
     "overrides": {
       "@mastra/core": "0.6.4"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@swc/core",
+      "esbuild"
+    ]
   }
 }

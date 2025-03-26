@@ -35,6 +35,7 @@
     "@packages/eslint-config": "workspace:*",
     "@packages/typescript-config": "workspace:*",
     "@types/pg": "^8.11.2",
+    "eslint": "^9.20.1",
     "tsup": "^8.0.2"
   }
 }
