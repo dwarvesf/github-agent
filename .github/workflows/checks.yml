@@ -9,6 +9,7 @@ on:
       - 'apps/**/src/**.js'
       - 'packages/**/src/**.ts'
       - 'packages/**/src/**.js'
+      - 'pnpm-lock.yaml'
 
 concurrency:
   group: ci-${{ github.ref }}
