@@ -160,11 +160,9 @@ export class WebhookService {
 
   private setupRoutes(): void {
     // Register controllers
-    const controllers: Controller[] = [
-      new RootController(),
-    ]
+    const controllers: Controller[] = [new RootController()]
 
-    controllers.forEach(controller => {
+    controllers.forEach((controller) => {
       controller.register()
       this.app.use(controller.path, controller.router)
     })
