@@ -7,6 +7,13 @@ import {
   convertNestedArrayToTreeList,
 } from '../../utils/string'
 import { formatDate } from '../../utils/datetime'
+import { PullRequest } from '../../lib/type'
+import { nanoid } from 'nanoid'
+import { EventRepository, NotificationType } from '../../db/event.repository'
+import dayjs from 'dayjs'
+import { EventCategory } from '@prisma/client'
+import { EventType } from '@prisma/client'
+import { getPrisma } from '../../db'
 
 const stepOneSchema = z.object({
   todayPRs: z.array(
@@ -96,109 +103,130 @@ const stepTwo = new Step({
   },
 })
 
+const stepThreeSchema = z.object({
+  message: z.string(),
+})
+
+type StepThreeOutput = z.infer<typeof stepThreeSchema>
+
 const stepThree = new Step({
   id: 'compose-message',
+  outputSchema: stepThreeSchema,
   execute: async ({ context }) => {
     if (
-      context.steps['get-today-pr-list']?.status === 'success' &&
-      context.steps['get-today-commits']?.status === 'success'
+      context.steps['get-today-pr-list']?.status !== 'success' ||
+      context.steps['get-today-commits']?.status !== 'success'
     ) {
-      const { todayPRs } = context.steps['get-today-pr-list']
-        ?.output as StepOneOutput
+      throw new Error('Failed to get today PR list or commits')
+    }
 
-      const { todayCommits } = context.steps['get-today-commits']
-        ?.output as StepTwoOutput
+    const { todayPRs } = context.steps['get-today-pr-list']
+      ?.output as StepOneOutput
 
-      const openPRs = todayPRs.filter((pr) => !pr.isMerged && !pr.isWIP) || []
-      const mergedPRs = todayPRs.filter((pr) => pr.isMerged) || []
-      const wipPRs = todayPRs.filter((pr) => pr.isWIP) || []
-      const needToReviewPRs = todayPRs.filter(
-        (pr) => !pr.isMerged && !pr.isWIP && pr.isWaitingForReview,
+    const { todayCommits } = context.steps['get-today-commits']
+      ?.output as StepTwoOutput
+
+    const openPRs = todayPRs.filter((pr) => !pr.isMerged && !pr.isWIP) || []
+    const mergedPRs = todayPRs.filter((pr) => pr.isMerged) || []
+    const wipPRs = todayPRs.filter((pr) => pr.isWIP) || []
+    const needToReviewPRs = todayPRs.filter(
+      (pr) => !pr.isMerged && !pr.isWIP && pr.isWaitingForReview,
+    )
+
+    const summary = [
+      { label: 'Open PRs', value: `**${openPRs.length}**` },
+      { label: 'Merged PRs', value: `**${mergedPRs.length}**` },
+      { label: 'WIP PRs', value: `**${wipPRs.length}**` },
+      { label: 'Commits', value: `**${todayCommits.length}**` },
+    ]
+
+    const representData = [
+      '🔥 **Summary**',
+      convertArrayToMarkdownTableList(summary, false),
+    ]
+
+    if (openPRs.length > 0) {
+      representData.push(
+        convertNestedArrayToTreeList({
+          label: '`Open PRs:`',
+          children: openPRs.map((pr) => ({
+            label: `[#${pr.number}](${pr.url}) ${pr.title}`,
+          })),
+        }),
       )
+    }
 
-      const summary = [
-        { label: 'Open PRs', value: `**${openPRs.length}**` },
-        { label: 'Merged PRs', value: `**${mergedPRs.length}**` },
-        { label: 'WIP PRs', value: `**${wipPRs.length}**` },
-        { label: 'Commits', value: `**${todayCommits.length}**` },
-      ]
+    if (mergedPRs.length > 0) {
+      representData.push(
+        convertNestedArrayToTreeList({
+          label: '\n`Merged PRs:`',
+          children: mergedPRs.map((pr) => ({
+            label: `[#${pr.number}](${pr.url}) ${pr.title}`,
+          })),
+        }),
+      )
+    }
 
-      const representData = [
-        '🔥 **Summary**',
-        convertArrayToMarkdownTableList(summary, false),
-      ]
+    if (wipPRs.length > 0) {
+      representData.push(
+        convertNestedArrayToTreeList({
+          label: '\n`WIP PRs:`',
+          children: wipPRs.map((pr) => ({
+            label: `[#${pr.number}](${pr.url}) ${pr.title}`,
+          })),
+        }),
+      )
+    }
 
-      if (openPRs.length > 0) {
-        representData.push(
-          convertNestedArrayToTreeList({
-            label: '`Open PRs:`',
-            children: openPRs.map((pr) => ({
-              label: `[#${pr.number}](${pr.url}) ${pr.title}`,
-            })),
-          }),
-        )
-      }
+    if (needToReviewPRs.length > 0) {
+      representData.push(
+        convertNestedArrayToTreeList({
+          label: '\n`Need to review PRs:`',
+          children: needToReviewPRs.map((pr) => ({
+            label: `[#${pr.number}](${pr.url}) ${pr.title}`,
+          })),
+        }),
+      )
+    }
 
-      if (mergedPRs.length > 0) {
-        representData.push(
-          convertNestedArrayToTreeList({
-            label: '\n`Merged PRs:`',
-            children: mergedPRs.map((pr) => ({
-              label: `[#${pr.number}](${pr.url}) ${pr.title}`,
-            })),
-          }),
-        )
-      }
+    if (todayCommits.length > 0) {
+      representData.push(
+        convertNestedArrayToTreeList({
+          label: '\n`Commits:`',
+          children: todayCommits.map((c) => ({
+            label: `[${c.sha.substring(0, 8)}](${c.url}) ${c.message}`,
+          })),
+        }),
+      )
+    }
 
-      if (wipPRs.length > 0) {
-        representData.push(
-          convertNestedArrayToTreeList({
-            label: '\n`WIP PRs:`',
-            children: wipPRs.map((pr) => ({
-              label: `[#${pr.number}](${pr.url}) ${pr.title}`,
-            })),
-          }),
-        )
-      }
+    const message = representData.join('\n').trim() || ''
 
-      if (needToReviewPRs.length > 0) {
-        representData.push(
-          convertNestedArrayToTreeList({
-            label: '\n`Need to review PRs:`',
-            children: needToReviewPRs.map((pr) => ({
-              label: `[#${pr.number}](${pr.url}) ${pr.title}`,
-            })),
-          }),
-        )
-      }
-
-      if (todayCommits.length > 0) {
-        representData.push(
-          convertNestedArrayToTreeList({
-            label: '\n`Commits:`',
-            children: todayCommits.map((c) => ({
-              label: `[${c.sha.substring(0, 8)}](${c.url}) ${c.message}`,
-            })),
-          }),
-        )
-      }
-
-      const message = representData.join('\n').trim()
-
-      return {
-        message,
-      }
+    return {
+      message,
     }
   },
 })
 
+const stepFourSchema = z.object({
+  response: z.string().optional(),
+  message: z.string(),
+  error: z.string().optional(),
+})
+
+type StepFourOutput = z.infer<typeof stepFourSchema>
+
 const stepFour = new Step({
   id: 'send-to-discord',
+  outputSchema: stepFourSchema,
   execute: async ({ context }) => {
-    if (context.steps['compose-message']?.status === 'success') {
+    try {
+      if (context.steps['compose-message']?.status !== 'success') {
+        throw new Error('Invalid compose message')
+      }
       const message = context.steps['compose-message']?.output.message
 
-      return await discordClient.sendMessageToChannel({
+      const resp = await discordClient.sendMessageToChannel({
         channelId: DISCORD_CHANNEL_ID,
         embed: {
           title: `🤖 Daily report (${formatDate(new Date(), 'MMMM d, yyyy')})`,
@@ -209,9 +237,59 @@ const stepFour = new Step({
           },
         },
       })
+      return {
+        response: resp,
+        message: 'success',
+      }
+    } catch (error) {
+      return {
+        message: 'Failed to send PR list to Discord',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      }
     }
   },
 })
+
+const stepFive = new Step({
+  id: 'log-event',
+  execute: async ({ context }) => {
+    const { response, message, error } = (
+      context.steps['send-to-discord'] as any
+    )?.output as StepFourOutput
+    const { todayPRs } = (context.steps['get-today-pr-list'] as any)
+      ?.output as StepOneOutput
+    const { todayCommits } = (context.steps['get-today-commits'] as any)
+      ?.output as StepTwoOutput
+    const { message: composeMessage } = (
+      context.steps['compose-message'] as any
+    )?.output as StepThreeOutput
+    const ctxId = nanoid()
+
+    await EventRepository.logEvent({
+      workflowId: 'sendTodayPRListToDiscordWorkflow',
+      eventCategory: EventCategory.NOTIFICATION_DISCORD,
+      eventType: EventType.REPORT_PR_LIST,
+      organizationId: GITHUB_OWNER!,
+      repositoryId: GITHUB_REPO,
+      eventData: {
+        notificationType: NotificationType.DAILY_REPORT,
+        message: composeMessage,
+        prList: todayPRs,
+        commitList: todayCommits,
+        discordChannelId: DISCORD_CHANNEL_ID,
+      },
+      metadata: {
+        response,
+        message,
+        error,
+      },
+      contextId: ctxId,
+      tags: ['daily-report', 'github', 'pr-list', 'commit-list', 'discord'],
+    })
+    return context
+  },
+})
+
 const sendTodayPRListToDiscordWorkflow = new Workflow({
   name: 'Send daily PR List to Discord',
 })
@@ -219,6 +297,7 @@ const sendTodayPRListToDiscordWorkflow = new Workflow({
   .then(stepTwo)
   .then(stepThree)
   .then(stepFour)
+  .then(stepFive)
 
 sendTodayPRListToDiscordWorkflow.commit()
 

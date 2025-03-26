@@ -1,100 +1,72 @@
-import { Pool, PoolConfig, PoolClient } from 'pg'
-import { parse } from 'pg-connection-string'
-import { drizzle } from 'drizzle-orm/node-postgres'
 import dotenv from 'dotenv'
+
+// Use dynamic import for PrismaClient
+import { PrismaClient } from '@prisma/client'
 
 // Load environment variables
 dotenv.config()
-// Connection configuration
-const getConnectionConfig = (): PoolConfig => {
-  const connectionString = process.env.DATABASE_URL
 
-  if (connectionString) {
-    // Parse connection string if provided
-    const config = parse(connectionString)
-    return {
-      host: config.host || undefined,
-      port: config.port ? parseInt(config.port, 10) : 5432,
-      database: config.database || undefined,
-      user: config.user || undefined,
-      password: config.password || undefined,
-      ssl:
-        process.env.DATABASE_SSL === 'true'
-          ? { rejectUnauthorized: false }
-          : undefined,
-    }
-  }
-
-  // Fallback to individual environment variables
-  return {
-    host: process.env.DATABASE_HOST || 'localhost',
-    port: process.env.DATABASE_PORT
-      ? parseInt(process.env.DATABASE_PORT, 10)
-      : 5432,
-    database: process.env.DATABASE_NAME || 'github_agent',
-    user: process.env.DATABASE_USER || 'agent_user',
-    password: process.env.DATABASE_PASSWORD || 'agent_password',
-    ssl:
-      process.env.DATABASE_SSL === 'true'
-        ? { rejectUnauthorized: false }
-        : undefined,
-  }
-}
-
-// Create a singleton pool
-let pool: Pool | null = null
+// Create a singleton PrismaClient instance
+let prisma: PrismaClient | null = null
 
 /**
- * Get the database connection pool
+ * Get the Prisma client instance
  */
-export const getPool = (): Pool => {
-  if (!pool) {
-    pool = new Pool(getConnectionConfig())
-
-    // Handle errors
-    pool.on('error', (err) => {
-      console.error('Unexpected error on idle client', err)
+export const getPrisma = (): PrismaClient => {
+  if (!prisma) {
+    prisma = new PrismaClient({
+      log:
+        process.env.NODE_ENV === 'development'
+          ? ['query', 'error', 'warn']
+          : ['error'],
     })
 
-    // Log connection success
-    pool.on('connect', () => {
-      console.log('Connected to PostgreSQL database')
-    })
+    console.log('Connected to PostgreSQL database with Prisma')
   }
 
-  return pool
+  return prisma
 }
 
 /**
- * Get a database client from the pool
+ * Disconnect the Prisma client
  */
-export const getClient = async (): Promise<PoolClient> => {
-  const pool = getPool()
-  const client = await pool.connect()
-
-  // Set search path to use the agent schema
-  await client.query('SET search_path TO agent_schema')
-
-  return client
-}
-
-/**
- * Close the database connection pool
- */
-export const closePool = async (): Promise<void> => {
-  if (pool) {
-    await pool.end()
-    pool = null
-    console.log('Database connection pool closed')
+export const disconnectPrisma = async (): Promise<void> => {
+  if (prisma) {
+    await prisma.$disconnect()
+    prisma = null
+    console.log('Database connection closed')
   }
 }
 
 /**
- * Get a drizzle ORM instance with the pool
+ * Legacy function for backwards compatibility - returns Prisma client
+ * @deprecated Use getPrisma() instead
  */
 export const getDrizzle = () => {
-  const db = drizzle(getPool(), {
-    schema: { schema: 'agent_schema' },
-  })
-  return db
+  console.warn('Warning: getDrizzle() is deprecated. Use getPrisma() instead.')
+  return getPrisma()
+}
+
+/**
+ * Legacy function for backwards compatibility
+ * @deprecated Use disconnectPrisma() instead
+ */
+export const closePool = async (): Promise<void> => {
+  console.warn(
+    'Warning: closePool() is deprecated. Use disconnectPrisma() instead.',
+  )
+  await disconnectPrisma()
+}
+
+// For compatibility with existing code that might use these functions
+export const getPool = () => {
+  console.warn(
+    'Warning: getPool() is deprecated. Database connection is now handled by Prisma.',
+  )
+  return getPrisma()
+}
+
+export const getClient = async () => {
+  console.warn('Warning: getClient() is deprecated. Use getPrisma() instead.')
+  return getPrisma()
 }
