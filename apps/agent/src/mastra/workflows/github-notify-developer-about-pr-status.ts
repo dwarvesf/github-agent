@@ -5,8 +5,16 @@ import { discordClient } from '../../lib/discord'
 import { groupBy } from '../../utils/array'
 import { PullRequest } from '../../lib/type'
 import { DISCORD_GITHUB_MAP } from '../../constants/discord'
+import { EventRepository, NotificationType } from '../../db/event.repository'
+import { EventCategory, EventType } from '@prisma/client'
+import { nanoid } from 'nanoid'
+import { GITHUB_OWNER, GITHUB_REPO } from '../../lib/github'
 
-async function handleMergeConflicts(discordUserId: string, prs: PullRequest[]) {
+async function handleMergeConflicts(
+  discordUserId: string,
+  prs: PullRequest[],
+  ctxId: string,
+) {
   const hasMergedConflictsPRs = prs.filter(
     (pr: PullRequest) => pr.hasMergeConflicts,
   )
@@ -23,17 +31,44 @@ async function handleMergeConflicts(discordUserId: string, prs: PullRequest[]) {
       })),
     }
 
-    await discordClient.sendMessageToUser({
-      userId: discordUserId,
-      message: '',
-      embed,
-    })
+    try {
+      const response = await discordClient.sendMessageToUser({
+        userId: discordUserId,
+        message: '',
+        embed,
+      })
+      // Log event for merge conflicts notification
+      await EventRepository.logEvent({
+        workflowId: 'notifyDeveloperAboutPRStatus',
+        eventCategory: EventCategory.NOTIFICATION_DISCORD,
+        eventType: EventType.PR_NOTIFIED,
+        organizationId: GITHUB_OWNER!,
+        repositoryId: GITHUB_REPO!,
+        eventData: {
+          notificationType: NotificationType.MERGE_CONFLICTS,
+          message: embed.title,
+          prList: hasMergedConflictsPRs,
+          discordUserId: discordUserId,
+          details: {
+            embed,
+          },
+        },
+        metadata: {
+          response,
+        },
+        contextId: ctxId,
+        tags: ['notification', 'discord', 'merge-conflicts', 'pr-status'],
+      })
+    } catch (error) {
+      console.error(error)
+    }
   }
 }
 
 async function handleWaitingForReview(
   discordUserId: string,
   prs: PullRequest[],
+  ctxId: string,
 ) {
   // Waiting for review
   const watingForReviewPrs = prs.filter(
@@ -51,12 +86,38 @@ async function handleWaitingForReview(
         inline: false,
       })),
     }
+    try {
+      const response = await discordClient.sendMessageToUser({
+        userId: discordUserId,
+        message: '',
+        embed,
+      })
 
-    await discordClient.sendMessageToUser({
-      userId: discordUserId,
-      message: '',
-      embed,
-    })
+      // Log event for waiting for review notification
+      await EventRepository.logEvent({
+        workflowId: 'notifyDeveloperAboutPRStatus',
+        eventCategory: EventCategory.NOTIFICATION_DISCORD,
+        eventType: EventType.PR_NOTIFIED,
+        organizationId: GITHUB_OWNER!,
+        repositoryId: GITHUB_REPO!,
+        eventData: {
+          message: embed.title,
+          prList: watingForReviewPrs,
+          discordUserId: discordUserId,
+          notificationType: NotificationType.WAITING_FOR_REVIEW,
+          details: {
+            embed,
+          },
+        },
+        metadata: {
+          response,
+        },
+        contextId: ctxId,
+        tags: ['notification', 'discord', 'waiting-for-review', 'pr-status'],
+      })
+    } catch (error) {
+      console.error(error)
+    }
   }
 }
 
@@ -76,6 +137,7 @@ const notifyDeveloperAboutPRStatus = new Workflow({
         )
 
         const byAuthor = groupBy(output?.list || [], (pr) => pr.author)
+        const ctxId = nanoid()
 
         await Promise.all(
           Object.entries(byAuthor).map(async ([author, prs]) => {
@@ -83,10 +145,10 @@ const notifyDeveloperAboutPRStatus = new Workflow({
               DISCORD_GITHUB_MAP[author as keyof typeof DISCORD_GITHUB_MAP]
             if (discordUserId) {
               // Notify developer if their PR has merge conflicts
-              await handleMergeConflicts(discordUserId, prs)
+              await handleMergeConflicts(discordUserId, prs, ctxId)
 
               // Notify developer if their PR needs to tag for review
-              await handleWaitingForReview(discordUserId, prs)
+              await handleWaitingForReview(discordUserId, prs, ctxId)
             }
           }),
         )
