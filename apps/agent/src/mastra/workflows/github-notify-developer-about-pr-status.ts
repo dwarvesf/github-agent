@@ -1,70 +1,19 @@
 import { Step, Workflow } from '@mastra/core/workflows'
 import { DISCORD_GITHUB_MAP } from '../../constants/discord'
 import { discordClient } from '../../lib/discord'
-import { GITHUB_REPO, githubClient } from '../../lib/github'
+import { GITHUB_OWNER, GITHUB_REPO, githubClient } from '../../lib/github'
 import { PullRequest } from '../../lib/type'
 import { groupBy } from '../../utils/array'
 import { formatDate } from '../../utils/datetime'
 import { prTitleFormatValid } from '../../utils/string'
 import { suggestPRDescriptionAgent } from '../agents/analyze-github-prs'
-
-async function handleMergeConflicts(discordUserId: string, prs: PullRequest[]) {
-  const hasMergedConflictsPRs = prs.filter(
-    (pr: PullRequest) => pr.hasMergeConflicts,
-  )
-  // Has merge conflicts
-  if (hasMergedConflictsPRs.length > 0) {
-    const isPlural = hasMergedConflictsPRs.length > 1
-    const embed = {
-      title: `🚧 your ${isPlural ? 'PRs have' : 'PR has'} merge conflicts`,
-      color: 15158332,
-      fields: hasMergedConflictsPRs.map((pr) => ({
-        name: `#${pr.number} ${pr.title}`,
-        value: `Created at: ${new Date(pr.createdAt).toISOString().split('T')[0]} | [link](${pr.url})`,
-        inline: false,
-      })),
-    }
-
-    await discordClient.sendMessageToUser({
-      userId: discordUserId,
-      message: '',
-      embed,
-    })
-  }
-}
-
-async function handleWaitingForReview(
-  discordUserId: string,
-  prs: PullRequest[],
-) {
-  // Waiting for review
-  const watingForReviewPrs = prs.filter(
-    (pr: PullRequest) => pr.isWaitingForReview && !pr.hasMergeConflicts,
-  )
-
-  if (watingForReviewPrs.length > 0) {
-    const isPlural = watingForReviewPrs.length > 1
-    const embed = {
-      title: `👀 ${isPlural ? ' are' : ' is'} your pull request${isPlural ? 's' : ''} ready for review?`,
-      color: 3447003,
-      fields: watingForReviewPrs.map((pr) => ({
-        name: `#${pr.number} ${pr.title}`,
-        value: `Created at: ${new Date(pr.createdAt).toISOString().split('T')[0]} | [link](${pr.url})`,
-        inline: false,
-      })),
-    }
-
-    await discordClient.sendMessageToUser({
-      userId: discordUserId,
-      message: '',
-      embed,
-    })
-  }
-}
-
+import { EventRepository, NotificationType } from '../../db/event.repository'
+import { EventCategory, EventType } from '@prisma/client'
+import { nanoid } from 'nanoid'
 async function handleApprovedNotMerged(
   discordUserId: string,
   prs: PullRequest[],
+  ctxId: string,
 ) {
   const approvedNotMergedPRs = prs.filter(
     (pr: PullRequest) => pr.isApprovedWaitingForMerging,
@@ -82,10 +31,33 @@ async function handleApprovedNotMerged(
       })),
     }
 
-    await discordClient.sendMessageToUser({
+    const response = await discordClient.sendMessageToUser({
       userId: discordUserId,
       message: '',
       embed,
+    })
+
+    // Log event for merge conflicts notification
+    await EventRepository.logEvent({
+      workflowId: 'notifyDeveloperAboutPRStatus',
+      eventCategory: EventCategory.NOTIFICATION_DISCORD,
+      eventType: EventType.PR_NOTIFIED,
+      organizationId: GITHUB_OWNER!,
+      repositoryId: GITHUB_REPO!,
+      eventData: {
+        notificationType: NotificationType.PR_PENDING_MERGE,
+        message: embed.title,
+        prList: approvedNotMergedPRs,
+        discordUserId: discordUserId,
+        details: {
+          embed,
+        },
+      },
+      metadata: {
+        response,
+      },
+      contextId: ctxId,
+      tags: ['notification', 'discord', 'pr-pending-merge', 'pr-status'],
     })
   }
 }
@@ -93,6 +65,7 @@ async function handleApprovedNotMerged(
 async function handleUnconventionalTitleOrDescription(
   discordUserId: string,
   prs: PullRequest[],
+  ctxId: string,
 ) {
   const readyToCheckPRs = prs.filter((pr: PullRequest) => !pr.isWIP)
 
@@ -158,10 +131,33 @@ async function handleUnconventionalTitleOrDescription(
       inline: false,
     }
 
-    await discordClient.sendMessageToUser({
+    const response = await discordClient.sendMessageToUser({
       userId: discordUserId,
       message: '',
       embed,
+    })
+
+    // Log event
+    await EventRepository.logEvent({
+      workflowId: 'notifyDeveloperAboutPRStatus',
+      eventCategory: EventCategory.NOTIFICATION_DISCORD,
+      eventType: EventType.PR_NOTIFIED,
+      organizationId: GITHUB_OWNER!,
+      repositoryId: GITHUB_REPO!,
+      eventData: {
+        notificationType: NotificationType.WRONG_CONVENTION,
+        message: embed.title,
+        prList: wrongConventionPRs,
+        discordUserId: discordUserId,
+        details: {
+          embed,
+        },
+      },
+      metadata: {
+        response,
+      },
+      contextId: ctxId,
+      tags: ['notification', 'discord', 'wrong-convention', 'pr-status'],
     })
   }
 
@@ -225,24 +221,22 @@ const notifyDeveloperAboutPRStatus = new Workflow({
             todayPRs || [],
             (pr: PullRequest) => pr.author,
           )
+          const ctxId = nanoid()
 
           await Promise.all(
             Object.entries(byAuthor).map(async ([author, prs]) => {
               const discordUserId =
                 DISCORD_GITHUB_MAP[author as keyof typeof DISCORD_GITHUB_MAP]
               if (discordUserId) {
-                await handleMergeConflicts(discordUserId, prs as PullRequest[])
-                await handleWaitingForReview(
-                  discordUserId,
-                  prs as PullRequest[],
-                )
                 await handleApprovedNotMerged(
                   discordUserId,
                   prs as PullRequest[],
+                  ctxId,
                 )
                 await handleUnconventionalTitleOrDescription(
                   discordUserId,
                   prs as PullRequest[],
+                  ctxId,
                 )
               }
             }),

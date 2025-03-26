@@ -5,7 +5,7 @@ export * from './connection'
 export * from './schema'
 
 // Export repository
-export * from './repository'
+export * from './event.repository'
 
 // Re-export drizzle types for convenience
 export type { PostgresJsDatabase } from 'drizzle-orm/postgres-js'
