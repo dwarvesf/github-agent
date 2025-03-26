@@ -47,3 +47,9 @@ export const convertNestedArrayToTreeList = (node: TreeNode): string => {
   traverse(node, level)
   return result.join('\n')
 }
+
+export const getOneLineCommit = (originCommit: string): string => {
+  const lines = originCommit.split('\n')
+
+  return lines[0] || ''
+}

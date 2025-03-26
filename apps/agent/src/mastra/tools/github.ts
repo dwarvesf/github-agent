@@ -162,7 +162,7 @@ export const getCommitsTool = createTool({
         sha: c.sha.substring(0, 8),
         author: c.author.login,
         url: c.html_url,
-        message: c.commit.message,
+        message: c.message,
       })),
     }
   },
@@ -308,7 +308,7 @@ export const getUserActivitiesTool = createTool({
         convertNestedArrayToTreeList({
           label: '`Commits:`',
           children: commits.map((c) => ({
-            label: `[${c.sha.substring(0, 8)}](${c.html_url}) ${c.commit.message}`,
+            label: `[${c.sha.substring(0, 8)}](${c.html_url}) ${c.message}`,
           })),
         }),
       )

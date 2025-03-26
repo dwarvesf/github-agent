@@ -90,7 +90,7 @@ const stepTwo = new Step({
         sha: commit.sha,
         author: commit.author.login,
         url: commit.html_url,
-        message: commit.commit.message,
+        message: commit.message,
       })),
     }
   },
