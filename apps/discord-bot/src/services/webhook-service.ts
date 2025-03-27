@@ -5,6 +5,7 @@ import { Logger } from '../services/index.js'
 import { replaceGitHubMentions } from '../commands/index.js'
 import { RootController } from '../controllers/root-controller.js'
 import { Controller } from '../controllers/index.js'
+import { processResponseToEmbedFields } from '../commands/common.js'
 
 interface MessagePayload {
   content?: string
@@ -38,7 +39,9 @@ export class WebhookService {
     this.setupRoutes()
   }
 
-  private createMessagePayload(request: WebhookRequest): MessagePayload {
+  private async createMessagePayload(
+    request: WebhookRequest,
+  ): Promise<MessagePayload> {
     const payload: MessagePayload = {}
 
     if (request.message) {
@@ -61,6 +64,15 @@ export class WebhookService {
             ? replaceGitHubMentions(field.value)[0]
             : field.value,
         }))
+      }
+
+      if (request.embed.table) {
+        request.embed.fields = await processResponseToEmbedFields(
+          this.client,
+          '',
+          request.embed.table.value,
+        )
+        delete request.embed.table
       }
 
       payload.embeds = [request.embed]
@@ -111,7 +123,7 @@ export class WebhookService {
       }
 
       // Create and send message
-      const payload = this.createMessagePayload(request)
+      const payload = await this.createMessagePayload(request)
       await channel.send(payload)
 
       return res
@@ -140,7 +152,7 @@ export class WebhookService {
         const dmChannel = await user.createDM()
 
         // Create and send message
-        const payload = this.createMessagePayload(request)
+        const payload = await this.createMessagePayload(request)
         await dmChannel.send(payload)
 
         return res

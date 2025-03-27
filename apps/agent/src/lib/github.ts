@@ -1,4 +1,5 @@
 import { getOneLineCommit } from '../utils/string'
+import { getDaysDifference } from '../utils/datetime'
 import { Commit } from './type'
 
 // GitHub API configuration
@@ -378,6 +379,49 @@ class GitHubClient {
       }))
     } catch (error) {
       console.error('Error fetching repository commits:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get open PRs that have been inactive (no updates or comments) for a specified period
+   * @param repo Repository name
+   * @param inactiveDays Number of days without activity to consider PR as inactive
+   * @returns Array of inactive pull requests
+   */
+  async getInactivePRs(
+    repo: string,
+    inactiveDays: number = 3,
+  ): Promise<PullRequest[]> {
+    try {
+      // Get all open PRs
+      const openPRs = await this.getRepoPRs(repo, {
+        isOpen: true,
+        isMerged: false,
+      })
+      const now = new Date()
+
+      // Filter PRs based on last activity
+      const inactivePRs = openPRs.filter((pr) => {
+        // Get the most recent date between updated_at and the latest review
+        const lastUpdated = new Date(pr.updated_at)
+        if (pr.reviews && pr.reviews.length > 0) {
+          const lastReviewDate = new Date(
+            Math.max(
+              ...pr.reviews.map((r) => new Date(r.submitted_at).getTime()),
+            ),
+          )
+          if (lastReviewDate > lastUpdated) {
+            return getDaysDifference(now, lastReviewDate) >= inactiveDays
+          }
+        }
+
+        return getDaysDifference(now, lastUpdated) >= inactiveDays
+      })
+
+      return inactivePRs
+    } catch (error) {
+      console.error('Error fetching inactive PRs:', error)
       throw error
     }
   }

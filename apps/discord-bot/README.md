@@ -255,6 +255,30 @@ curl -X POST http://localhost:3000/webhook/channel \
   }'
 ```
 
+**\*Transform Markdown Table**
+
+Alignment:
+
+```
+| Left | Center | Right |
+|:-----|:------:|------:|
+```
+
+```bash
+curl -X POST http://localhost:3000/webhook/channel \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channelId": "964734967517167616",
+    "embed": {
+      "color": 3447003,
+      "table": {
+          "value": "Summary \n| User | Task | Priority | Status |\n|:-----|:----:|:--------:|-------:|\n| @vdhieu | [API Integration](https://example.com) | Medium | Done |\n| @R-Jim | UI Components | High | In Progress |\n| @zlatanpham | Documentation | Low | Pending |\n",
+          "inline": false
+        }
+    }
+  }'
+```
+
 **List**
 
 <img width="350" alt="image" src="img/list.png">
