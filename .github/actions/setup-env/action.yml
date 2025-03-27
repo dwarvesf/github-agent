@@ -20,7 +20,7 @@ runs:
 
     - name: Install Packages
       shell: bash
-      run: pnpm install --frozen-lockfile
+      run: pnpm install
       env:
         CI: true
 
