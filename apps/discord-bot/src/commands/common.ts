@@ -5,6 +5,7 @@ const hardCodeIDMap = {
   'R-Jim': '336090238210408450',
   vdhieu: '797044001579597846',
   chinhld12: '757540075159420948',
+  catngh: '319132138849173505',
 }
 
 export function replaceGitHubMentions(
