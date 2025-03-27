@@ -131,12 +131,7 @@
       },
       "askResponse": {
         "title": "🤖 Github agent",
-        "fields": [
-          {
-            "name": "Question",
-            "value": ["{{QUESTION}}"]
-          }
-        ]
+        "fields": []
       }
     },
     "validationEmbeds": {
