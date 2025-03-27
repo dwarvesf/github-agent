@@ -1,6 +1,6 @@
 import { Step, Workflow } from '@mastra/core/workflows'
 import { formatDate } from 'date-fns'
-import * as z from 'zod'
+import { z } from 'zod'
 import { DISCORD_CHANNEL_ID, discordClient } from '../../lib/discord'
 import { GITHUB_REPO, githubClient } from '../../lib/github'
 
