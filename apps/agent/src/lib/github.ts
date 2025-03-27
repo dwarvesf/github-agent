@@ -74,87 +74,6 @@ class GitHubClient {
     this.repo = GITHUB_REPO
   }
 
-  /**
-   * Get open pull requests across the organization
-   */
-  async getOrgOpenPRs(repo?: string): Promise<PullRequest[]> {
-    // Using the search API to get all open PRs in the organization
-    // https://docs.github.com/en/rest/search/search?apiVersion=2022-11-28#search-issues-and-pull-requests
-    let query = `is:pr is:open org:${this.owner}`
-    if (repo) {
-      query += ` repo:${repo}`
-    }
-    const url = `${GITHUB_API_URL}/search/issues?q=${encodeURIComponent(query)}&sort=updated&order=desc`
-
-    try {
-      const response = await fetch(url, { headers: this.headers })
-
-      if (!response.ok) {
-        throw new Error(
-          `GitHub API error: ${response.status} ${response.statusText}`,
-        )
-      }
-
-      const searchData = await response.json()
-
-      // The search API returns a different format, so we need to map it to our PullRequest interface
-      // and fetch additional details for each PR
-      const prs: PullRequest[] = []
-      const prPromises = searchData.items.map(async (item: any) => {
-        // Extract repo name and PR number from the html_url
-        // Format is typically: https://github.com/owner/repo/pull/number
-        const urlParts = item.html_url.split('/')
-        const repoName = urlParts[urlParts.length - 3]
-        const prNumber = parseInt(urlParts[urlParts.length - 1], 10)
-
-        // Get full PR details
-        const prUrl = `${GITHUB_API_URL}/repos/${this.owner}/${repoName}/pulls/${prNumber}`
-        const prResponse = await fetch(prUrl, { headers: this.headers })
-
-        if (prResponse.ok) {
-          const prData = await prResponse.json()
-          prs.push(prData)
-        }
-      })
-
-      // Wait for all PR detail requests to complete
-      await Promise.all(prPromises)
-
-      return prs
-    } catch (error) {
-      console.error('Error fetching organization open PRs:', error)
-      throw error
-    }
-  }
-
-  /**
-   * Get pull request details
-   */
-  async getPrDetails(prNumber: number): Promise<PullRequest> {
-    // Get the PR details
-    const prUrl = `${GITHUB_API_URL}/repos/${this.owner}/${this.repo}/pulls/${prNumber}`
-    const prResponse = await fetch(prUrl, { headers: this.headers })
-
-    if (!prResponse.ok) {
-      throw new Error(
-        `GitHub API error: ${prResponse.status} ${prResponse.statusText}`,
-      )
-    }
-
-    const pr = (await prResponse.json()) as PullRequest
-
-    // Get reviews
-    const reviewsUrl = `${GITHUB_API_URL}/repos/${this.owner}/${this.repo}/pulls/${prNumber}/reviews`
-    const reviewsResponse = await fetch(reviewsUrl, { headers: this.headers })
-
-    const reviews = await reviewsResponse.json()
-
-    return {
-      ...pr,
-      reviews,
-    }
-  }
-
   isWIP(pr: PullRequest): boolean {
     if (pr.draft) {
       return true
@@ -286,7 +205,6 @@ class GitHubClient {
         const mergedQuery = `is:pr is:merged ${
           repo ? ` repo:${this.owner}/${repo}` : ''
         }${reviewerFilter}${authorFilter}${commenterFilter}${dateFilter}`
-        console.log('mergedQuery', mergedQuery)
         const mergedPrs = await this.fetchPRs(mergedQuery)
         prs.push(...mergedPrs)
       }
