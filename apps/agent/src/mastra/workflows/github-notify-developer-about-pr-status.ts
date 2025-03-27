@@ -149,6 +149,8 @@ const notifyDeveloperAboutPRStatus = new Workflow({
       execute: async () => {
         const prs = await githubClient.getRepoPRs(GITHUB_REPO, {
           from: formatDate(new Date()),
+          isMerged: false,
+          isOpen: true,
         })
 
         return {
