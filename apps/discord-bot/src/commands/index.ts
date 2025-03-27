@@ -7,8 +7,4 @@ export {
   getUsername,
   processResponseToEmbedFields,
 } from './common.js'
-export {
-  ChatCommandMetadata,
-  MessageCommandMetadata,
-  UserCommandMetadata,
-} from './metadata.js'
+export { ChatCommandMetadata } from './metadata.js'

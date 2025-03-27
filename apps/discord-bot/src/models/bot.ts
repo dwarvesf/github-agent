@@ -1,32 +1,16 @@
 import {
   AutocompleteInteraction,
-  ButtonInteraction,
   Client,
   CommandInteraction,
   Events,
-  Guild,
   Interaction,
-  Message,
-  MessageReaction,
-  ModalSubmitInteraction,
-  PartialMessageReaction,
-  PartialUser,
   RateLimitData,
   RESTEvents,
-  User,
 } from 'discord.js'
 import { createRequire } from 'node:module'
 
-import {
-  ButtonHandler,
-  CommandHandler,
-  GuildJoinHandler,
-  GuildLeaveHandler,
-  MessageHandler,
-  ReactionHandler,
-} from '../events/index.js'
-import { JobService, Logger } from '../services/index.js'
-import { PartialUtils } from '../utils/index.js'
+import { CommandHandler } from '../events/index.js'
+import { Logger } from '../services/index.js'
 
 const require = createRequire(import.meta.url)
 const Config = require('../../config/config.json')
@@ -39,13 +23,7 @@ export class Bot {
   constructor(
     private token: string,
     private client: Client,
-    private guildJoinHandler: GuildJoinHandler,
-    private guildLeaveHandler: GuildLeaveHandler,
-    private messageHandler: MessageHandler,
     private commandHandler: CommandHandler,
-    private buttonHandler: ButtonHandler,
-    private reactionHandler: ReactionHandler,
-    private jobService: JobService,
   ) {}
 
   public async start(): Promise<void> {
@@ -60,22 +38,8 @@ export class Bot {
       (shardId: number, unavailableGuilds: Set<string>) =>
         this.onShardReady(shardId, unavailableGuilds),
     )
-    this.client.on(Events.GuildCreate, (guild: Guild) =>
-      this.onGuildJoin(guild),
-    )
-    this.client.on(Events.GuildDelete, (guild: Guild) =>
-      this.onGuildLeave(guild),
-    )
-    this.client.on(Events.MessageCreate, (msg: Message) => this.onMessage(msg))
     this.client.on(Events.InteractionCreate, (intr: Interaction) =>
       this.onInteraction(intr),
-    )
-    this.client.on(
-      Events.MessageReactionAdd,
-      (
-        messageReaction: MessageReaction | PartialMessageReaction,
-        user: User | PartialUser,
-      ) => this.onReaction(messageReaction, user),
     )
     this.client.rest.on(
       RESTEvents.RateLimited,
@@ -96,61 +60,12 @@ export class Bot {
     const userTag = this.client.user?.tag
     Logger.info(Logs.info.clientLogin.replaceAll('{USER_TAG}', userTag))
 
-    if (!Debug.dummyMode.enabled) {
-      this.jobService.start()
-    }
-
     this.ready = true
     Logger.info(Logs.info.clientReady)
   }
 
   private onShardReady(shardId: number, _unavailableGuilds: Set<string>): void {
     Logger.setShardId(shardId)
-  }
-
-  private async onGuildJoin(guild: Guild): Promise<void> {
-    if (!this.ready || Debug.dummyMode.enabled) {
-      return
-    }
-
-    try {
-      await this.guildJoinHandler.process(guild)
-    } catch (error) {
-      Logger.error(Logs.error.guildJoin, error)
-    }
-  }
-
-  private async onGuildLeave(guild: Guild): Promise<void> {
-    if (!this.ready || Debug.dummyMode.enabled) {
-      return
-    }
-
-    try {
-      await this.guildLeaveHandler.process(guild)
-    } catch (error) {
-      Logger.error(Logs.error.guildLeave, error)
-    }
-  }
-
-  private async onMessage(msg: Message): Promise<void> {
-    if (
-      !this.ready ||
-      (Debug.dummyMode.enabled &&
-        !Debug.dummyMode.whitelist.includes(msg.author.id))
-    ) {
-      return
-    }
-
-    try {
-      msg = await PartialUtils.fillMessage(msg)
-      if (!msg) {
-        return
-      }
-
-      await this.messageHandler.process(msg)
-    } catch (error) {
-      Logger.error(Logs.error.message, error)
-    }
   }
 
   private async onInteraction(intr: Interaction): Promise<void> {
@@ -171,45 +86,6 @@ export class Bot {
       } catch (error) {
         Logger.error(Logs.error.command, error)
       }
-    } else if (intr instanceof ButtonInteraction) {
-      try {
-        await this.buttonHandler.process(intr)
-      } catch (error) {
-        Logger.error(Logs.error.button, error)
-      }
-    }
-  }
-
-  private async onReaction(
-    msgReaction: MessageReaction | PartialMessageReaction,
-    reactor: User | PartialUser,
-  ): Promise<void> {
-    if (
-      !this.ready ||
-      (Debug.dummyMode.enabled &&
-        !Debug.dummyMode.whitelist.includes(reactor.id))
-    ) {
-      return
-    }
-
-    try {
-      msgReaction = await PartialUtils.fillReaction(msgReaction)
-      if (!msgReaction) {
-        return
-      }
-
-      reactor = await PartialUtils.fillUser(reactor)
-      if (!reactor) {
-        return
-      }
-
-      await this.reactionHandler.process(
-        msgReaction,
-        msgReaction.message as Message,
-        reactor,
-      )
-    } catch (error) {
-      Logger.error(Logs.error.reaction, error)
     }
   }
 
