@@ -1,15 +1,12 @@
 import { Step, Workflow } from '@mastra/core/workflows'
-import { getTodayPRListTool } from '../tools'
-import { z } from 'zod'
 import { discordClient } from '../../lib/discord'
 import { groupBy } from '../../utils/array'
 import { PullRequest } from '../../lib/type'
 import { DISCORD_GITHUB_MAP } from '../../constants/discord'
 import { suggestPRDescriptionAgent } from '../agents/analyze-github-prs'
-import {
-  convertNestedArrayToTreeList,
-  prTitleFormatValid,
-} from '../../utils/string'
+import { prTitleFormatValid } from '../../utils/string'
+import { GITHUB_REPO, githubClient } from '../../lib/github'
+import { formatDate } from '../../utils/datetime'
 
 async function handleMergeConflicts(discordUserId: string, prs: PullRequest[]) {
   const hasMergedConflictsPRs = prs.filter(
@@ -146,39 +143,71 @@ async function handleUnconventionalTitleOrDescription(
 const notifyDeveloperAboutPRStatus = new Workflow({
   name: 'Notify developer about PR status',
 })
-  .step(getTodayPRListTool)
+  .step(
+    new Step({
+      id: 'get-today-pr-list',
+      execute: async () => {
+        const prs = await githubClient.getRepoPRs(GITHUB_REPO, {
+          from: formatDate(new Date()),
+        })
+
+        return {
+          todayPRs: prs.map((pr) => ({
+            number: pr.number,
+            title: pr.title,
+            url: pr.html_url,
+            author: pr.user.login,
+            createdAt: pr.created_at,
+            updatedAt: pr.updated_at,
+            mergedAt: pr.merged_at,
+            isMerged: pr.merged_at !== null,
+            isWaitingForReview: githubClient.isWaitingForReview(pr),
+            hasMergeConflicts: githubClient.hasMergeConflicts(pr),
+            draft: pr.draft,
+            isWIP: githubClient.isWIP(pr),
+            labels: pr.labels.map((label) => label.name),
+            reviewers: pr.requested_reviewers.map((reviewer) => reviewer.login),
+            hasComments: pr.comments > 0 || pr.review_comments > 0,
+            hasReviews: pr.reviews && pr.reviews.length > 0,
+            body: pr.body,
+          })),
+        }
+      },
+    }),
+  )
   .then(
     new Step({
       id: 'send-to-discord',
-      description: 'Send PR list to Discord',
-      inputSchema: z.object({}),
-      outputSchema: z.object({}),
       execute: async ({ context }) => {
-        const output = context?.getStepResult<{ list: PullRequest[] }>(
-          getTodayPRListTool.id,
-        )
+        if (context.steps['get-today-pr-list']?.status === 'success') {
+          const { todayPRs } = context.steps['get-today-pr-list'].output as {
+            todayPRs: PullRequest[]
+          }
+          const byAuthor = groupBy(
+            todayPRs || [],
+            (pr: PullRequest) => pr.author,
+          )
 
-        const byAuthor = groupBy(
-          output?.list || [],
-          (pr: PullRequest) => pr.author,
-        )
+          await Promise.all(
+            Object.entries(byAuthor).map(async ([author, prs]) => {
+              const discordUserId =
+                DISCORD_GITHUB_MAP[author as keyof typeof DISCORD_GITHUB_MAP]
+              if (discordUserId) {
+                await handleMergeConflicts(discordUserId, prs as PullRequest[])
+                await handleWaitingForReview(
+                  discordUserId,
+                  prs as PullRequest[],
+                )
+                await handleUnconventionalTitleOrDescription(
+                  discordUserId,
+                  prs as PullRequest[],
+                )
+              }
+            }),
+          )
 
-        await Promise.all(
-          Object.entries(byAuthor).map(async ([author, prs]) => {
-            const discordUserId =
-              DISCORD_GITHUB_MAP[author as keyof typeof DISCORD_GITHUB_MAP]
-            if (discordUserId) {
-              await handleMergeConflicts(discordUserId, prs as PullRequest[])
-              await handleWaitingForReview(discordUserId, prs as PullRequest[])
-              await handleUnconventionalTitleOrDescription(
-                discordUserId,
-                prs as PullRequest[],
-              )
-            }
-          }),
-        )
-
-        return 'ok'
+          return 'ok'
+        }
       },
     }),
   )

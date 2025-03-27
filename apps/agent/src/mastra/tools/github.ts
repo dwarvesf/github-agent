@@ -1,7 +1,6 @@
 import { createTool } from '@mastra/core/tools'
 import { z } from 'zod'
 import { GITHUB_REPO, githubClient } from '../../lib/github'
-import { formatDate } from '../../utils/datetime'
 import {
   convertArrayToMarkdownTableList,
   convertNestedArrayToTreeList,
@@ -29,40 +28,6 @@ const prListSchema = z.object({
 })
 
 export type PRListOutputSchema = z.infer<typeof prListSchema>
-
-export const getTodayPRListTool = createTool({
-  id: 'get-daily-pr-list-agent',
-  description: 'Get a list of current pull requests',
-  inputSchema: z.object({}),
-  outputSchema: prListSchema.describe('PR JSON list'),
-  execute: async () => {
-    const prs = await githubClient.getRepoPRs(GITHUB_REPO, {
-      from: formatDate(new Date()),
-    })
-
-    return {
-      list: prs.map((pr) => ({
-        number: pr.number,
-        title: pr.title,
-        url: pr.html_url,
-        author: pr.user.login,
-        createdAt: pr.created_at,
-        updatedAt: pr.updated_at,
-        mergedAt: pr.merged_at,
-        isMerged: pr.merged_at !== null,
-        isWaitingForReview: githubClient.isWaitingForReview(pr),
-        hasMergeConflicts: githubClient.hasMergeConflicts(pr),
-        draft: pr.draft,
-        isWIP: githubClient.isWIP(pr),
-        labels: pr.labels.map((label) => label.name),
-        reviewers: pr.requested_reviewers.map((reviewer) => reviewer.login),
-        hasComments: pr.comments > 0 || pr.review_comments > 0,
-        hasReviews: pr.reviews && pr.reviews.length > 0,
-        body: pr.body,
-      })),
-    }
-  },
-})
 
 export const getPullRequestTool = createTool({
   id: 'get-pull-request',
