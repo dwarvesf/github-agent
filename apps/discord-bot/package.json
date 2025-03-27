@@ -10,8 +10,7 @@
   },
   "type": "module",
   "exports": [
-    "./dist/start-bot.js",
-    "./dist/start-manager.js"
+    "./dist/start-bot.js"
   ],
   "scripts": {
     "lint": "eslint . --cache --ext .js,.jsx,.ts,.tsx",
@@ -35,7 +34,6 @@
     "start": "pnpm run start:bot",
     "start-dev:bot": "nodemon --exec tsx src/start-bot.ts",
     "start:bot": "pnpm run prepare-discord && node --enable-source-maps dist/start-bot.js",
-    "start:manager": "node --enable-source-maps dist/start-manager.js",
     "start:pm2": "pnpm run pm2:start",
     "pm2:start": "pm2 start process.json",
     "pm2:stop": "pm2 stop process.json",
