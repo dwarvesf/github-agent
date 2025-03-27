@@ -129,17 +129,14 @@
           }
         ]
       },
-      "accessKeySuccess": {
-        "title": "✅ Access Granted",
-        "description": "You now have access to the private channels."
-      },
-      "accessKeyFailed": {
-        "title": "❌ Access Denied",
-        "description": "The access key you provided is not correct. Please try again or contact an administrator."
-      },
       "askResponse": {
         "title": "🤖 Github agent",
-        "fields": []
+        "fields": [
+          {
+            "name": "Question",
+            "value": ["{{QUESTION}}"]
+          }
+        ]
       }
     },
     "validationEmbeds": {
@@ -231,15 +228,12 @@
       "promptText": "prompt"
     },
     "commandDescs": {
-      "dev": "Developer use only.",
       "help": "Find help or contact support.",
       "info": "View bot info.",
       "test": "Run the test command.",
-      "accessKey": "Sign in private channels.",
       "ask": "Ask a question to the agent bot."
     },
     "argDescs": {
-      "devCommand": "Command.",
       "helpOption": "Option.",
       "infoOption": "Option.",
       "askCommand": "Ask.",

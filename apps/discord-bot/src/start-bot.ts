@@ -4,11 +4,9 @@ import { createRequire } from 'node:module'
 
 import { Button } from './buttons/index.js'
 import {
-  DevCommand,
   HelpCommand,
   InfoCommand,
   TestCommand,
-  AccessKeyCommand,
   AskCommand,
 } from './commands/chat/index.js'
 import {
@@ -27,7 +25,6 @@ import {
   MessageHandler,
   ReactionHandler,
   TriggerHandler,
-  ModalHandler,
 } from './events/index.js'
 import { CustomClient } from './extensions/index.js'
 import { Job } from './jobs/index.js'
@@ -67,11 +64,9 @@ async function start(): Promise<void> {
   // Commands
   const commands: Command[] = [
     // Chat Commands
-    new DevCommand(),
     new HelpCommand(),
     new InfoCommand(),
     new TestCommand(),
-    new AccessKeyCommand(),
     new AskCommand(),
 
     // Message Context Commands
@@ -106,7 +101,6 @@ async function start(): Promise<void> {
   const triggerHandler = new TriggerHandler(triggers, eventDataService)
   const messageHandler = new MessageHandler(triggerHandler)
   const reactionHandler = new ReactionHandler(reactions, eventDataService)
-  const modalHandler = new ModalHandler()
 
   // Jobs
   const jobs: Job[] = [
@@ -123,7 +117,6 @@ async function start(): Promise<void> {
     commandHandler,
     buttonHandler,
     reactionHandler,
-    modalHandler,
     new JobService(jobs),
   )
 

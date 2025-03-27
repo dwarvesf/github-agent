@@ -1,0 +1,5 @@
+{
+  "watch": ["src", "lang"],
+  "ext": "ts,json",
+  "ignore": ["config/*"]
+}
