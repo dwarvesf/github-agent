@@ -1,5 +1,4 @@
 import { Step, Workflow } from '@mastra/core/workflows'
-import { formatDate } from 'date-fns'
 import { z } from 'zod'
 import { DISCORD_CHANNEL_ID, discordClient } from '../../lib/discord'
 import { GITHUB_REPO, githubClient } from '../../lib/github'
@@ -160,9 +159,7 @@ class NotifyInactivePRsWorkflow {
         const repoNotify = Object.values(notificationsByRepo)[0]
 
         if (!repoNotify?.prs.length) {
-          return {
-            description: summary,
-          }
+          return {}
         }
 
         const tableHeader = '| PR | Title | By | Idle days |'
@@ -209,7 +206,14 @@ class NotifyInactivePRsWorkflow {
             ...outputData,
             color: 0xffa500,
             footer: {
-              text: `${formatDate(new Date(), 'MMMM d, yyyy')}`,
+              text: `📸 Snapshot taken at ${new Date().toLocaleString('en-GB', {
+                day: '2-digit',
+                month: '2-digit',
+                year: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+              })}`,
             },
           },
         })
@@ -223,7 +227,14 @@ class NotifyInactivePRsWorkflow {
       .step(this.stepOne)
       .then(this.stepTwo)
       .then(this.stepThree)
-      .then(this.stepFour)
+      .then(this.stepFour, {
+        when: async ({ context }) => {
+          const fetchData = context?.getStepResult<{
+            table?: { value: string }
+          }>('process-embed-discord-notification')
+          return Boolean(fetchData?.table?.value)
+        },
+      })
   }
 
   public commit() {
