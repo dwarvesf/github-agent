@@ -10,25 +10,17 @@
     </a>
 </p>
 
-An agentic system designed to streamline the collaboration workflow of
-development teams on GitHub. Key features:
+<p align="center">
+ <img alt="image" src="assets/github-agent.gif"/>
+</p>
+
+An intelligent agent designed to enhance the reminder and notification workflow
+for development teams on GitHub. Key features:
 
 - Automated reminders for development blockers (code reviews, merge conflicts,
   etc)
 - Pull request monitoring and review notifications
 - Project progress tracking with work summaries
-
-## Project Structure
-
-### Apps
-
-- `agent`: Core automation service using Mastra framework
-- `discord-bot`: Discord integration service for notification
-
-### Packages
-
-- `eslint-config`: Shared ESLint configurations
-- `typescript-config`: Shared TypeScript configurations
 
 ## Getting Started
 
@@ -83,6 +75,18 @@ cp apps/discord-bot/.env.example apps/discord-bot/.env
 ```bash
 pnpm dev
 ```
+
+## Project Structure
+
+### Apps
+
+- `agent`: Core automation service using Mastra framework
+- `discord-bot`: Discord integration service for notification
+
+### Packages
+
+- `eslint-config`: Shared ESLint configurations
+- `typescript-config`: Shared TypeScript configurations
 
 ## Development
 
