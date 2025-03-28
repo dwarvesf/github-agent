@@ -2,6 +2,7 @@ import { Step, Workflow } from '@mastra/core/workflows'
 import { z } from 'zod'
 import { DISCORD_CHANNEL_ID, discordClient } from '../../lib/discord'
 import { GITHUB_REPO, githubClient } from '../../lib/github'
+import { takeSnapshotTime } from '../../utils/datetime'
 
 interface InactivePRNotification {
   repo: string
@@ -206,14 +207,7 @@ class NotifyInactivePRsWorkflow {
             ...outputData,
             color: 0xffa500,
             footer: {
-              text: `📸 Snapshot taken at ${new Date().toLocaleString('en-GB', {
-                day: '2-digit',
-                month: '2-digit',
-                year: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false,
-              })}`,
+              text: takeSnapshotTime(new Date()),
             },
           },
         })
