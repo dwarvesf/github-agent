@@ -1,5 +1,5 @@
-import { getOneLineCommit } from '../utils/string'
 import { getDaysDifference } from '../utils/datetime'
+import { getOneLineCommit } from '../utils/string'
 import { Commit } from './type'
 
 // GitHub API configuration
@@ -139,6 +139,53 @@ class GitHubClient {
     // mergeable can be true, false, or null (when GitHub hasn't computed it yet)
     // mergeable_state can be: clean, dirty, blocked, behind, unstable
     return pr.mergeable === false || pr.mergeable_state === 'dirty'
+  }
+
+  /**
+   * Check if PR is approved but not merged yet, ignoring dismissed reviews
+   * @param pr Pull request to check
+   * @returns boolean indicating if PR is approved but not merged
+   */
+  isApprovedButNotMerged(pr: PullRequest): boolean {
+    // If PR is merged, it's not waiting for merge
+    if (pr.merged_at !== null) {
+      return false
+    }
+
+    // If PR is in WIP state, it's not ready for merge
+    if (this.isWIP(pr)) {
+      return false
+    }
+
+    // If there are no reviews, it's not approved
+    if (!pr.reviews || pr.reviews.length === 0) {
+      return false
+    }
+
+    // Sort reviews by submission date to get chronological order
+    const sortedReviews = [...pr.reviews].sort(
+      (a, b) =>
+        new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime(),
+    )
+
+    // Find the last approved review
+    const lastApprovedReview = [...sortedReviews]
+      .reverse()
+      .find((review) => review.state === 'APPROVED')
+
+    if (!lastApprovedReview) {
+      return false
+    }
+
+    // Check if there are any dismissed reviews after the last approval
+    const hasDismissedAfterApproval = sortedReviews.some(
+      (review) =>
+        review.state === 'DISMISSED' &&
+        new Date(review.submitted_at).getTime() >
+          new Date(lastApprovedReview.submitted_at).getTime(),
+    )
+
+    return !hasDismissedAfterApproval
   }
 
   // https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests
