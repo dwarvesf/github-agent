@@ -8,6 +8,7 @@ export interface PullRequest {
   draft: boolean
   isWaitingForReview: boolean
   hasMergeConflicts: boolean
+  isApprovedWaitingForMerging: boolean
   isWIP: boolean
   isMerged: boolean
   labels: string[]

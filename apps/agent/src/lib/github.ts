@@ -1,5 +1,5 @@
-import { getOneLineCommit } from '../utils/string'
 import { getDaysDifference } from '../utils/datetime'
+import { getOneLineCommit } from '../utils/string'
 import { Commit } from './type'
 
 // GitHub API configuration
@@ -141,6 +141,53 @@ class GitHubClient {
     return pr.mergeable === false || pr.mergeable_state === 'dirty'
   }
 
+  /**
+   * Check if PR is approved but not merged yet, ignoring dismissed reviews
+   * @param pr Pull request to check
+   * @returns boolean indicating if PR is approved but not merged
+   */
+  isApprovedButNotMerged(pr: PullRequest): boolean {
+    // If PR is merged, it's not waiting for merge
+    if (pr.merged_at !== null) {
+      return false
+    }
+
+    // If PR is in WIP state, it's not ready for merge
+    if (this.isWIP(pr)) {
+      return false
+    }
+
+    // If there are no reviews, it's not approved
+    if (!pr.reviews || pr.reviews.length === 0) {
+      return false
+    }
+
+    // Sort reviews by submission date to get chronological order
+    const sortedReviews = [...pr.reviews].sort(
+      (a, b) =>
+        new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime(),
+    )
+
+    // Find the last approved review
+    const lastApprovedReview = [...sortedReviews]
+      .reverse()
+      .find((review) => review.state === 'APPROVED')
+
+    if (!lastApprovedReview) {
+      return false
+    }
+
+    // Check if there are any dismissed reviews after the last approval
+    const hasDismissedAfterApproval = sortedReviews.some(
+      (review) =>
+        review.state === 'DISMISSED' &&
+        new Date(review.submitted_at).getTime() >
+          new Date(lastApprovedReview.submitted_at).getTime(),
+    )
+
+    return !hasDismissedAfterApproval
+  }
+
   // https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests
   async getRepoPRs(
     repo: string,
@@ -178,10 +225,10 @@ class GitHubClient {
         let dateFilter = ''
         if (from || to) {
           if (from) {
-            dateFilter = ` created:>=${from}`
+            dateFilter = ` updated:>=${from}`
           }
           if (to) {
-            dateFilter = ` created:<=${to}`
+            dateFilter = ` updated:<=${to}`
           }
         }
         const openQuery = `is:pr is:open ${
@@ -234,6 +281,28 @@ class GitHubClient {
     )
 
     return Promise.all(prPromises)
+  }
+
+  public async getPRReviews(pr: PullRequest): Promise<PullRequest> {
+    const urlParts = pr.html_url.split('/')
+    const repoName = urlParts[urlParts.length - 3]
+    const prNumber = parseInt(urlParts[urlParts.length - 1]!, 10)
+
+    // Fetch PR reviews
+    const reviewsUrl = `${GITHUB_API_URL}/repos/${this.owner}/${repoName}/pulls/${prNumber}/reviews`
+    const reviewsResponse = await fetch(reviewsUrl, { headers: this.headers })
+
+    if (!reviewsResponse.ok) {
+      throw new Error(
+        `GitHub API error: ${reviewsResponse.status} ${reviewsResponse.statusText}`,
+      )
+    }
+
+    const reviews = await reviewsResponse.json()
+    return {
+      ...pr,
+      reviews,
+    }
   }
 
   // Helper function to fetch full PR details

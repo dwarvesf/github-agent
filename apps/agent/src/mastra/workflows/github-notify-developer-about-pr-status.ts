@@ -1,12 +1,12 @@
 import { Step, Workflow } from '@mastra/core/workflows'
-import { discordClient } from '../../lib/discord'
-import { groupBy } from '../../utils/array'
-import { PullRequest } from '../../lib/type'
 import { DISCORD_GITHUB_MAP } from '../../constants/discord'
-import { suggestPRDescriptionAgent } from '../agents/analyze-github-prs'
-import { prTitleFormatValid } from '../../utils/string'
+import { discordClient } from '../../lib/discord'
 import { GITHUB_REPO, githubClient } from '../../lib/github'
+import { PullRequest } from '../../lib/type'
+import { groupBy } from '../../utils/array'
 import { formatDate } from '../../utils/datetime'
+import { prTitleFormatValid } from '../../utils/string'
+import { suggestPRDescriptionAgent } from '../agents/analyze-github-prs'
 
 async function handleMergeConflicts(discordUserId: string, prs: PullRequest[]) {
   const hasMergedConflictsPRs = prs.filter(
@@ -48,6 +48,34 @@ async function handleWaitingForReview(
       title: `👀 ${isPlural ? ' are' : ' is'} your pull request${isPlural ? 's' : ''} ready for review?`,
       color: 3447003,
       fields: watingForReviewPrs.map((pr) => ({
+        name: `#${pr.number} ${pr.title}`,
+        value: `Created at: ${new Date(pr.createdAt).toISOString().split('T')[0]} | [link](${pr.url})`,
+        inline: false,
+      })),
+    }
+
+    await discordClient.sendMessageToUser({
+      userId: discordUserId,
+      message: '',
+      embed,
+    })
+  }
+}
+
+async function handleApprovedNotMerged(
+  discordUserId: string,
+  prs: PullRequest[],
+) {
+  const approvedNotMergedPRs = prs.filter(
+    (pr: PullRequest) => pr.isApprovedWaitingForMerging,
+  )
+
+  if (approvedNotMergedPRs.length > 0) {
+    const isPlural = approvedNotMergedPRs.length > 1
+    const embed = {
+      title: `✅ ${isPlural ? 'Your PRs are' : 'Your PR is'} approved and ready to merge`,
+      color: 3066993, // Green color
+      fields: approvedNotMergedPRs.map((pr) => ({
         name: `#${pr.number} ${pr.title}`,
         value: `Created at: ${new Date(pr.createdAt).toISOString().split('T')[0]} | [link](${pr.url})`,
         inline: false,
@@ -153,8 +181,14 @@ const notifyDeveloperAboutPRStatus = new Workflow({
           isOpen: true,
         })
 
+        const todayPRsWithReviews = await Promise.all(
+          prs.map((pr) => {
+            return githubClient.getPRReviews(pr)
+          }),
+        )
+
         return {
-          todayPRs: prs.map((pr) => ({
+          todayPRs: todayPRsWithReviews.map((pr) => ({
             number: pr.number,
             title: pr.title,
             url: pr.html_url,
@@ -165,6 +199,8 @@ const notifyDeveloperAboutPRStatus = new Workflow({
             isMerged: pr.merged_at !== null,
             isWaitingForReview: githubClient.isWaitingForReview(pr),
             hasMergeConflicts: githubClient.hasMergeConflicts(pr),
+            isApprovedWaitingForMerging:
+              githubClient.isApprovedButNotMerged(pr),
             draft: pr.draft,
             isWIP: githubClient.isWIP(pr),
             labels: pr.labels.map((label) => label.name),
@@ -197,6 +233,10 @@ const notifyDeveloperAboutPRStatus = new Workflow({
               if (discordUserId) {
                 await handleMergeConflicts(discordUserId, prs as PullRequest[])
                 await handleWaitingForReview(
+                  discordUserId,
+                  prs as PullRequest[],
+                )
+                await handleApprovedNotMerged(
                   discordUserId,
                   prs as PullRequest[],
                 )
