@@ -283,22 +283,10 @@ class GitHubClient {
     return Promise.all(prPromises)
   }
 
-  // Helper function to fetch full PR details
-  private async fetchPRDetails(item: any): Promise<PullRequest> {
-    const urlParts = item.html_url.split('/')
+  public async getPRReviews(pr: PullRequest): Promise<PullRequest> {
+    const urlParts = pr.html_url.split('/')
     const repoName = urlParts[urlParts.length - 3]
-    const prNumber = parseInt(urlParts[urlParts.length - 1], 10)
-    const prUrl = `${GITHUB_API_URL}/repos/${this.owner}/${repoName}/pulls/${prNumber}`
-
-    const prResponse = await fetch(prUrl, { headers: this.headers })
-
-    if (!prResponse.ok) {
-      throw new Error(
-        `GitHub API error: ${prResponse.status} ${prResponse.statusText}`,
-      )
-    }
-
-    const pr = await prResponse.json()
+    const prNumber = parseInt(urlParts[urlParts.length - 1]!, 10)
 
     // Fetch PR reviews
     const reviewsUrl = `${GITHUB_API_URL}/repos/${this.owner}/${repoName}/pulls/${prNumber}/reviews`
@@ -315,6 +303,24 @@ class GitHubClient {
       ...pr,
       reviews,
     }
+  }
+
+  // Helper function to fetch full PR details
+  private async fetchPRDetails(item: any): Promise<PullRequest> {
+    const urlParts = item.html_url.split('/')
+    const repoName = urlParts[urlParts.length - 3]
+    const prNumber = parseInt(urlParts[urlParts.length - 1], 10)
+    const prUrl = `${GITHUB_API_URL}/repos/${this.owner}/${repoName}/pulls/${prNumber}`
+
+    const prResponse = await fetch(prUrl, { headers: this.headers })
+
+    if (!prResponse.ok) {
+      throw new Error(
+        `GitHub API error: ${prResponse.status} ${prResponse.statusText}`,
+      )
+    }
+
+    return prResponse.json()
   }
 
   /**

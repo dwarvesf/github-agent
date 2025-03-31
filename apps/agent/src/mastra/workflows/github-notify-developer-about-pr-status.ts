@@ -181,8 +181,14 @@ const notifyDeveloperAboutPRStatus = new Workflow({
           isOpen: true,
         })
 
+        const todayPRsWithReviews = await Promise.all(
+          prs.map((pr) => {
+            return githubClient.getPRReviews(pr)
+          }),
+        )
+
         return {
-          todayPRs: prs.map((pr) => ({
+          todayPRs: todayPRsWithReviews.map((pr) => ({
             number: pr.number,
             title: pr.title,
             url: pr.html_url,
