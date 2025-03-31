@@ -26,6 +26,13 @@ export function replaceGitHubMentions(
   ]
 }
 
+export function getDiscordIdFromGitHubId(
+  githubId: string,
+  idMap: Record<string, string> = hardCodeIDMap,
+): string | null {
+  return idMap[githubId] || null
+}
+
 export function replaceDiscordMentions(
   text: string,
   idMap: Record<string, string> = hardCodeIDMap,

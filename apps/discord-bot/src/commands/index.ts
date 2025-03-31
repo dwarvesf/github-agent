@@ -6,5 +6,6 @@ export {
   replaceDiscordMentions,
   getUsername,
   processResponseToEmbedFields,
+  getDiscordIdFromGitHubId,
 } from './common.js'
 export { ChatCommandMetadata } from './metadata.js'
