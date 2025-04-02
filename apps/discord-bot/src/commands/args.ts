@@ -16,4 +16,12 @@ export class Args {
     ),
     type: ApplicationCommandOptionType.String,
   }
+
+  public static readonly AMOUNT: APIApplicationCommandBasicOption = {
+    name: Lang.getRef('arguments.amount', Language.Default),
+    name_localizations: Lang.getRefLocalizationMap('arguments.amount'),
+    description: Lang.getRef('argDescs.amount', Language.Default),
+    description_localizations: Lang.getRefLocalizationMap('argDescs.amount'),
+    type: ApplicationCommandOptionType.Integer,
+  }
 }

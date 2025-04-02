@@ -1,5 +1,7 @@
 import {
   ApplicationCommandType,
+  PermissionFlagsBits,
+  PermissionsBitField,
   RESTPostAPIChatInputApplicationCommandsJSONBody,
 } from 'discord.js'
 
@@ -21,6 +23,23 @@ export const ChatCommandMetadata: {
     options: [
       {
         ...Args.PROMPT,
+        required: true,
+      },
+    ],
+  },
+  CLEAN: {
+    type: ApplicationCommandType.ChatInput,
+    name: Lang.getRef('chatCommands.clean', Language.Default),
+    name_localizations: Lang.getRefLocalizationMap('chatCommands.clean'),
+    description: Lang.getRef('commandDescs.clean', Language.Default),
+    description_localizations: Lang.getRefLocalizationMap('commandDescs.clean'),
+    dm_permission: true,
+    default_member_permissions: PermissionsBitField.resolve([
+      PermissionFlagsBits.Administrator,
+    ]).toString(),
+    options: [
+      {
+        ...Args.AMOUNT,
         required: true,
       },
     ],

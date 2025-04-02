@@ -137,6 +137,10 @@
             "value": ["{{QUESTION}}"]
           }
         ]
+      },
+      "cleanResponse": {
+        "title": "🤖 Github agent",
+        "fields": []
       }
     },
     "validationEmbeds": {
@@ -214,7 +218,8 @@
       "info": "info",
       "test": "test",
       "accessKey": "accesskey",
-      "ask": "ask"
+      "ask": "ask",
+      "clean": "clean"
     },
     "userCommands": {
       "viewDateJoined": "View Date Joined"
@@ -225,19 +230,22 @@
     "arguments": {
       "command": "command",
       "option": "option",
-      "promptText": "prompt"
+      "promptText": "prompt",
+      "amount": "amount"
     },
     "commandDescs": {
       "help": "Find help or contact support.",
       "info": "View bot info.",
       "test": "Run the test command.",
-      "ask": "Ask a question to the agent bot."
+      "ask": "Ask a question to the agent bot.",
+      "clean": "Clean messages"
     },
     "argDescs": {
       "helpOption": "Option.",
       "infoOption": "Option.",
       "askCommand": "Ask.",
-      "promptText": "Enter Prompt text."
+      "promptText": "Enter Prompt text.",
+      "amount": "Enter amount messages"
     },
     "fields": {
       "commands": "Commands",
