@@ -59,3 +59,11 @@ export const prTitleFormatValid = (title: string): boolean => {
     /^[a-zA-Z0-9]+(\([a-zA-Z0-9\-_]+\))?: [a-zA-Z0-9]+(?: [a-zA-Z0-9]+)*$/
   return titleFormatRegex.test(title)
 }
+
+export const getPRTruncatedTitle = (title: string, maxLength = 22): string => {
+  if (!title || title.length <= maxLength) {
+    return title
+  }
+
+  return [title.slice(0, maxLength), '...'].join('')
+}

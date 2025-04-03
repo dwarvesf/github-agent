@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { DISCORD_CHANNEL_ID, discordClient } from '../../lib/discord'
 import { GITHUB_REPO, githubClient } from '../../lib/github'
 import { takeSnapshotTime } from '../../utils/datetime'
+import { getPRTruncatedTitle } from '../../utils/string'
 
 interface InactivePRNotification {
   repo: string
@@ -168,7 +169,7 @@ class NotifyInactivePRsWorkflow {
 
         const tableRows = (repoNotify?.prs || [])
           .map((pr) => {
-            return `| [#${pr.number}](${pr.url}) | ${pr.title} | @${pr.author} | ${pr.daysInactive} |`
+            return `| [#${pr.number}](${pr.url}) | ${getPRTruncatedTitle(pr.title)} | @${pr.author} | ${pr.daysInactive} |`
           })
           .join('\n')
 
