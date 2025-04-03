@@ -22,17 +22,20 @@ export class CleanCommand implements Command {
       if (!intr.isChatInputCommand()) {
         return
       }
-
-      if (
-        !intr.channel.isDMBased() &&
-        !intr.memberPermissions?.has('Administrator')
-      ) {
-        await InteractionUtils.send(
-          intr,
-          'Must be Administrator for removing messages!',
-          true,
+      // Check if the user has the required permissions
+      if (this.requireClientPerms.length > 0 && !intr.channel.isDMBased()) {
+        const missingPermissions = this.requireClientPerms.filter(
+          (perm) => !intr.memberPermissions.has(perm),
         )
-        return
+
+        if (missingPermissions.length > 0) {
+          await InteractionUtils.send(
+            intr,
+            `Must have ${this.requireClientPerms.join(', ')} permission(s) for removing messages!`,
+            true,
+          )
+          return
+        }
       }
 
       // Get the number of messages to clean from the options
