@@ -2,7 +2,7 @@ import { REST } from '@discordjs/rest'
 import { Options, Partials } from 'discord.js'
 import { createRequire } from 'node:module'
 
-import { AskCommand } from './commands/chat/index.js'
+import { AskCommand, CleanCommand } from './commands/chat/index.js'
 import { ChatCommandMetadata, Command } from './commands/index.js'
 import { CommandHandler } from './events/index.js'
 import { CustomClient } from './extensions/index.js'
@@ -40,6 +40,7 @@ async function start(): Promise<void> {
   const commands: Command[] = [
     // Chat Commands
     new AskCommand(),
+    new CleanCommand(),
   ]
 
   // Event handlers
