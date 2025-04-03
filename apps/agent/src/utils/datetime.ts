@@ -14,7 +14,5 @@ export function getDaysDifference(date1: Date, date2: Date): number {
 }
 
 export function takeSnapshotTime(date: Date = new Date()) {
-  return {
-    text: `📸 Snapshot taken at ${formatDate(date, 'dd/MM/yy, HH:mm')}`,
-  }
+  return `📸 Snapshot taken at ${formatDate(date, 'dd/MM/yy, HH:mm')}`
 }
