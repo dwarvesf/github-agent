@@ -3,7 +3,6 @@ import { z } from 'zod'
 import { DISCORD_CHANNEL_ID, discordClient } from '../../lib/discord'
 import { GITHUB_REPO, githubClient } from '../../lib/github'
 import { takeSnapshotTime } from '../../utils/datetime'
-import { getPRTruncatedTitle } from '../../utils/string'
 
 interface InactivePRNotification {
   repo: string
@@ -164,24 +163,27 @@ class NotifyInactivePRsWorkflow {
           return {}
         }
 
-        const tableHeader = '| PR | Title | By | Idle days |'
-        const tableAligner = '|:------:|:------|:------|------:|'
-
         const tableRows = (repoNotify?.prs || [])
-          .map((pr) => {
-            return `| [#${pr.number}](${pr.url}) | ${getPRTruncatedTitle(pr.title)} | @${pr.author} | ${pr.daysInactive} |`
-          })
-          .join('\n')
+          .reduce((chunks, pr, idx) => {
+            const row = `- **[#${pr.number}](${pr.url})** \`${pr.title}\` by @${pr.author}} **(${pr.daysInactive}+ days)**`
+            const chunkIndex = Math.floor(idx / 5)
+            if (!chunks[chunkIndex]) {
+              chunks[chunkIndex] = []
+            }
+            chunks[chunkIndex].push(row)
+            return chunks
+          }, [] as string[][])
+          .map((chunk) => chunk.join('\n'))
 
         // Combine summary and table
-        const content = [summary, tableHeader, tableAligner, tableRows].join(
-          '\n',
-        )
+        const fields = [summary, ...tableRows].map((value) => ({
+          value,
+          name: '',
+          inline: false,
+        }))
 
         return {
-          table: {
-            value: content,
-          },
+          fields,
         }
       }
       return {}
@@ -198,14 +200,14 @@ class NotifyInactivePRsWorkflow {
         context.steps['process-embed-discord-notification']?.status ===
           'success'
       ) {
-        const outputData =
-          context.steps['process-embed-discord-notification']?.output
+        const fields =
+          context.steps['process-embed-discord-notification']?.output.fields
 
         await discordClient.sendMessageToChannel({
           channelId: DISCORD_CHANNEL_ID,
           embed: {
             title: `👀 **Inactive work**`,
-            ...outputData,
+            fields,
             color: 0xffa500,
             footer: {
               text: takeSnapshotTime(new Date()),
@@ -225,9 +227,9 @@ class NotifyInactivePRsWorkflow {
       .then(this.stepFour, {
         when: async ({ context }) => {
           const fetchData = context?.getStepResult<{
-            table?: { value: string }
+            fields: Array<{ value: string }>
           }>('process-embed-discord-notification')
-          return Boolean(fetchData?.table?.value)
+          return Boolean(fetchData?.fields.length)
         },
       })
   }
