@@ -74,23 +74,48 @@ export async function processResponseToEmbedFields(
   const [lines, discordIDs] = replaceGitHubMentions(response)
   let currentChunk = ''
   let isTable = false
+  let currentAlignments: ('left' | 'center' | 'right')[] = []
   const idUsernameMap = await mapDiscordUsernameToID(
     client,
     guildID,
     discordIDs,
   )
 
+  // Calculate table widths from the entire response
+  const tableWidths = calculateTableWidths(response, idUsernameMap)
+
   const pushField = () => {
     if (currentChunk) {
       fields.push({
         name: isTable ? 'Table' : 'Text',
         value: isTable
-          ? convertMarkdownTable(currentChunk, idUsernameMap)
+          ? convertMarkdownTable(
+              currentChunk,
+              idUsernameMap,
+              currentAlignments,
+              tableWidths,
+            )
           : currentChunk,
         inline: false,
       })
       currentChunk = ''
     }
+  }
+
+  const separatorLine = lines
+    .split('\n')
+    .find((line) => TABLE_SEPARATOR_PATTERN.test(line))
+  if (separatorLine) {
+    // Extract alignments from separator row
+    currentAlignments = separatorLine
+      .split('|')
+      .slice(1, -1)
+      .map((cell) => {
+        const trimmed = cell.trim()
+        if (trimmed.startsWith(':') && trimmed.endsWith(':')) return 'center'
+        if (trimmed.endsWith(':')) return 'right'
+        return 'left'
+      })
   }
 
   for (const line of lines.split('\n')) {
@@ -129,7 +154,7 @@ interface TableCell {
   isLink: boolean
   isUrl: boolean
   isMention: boolean
-  align: 'left' | 'center' | 'right' // Always include alignment
+  align: 'left' | 'center' | 'right'
 }
 
 function parseTableCell(
@@ -171,13 +196,44 @@ function getCellWidth(
 
   if (cell.isMention) {
     const match = DISCORD_MENTION_PATTERN.exec(cell.content)
-    return (idUsernameMap?.get(match[1])?.length ?? 0) + 1
+    return (idUsernameMap?.get(match[1])?.length ?? 0) + 2
   }
 
   return cell.content.length
 }
 
-function formatTableCell(cell: TableCell, width: number): string {
+function calculateTableWidths(
+  markdown: string,
+  idUsernameMap?: Map<string, string>,
+): number[] {
+  const lines = markdown.split('\n').map((line) => line.trim())
+  const table: TableCell[][] = lines
+    .filter((line) => line.startsWith('|') && line.includes('|'))
+    .map((line) => {
+      const cells = line.split('|').slice(1, -1)
+      return cells.map((cell) => parseTableCell(cell.trim()))
+    })
+
+  const colWidths: number[] = []
+  const numColumns = Math.max(...table.map((row) => row.length))
+
+  for (let i = 0; i < numColumns; i++) {
+    const colWidth = Math.max(
+      ...table.map((row) => {
+        return i < row.length ? getCellWidth(row[i], idUsernameMap) : 0
+      }),
+    )
+    colWidths.push(colWidth)
+  }
+
+  return colWidths
+}
+
+function formatTableCell(
+  cell: TableCell,
+  width: number,
+  idUsernameMap?: Map<string, string>,
+): string {
   if (cell.isLink) {
     const linkTextMatch = cell.content.match(BOLD_LINK_PATTERN)
     let contentLength = 0
@@ -199,7 +255,10 @@ function formatTableCell(cell: TableCell, width: number): string {
   }
 
   if (cell.isMention) {
-    return cell.content.padEnd(width)
+    const match = DISCORD_MENTION_PATTERN.exec(cell.content)
+    const nameLength = idUsernameMap?.get(match[1])?.length ?? 0
+    const padEndwidth = width - nameLength
+    return `${cell.content} \`${' '.padEnd(padEndwidth / 2 + 1)}\``
   }
 
   // Apply alignment to regular cells
@@ -221,6 +280,8 @@ function formatTableCell(cell: TableCell, width: number): string {
 export function convertMarkdownTable(
   markdown: string,
   idUsernameMap?: Map<string, string>,
+  alignments?: ('left' | 'center' | 'right')[],
+  colWidths?: number[],
 ): string {
   // Split into lines
   const lines = markdown.split('\n').map((line) => line.trim())
@@ -230,55 +291,38 @@ export function convertMarkdownTable(
     TABLE_SEPARATOR_PATTERN.test(line),
   )
 
-  if (separatorRowIndex === -1 || separatorRowIndex === 0) {
+  if (!alignments?.length) {
     // If no proper separator found or it's the first line, use default processing
     return defaultTableProcessing(markdown, idUsernameMap)
   }
 
-  // Parse alignments from separator row
-  const separatorCells = lines[separatorRowIndex]
-    .split('|')
-    .slice(1, -1)
-    .map((cell) => cell.trim())
+  let contentRows = lines
+  if (separatorRowIndex !== -1) {
+    // Filter out the separator row
+    contentRows = [
+      ...lines.slice(0, separatorRowIndex),
+      ...lines.slice(separatorRowIndex + 1),
+    ]
+  }
 
-  const alignments = separatorCells.map((cell) => {
-    if (cell.startsWith(':') && cell.endsWith(':')) return 'center' as const
-    if (cell.endsWith(':')) return 'right' as const
-    return 'left' as const
-  })
-
-  // Filter out the separator row
-  const contentRows = [
-    ...lines.slice(0, separatorRowIndex),
-    ...lines.slice(separatorRowIndex + 1),
-  ]
-
-  // Convert rows to table cells with correct alignment
+  // Convert rows to table cells with provided alignments
   const table: TableCell[][] = contentRows.map((line) => {
     const cells = line.split('|').slice(1, -1)
     return cells.map((cell, index) => {
-      // Use default alignment if index is out of bounds
-      const align = index < alignments.length ? alignments[index] : 'left'
+      // Use provided alignment or default to left
+      const align =
+        alignments && index < alignments.length ? alignments[index] : 'left'
       return parseTableCell(cell.trim(), align)
     })
   })
 
-  // Determine column widths
-  const colWidths = []
-  for (let i = 0; i < table[0].length; i++) {
-    const colWidth = Math.max(
-      ...table.map((row) => {
-        return i < row.length ? getCellWidth(row[i], idUsernameMap) : 0
-      }),
-    )
-    colWidths.push(colWidth)
-  }
-
-  // Format each row
+  // Format each row using pre-calculated column widths
   return table
     .map((row) =>
       row
-        .map((cell, colIndex) => formatTableCell(cell, colWidths[colIndex]))
+        .map((cell, colIndex) =>
+          formatTableCell(cell, colWidths[colIndex], idUsernameMap),
+        )
         .join(' '),
     )
     .join('\n')
@@ -312,7 +356,9 @@ function defaultTableProcessing(
   return table
     .map((row) =>
       row
-        .map((cell, colIndex) => formatTableCell(cell, colWidths[colIndex]))
+        .map((cell, colIndex) =>
+          formatTableCell(cell, colWidths[colIndex], idUsernameMap),
+        )
         .join(' '),
     )
     .join('\n')
