@@ -7,13 +7,9 @@ import {
   convertNestedArrayToTreeList,
 } from '../../utils/string'
 import { formatDate } from '../../utils/datetime'
-import { PullRequest } from '../../lib/type'
 import { nanoid } from 'nanoid'
 import { EventRepository, NotificationType } from '../../db/event.repository'
-import dayjs from 'dayjs'
-import { EventCategory } from '@prisma/client'
-import { EventType } from '@prisma/client'
-import { getPrisma } from '../../db'
+import { EventCategory, EventType } from '@prisma/client'
 
 const stepOneSchema = z.object({
   todayPRs: z.array(

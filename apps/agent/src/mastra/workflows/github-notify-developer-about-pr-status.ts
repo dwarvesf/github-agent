@@ -8,8 +8,9 @@ import { formatDate } from '../../utils/datetime'
 import { prTitleFormatValid } from '../../utils/string'
 import { suggestPRDescriptionAgent } from '../agents/analyze-github-prs'
 import { EventRepository, NotificationType } from '../../db/event.repository'
-import { EventCategory, EventType } from '@prisma/client'
+
 import { nanoid } from 'nanoid'
+import { EventCategory, EventType } from '@prisma/client'
 async function handleApprovedNotMerged(
   discordUserId: string,
   prs: PullRequest[],
