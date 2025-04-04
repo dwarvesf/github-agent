@@ -1,8 +1,11 @@
 import { Step, Workflow } from '@mastra/core/workflows'
 import { z } from 'zod'
 import { DISCORD_CHANNEL_ID, discordClient } from '../../lib/discord'
-import { GITHUB_REPO, githubClient } from '../../lib/github'
+import { GITHUB_OWNER, GITHUB_REPO, githubClient } from '../../lib/github'
 import { takeSnapshotTime } from '../../utils/datetime'
+import { nanoid } from 'nanoid'
+import { EventRepository, NotificationType } from '../../db/event.repository'
+import { EventCategory, EventType } from '@prisma/client'
 
 interface InactivePRNotification {
   repo: string
@@ -219,6 +222,49 @@ class NotifyInactivePRsWorkflow {
     },
   })
 
+  private stepFive = new Step({
+    id: 'log-event',
+    outputSchema: z.object({}),
+    execute: async ({ context }) => {
+      if (
+        context.steps['get-inactive-prs']?.status === 'success' &&
+        context.steps['process-prs-by-repo']?.status === 'success' &&
+        context.steps['process-embed-discord-notification']?.status ===
+          'success' &&
+        context.steps['send-discord-notification']?.status === 'success'
+      ) {
+        const { notificationsByRepo } = context.steps['process-prs-by-repo']
+          .output as StepTwoOutput
+        const fields =
+          context.steps['process-embed-discord-notification']?.output.fields
+        const ctxId = nanoid()
+
+        await EventRepository.logEvent({
+          workflowId: 'notifyInactivePRsWorkflow',
+          eventCategory: EventCategory.NOTIFICATION_DISCORD,
+          eventType: EventType.PR_NOTIFIED,
+          organizationId: GITHUB_OWNER!,
+          repositoryId: GITHUB_REPO!,
+          eventData: {
+            notificationType: NotificationType.WAITING_FOR_REVIEW,
+            message:
+              fields?.map((f: { value: string }) => f.value).join('\n') || '',
+            prList: Object.values(notificationsByRepo).flatMap(
+              (repo) => repo.prs,
+            ),
+            discordChannelId: DISCORD_CHANNEL_ID,
+          },
+          metadata: {
+            inactiveDays: this.inactiveDays,
+          },
+          contextId: ctxId,
+          tags: ['inactive-prs', 'github', 'discord'],
+        })
+      }
+      return {}
+    },
+  })
+
   public configure() {
     return this.workflow
       .step(this.stepOne)
@@ -232,6 +278,7 @@ class NotifyInactivePRsWorkflow {
           return Boolean(fetchData?.fields.length)
         },
       })
+      .then(this.stepFive)
   }
 
   public commit() {
