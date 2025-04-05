@@ -165,7 +165,7 @@ class NotifyInactivePRsWorkflow {
 
         const tableRows = (repoNotify?.prs || [])
           .reduce((chunks, pr, idx) => {
-            const row = `- **[#${pr.number}](${pr.url})** \`${pr.title}\` by @${pr.author}} **(${pr.daysInactive}+ days)**`
+            const row = `- **[#${pr.number}](${pr.url})** \`${pr.title}\` by @${pr.author} **(${pr.daysInactive}+ days)**`
             const chunkIndex = Math.floor(idx / 5)
             if (!chunks[chunkIndex]) {
               chunks[chunkIndex] = []
