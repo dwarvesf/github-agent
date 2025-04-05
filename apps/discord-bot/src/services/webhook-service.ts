@@ -5,7 +5,10 @@ import { Logger } from '../services/index.js'
 import { replaceGitHubMentions } from '../commands/index.js'
 import { RootController } from '../controllers/root-controller.js'
 import { Controller } from '../controllers/index.js'
-import { processResponseToEmbedFields } from '../commands/common.js'
+import {
+  getDiscordIdFromGitHubId,
+  processResponseToEmbedFields,
+} from '../commands/common.js'
 
 interface MessagePayload {
   content?: string
@@ -24,6 +27,7 @@ interface ChannelWebhookRequest extends WebhookRequest {
 
 interface UserWebhookRequest extends WebhookRequest {
   userId: string
+  githubId: string
 }
 
 export class WebhookService {
@@ -141,14 +145,26 @@ export class WebhookService {
   ): Promise<express.Response> => {
     try {
       const request = req.body as UserWebhookRequest
+      let userId = request.userId
+      if (!userId && !request.githubId) {
+        return res
+          .status(400)
+          .send({ error: 'Missing required fields: userId or githubId' })
+      } else if (
+        ((userId = getDiscordIdFromGitHubId(request.githubId)), !userId)
+      ) {
+        return res
+          .status(400)
+          .send({ error: 'No user found with the provided githubId' })
+      }
 
-      if (!this.validateRequest(request.userId, request, res)) {
+      if (!this.validateRequest(userId, request, res)) {
         return res
       }
 
       try {
         // Fetch the user and create DM channel
-        const user = await this.client.users.fetch(request.userId)
+        const user = await this.client.users.fetch(userId)
         const dmChannel = await user.createDM()
 
         // Create and send message
