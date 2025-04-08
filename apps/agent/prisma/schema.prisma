@@ -1,0 +1,79 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Events table - Tracks all system events
+model Event {
+  id             String    @id @default(cuid())
+  eventCategory  String    @map("event_category") @db.VarChar(100)
+  eventType      String    @map("event_type") @db.VarChar(100)
+  actorId        String?   @map("actor_id") @db.VarChar(255)
+  repositoryId   String?   @map("repository_id") @db.VarChar(255)
+  workflowId     String?   @map("workflow_id") @db.VarChar(255)
+  organizationId String    @map("organization_id") @db.VarChar(255)
+  eventData      Json      @map("event_data")
+  metadata       Json?
+  contextId      String?   @map("context_id") @db.VarChar(255)
+  parentEventId  String?   @map("parent_event_id") @db.VarChar(255)
+  tags           String[]  @default([])
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt      DateTime? @map("updated_at") @db.Timestamp()
+  resolvedAt     DateTime? @map("resolved_at") @db.Timestamp()
+
+  // Relations
+  // repository Repository? @relation("RepositoryToEvent", fields: [repositoryId], references: [id])
+  parent   Event?  @relation("EventToEvent", fields: [parentEventId], references: [id])
+  children Event[] @relation("EventToEvent")
+
+  @@index([eventCategory], name: "event_category_idx")
+  @@index([eventType], name: "event_type_idx")
+  @@index([createdAt], name: "created_at_idx")
+  @@index([organizationId], name: "organization_id_idx")
+  @@index([contextId], name: "context_id_idx")
+  @@index([tags], name: "tags_idx")
+  @@map("events")
+}
+
+// Enums for Event categories and types
+enum EventCategory {
+  NOTIFICATION_DISCORD
+  NOTIFICATION_SLACK
+  NOTIFICATION_EMAIL
+  ACTIVITY
+  ERROR
+}
+
+enum EventType {
+  REMINDER_SENT
+  PR_NOTIFIED
+  COMMENT_NOTIFIED
+  MENTION_NOTIFIED
+  REPORT_PR_LIST
+  REPORT_PR_DETAILS
+  PR_CREATED
+  PR_UPDATED
+  PR_REVIEWED
+  PR_MERGED
+  PR_CLOSED
+  PR_STALLED
+  SYSTEM_STARTED
+  SYSTEM_STOPPED
+  SYSTEM_ERROR
+  CONFIG_CHANGED
+  USER_LOGIN
+  USER_LOGOUT
+  PERMISSION_CHANGED
+  USER_ACTION
+}

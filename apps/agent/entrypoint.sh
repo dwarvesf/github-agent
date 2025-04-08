@@ -3,6 +3,9 @@
 # Log startup information
 echo "Starting agent application..."
 
+# Deploy Prisma migrations
+pnpm db:migrate:deploy
+
 # Check for the entry point in different possible locations
 if [ -f ".mastra/output/index.mjs" ]; then
   echo "Found entry point at .mastra/output/index.mjs"

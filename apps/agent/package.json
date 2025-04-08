@@ -8,9 +8,11 @@
     "build": "mastra build",
     "lint": "eslint . --cache --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint . --fix --cache --ext .js,.jsx,.ts,.tsx",
-    "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push:pg",
-    "db:studio": "drizzle-kit studio"
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy"
   },
   "keywords": [],
   "author": "",
@@ -26,6 +28,7 @@
     "drizzle-kit": "^0.20.14",
     "drizzle-orm": "^0.29.5",
     "mastra": "0.4.3",
+    "@prisma/client": "^6.5.0",
     "nanoid": "^5.1.5",
     "pg": "^8.11.3",
     "pg-connection-string": "^2.6.2",
@@ -36,6 +39,7 @@
     "@packages/typescript-config": "workspace:*",
     "@types/pg": "^8.11.2",
     "eslint": "^9.20.1",
+    "prisma": "^6.5.0",
     "tsup": "^8.0.2"
   }
 }
