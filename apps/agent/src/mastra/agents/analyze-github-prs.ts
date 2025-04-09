@@ -3,7 +3,7 @@ import { Agent } from '@mastra/core/agent'
 
 // currently we are not reading the PR changes, so we can't auto generate the description
 export const suggestPRDescriptionAgent = new Agent({
-  name: 'agent suggest PR description',
+  name: 'Agent to suggest PR description',
   instructions: `
     You are an AI assistant tasked with reviewing multiple pull request (PR) descriptions. Your goal is to ensure they are clear enough.
     A description needs improvement if it's empty, missing a clear problem statement, or lacks sufficient context about the changes.
@@ -40,6 +40,6 @@ export const suggestPRDescriptionAgent = new Agent({
     ["https://github.com/dwarvesf/github-agent/pull/31"]
 
     Only return the array of PR urls. No additional explanation needed.
-  `,
+`,
   model: openai('gpt-4o-mini'),
 })
