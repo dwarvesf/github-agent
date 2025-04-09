@@ -5,6 +5,7 @@ echo "Starting agent application..."
 
 # Deploy Prisma migrations
 pnpm db:migrate:deploy
+pnpm db:generate
 
 # Check for the entry point in different possible locations
 if [ -f ".mastra/output/index.mjs" ]; then
