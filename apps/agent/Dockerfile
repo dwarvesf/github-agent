@@ -13,7 +13,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY packages/eslint-config/ ./packages/eslint-config/
 COPY packages/typescript-config/ ./packages/typescript-config/
 COPY apps/agent/package.json ./apps/agent/
-
+COPY apps/agent/prisma/ ./apps/agent/prisma/
 # Install global dependencies
 RUN npm install -g pnpm@latest turbo@latest
 
