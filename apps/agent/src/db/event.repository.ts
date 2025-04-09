@@ -1,4 +1,4 @@
-import { EventType, EventCategory, Event } from '@prisma/client'
+import { EventType, EventCategory, Event } from './.generated'
 import { getPrisma } from './connection'
 
 export enum NotificationType {
@@ -85,7 +85,7 @@ export class EventRepository {
       },
     })
 
-    return result
+    return result as any
   }
 
   /**

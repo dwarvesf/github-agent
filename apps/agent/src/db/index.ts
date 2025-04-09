@@ -2,7 +2,7 @@
 export * from './connection'
 
 // Export schema
-export * from './schema'
+export * from './.generated'
 
 // Export repository
 export * from './event.repository'

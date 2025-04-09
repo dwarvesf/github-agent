@@ -9,7 +9,7 @@ import {
 import { formatDate } from '../../utils/datetime'
 import { nanoid } from 'nanoid'
 import { EventRepository, NotificationType } from '../../db/event.repository'
-import { EventCategory, EventType } from '@prisma/client'
+import { EventCategory, EventType } from '../../db/.generated'
 
 const stepOneSchema = z.object({
   todayPRs: z.array(
