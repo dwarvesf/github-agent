@@ -25,7 +25,7 @@ class NotifyReviewersWorkflow {
       })
 
       // get PRs with reviewer assigned but not reviewed yet
-      const todayPRsWithReviewerAssigned = await Promise.all(
+      const allPRsWithReviewerAssigned = await Promise.all(
         prs.filter(async (pr) => {
           // Get full PR details including reviews
           const prWithReviews = await githubClient.getPRReviews(pr)
@@ -71,7 +71,7 @@ class NotifyReviewersWorkflow {
       )
 
       return {
-        todayPRs: todayPRsWithReviewerAssigned.map((pr) => ({
+        todayPRs: allPRsWithReviewerAssigned.map((pr) => ({
           number: pr.number,
           title: pr.title,
           url: pr.html_url,
