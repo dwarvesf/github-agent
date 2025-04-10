@@ -1,7 +1,7 @@
 import dotenv from 'dotenv'
 
 // Use dynamic import for PrismaClient
-import { PrismaClient } from './.generated'
+import { PrismaClient } from './'
 
 // Load environment variables
 dotenv.config()

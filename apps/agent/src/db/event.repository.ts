@@ -1,4 +1,4 @@
-import { EventType, EventCategory, Event } from './.generated'
+import type { EventType, EventCategory, Event } from '.'
 import { getPrisma } from './connection'
 
 export enum NotificationType {

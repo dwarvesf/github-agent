@@ -9,13 +9,16 @@ if [ -f ".mastra/output/index.mjs" ]; then
 
   # Extract context around the problematic line
   extract_error_context ".mastra/output/index.mjs" 24951
+  
+  # Change dir to output folder
+  cd .mastra/output/
 
   # Try running with comprehensive debugging
   NODE_OPTIONS="--trace-warnings --trace-deprecation --trace-uncaught --unhandled-rejections=strict" \
   node \
     --experimental-vm-modules \
     --no-warnings \
-    .mastra/output/index.mjs
+    ./index.mjs
 else
   echo "Error: Could not find entry point. Listing available files:"
   find . -name "*.js" -o -name "*.mjs" | grep -v "node_modules"
