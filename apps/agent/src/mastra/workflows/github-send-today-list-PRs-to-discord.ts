@@ -9,7 +9,7 @@ import {
 import { formatDate } from '../../utils/datetime'
 import { nanoid } from 'nanoid'
 import { EventRepository, NotificationType } from '../../db/event.repository'
-import { EventCategory, EventType } from '../../db/.generated'
+import { EventCategory, EventType } from '../../db'
 
 const stepOneSchema = z.object({
   todayPRs: z.array(

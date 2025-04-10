@@ -10,7 +10,8 @@ import { suggestPRDescriptionAgent } from '../agents/analyze-github-prs'
 import { EventRepository, NotificationType } from '../../db/event.repository'
 
 import { nanoid } from 'nanoid'
-import { EventCategory, EventType } from '../../db/.generated'
+import { EventCategory, EventType } from '../../db'
+
 async function handleApprovedNotMerged(
   discordUserId: string,
   prs: PullRequest[],

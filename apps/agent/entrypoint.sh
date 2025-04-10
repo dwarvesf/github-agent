@@ -12,10 +12,11 @@ if [ -f ".mastra/output/index.mjs" ]; then
 
   # Try running with comprehensive debugging
   NODE_OPTIONS="--trace-warnings --trace-deprecation --trace-uncaught --unhandled-rejections=strict" \
-  node \
+  cd .mastra/output/ \
+  && node \
     --experimental-vm-modules \
     --no-warnings \
-    .mastra/output/index.mjs
+    ./index.mjs
 else
   echo "Error: Could not find entry point. Listing available files:"
   find . -name "*.js" -o -name "*.mjs" | grep -v "node_modules"

@@ -5,7 +5,7 @@ import { GITHUB_OWNER, GITHUB_REPO, githubClient } from '../../lib/github'
 import { takeSnapshotTime } from '../../utils/datetime'
 import { nanoid } from 'nanoid'
 import { EventRepository, NotificationType } from '../../db/event.repository'
-import { EventCategory, EventType } from '../../db/.generated'
+import { EventCategory, EventType } from '../../db'
 
 interface InactivePRNotification {
   repo: string
