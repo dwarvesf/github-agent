@@ -6,9 +6,6 @@
 app = 'gh-agent-app'
 primary_region = 'sin'
 
-[deploy]
-  release_command = 'pnpm db:migrate:deploy'
-
 [build]
   dockerfile = 'Dockerfile'
 
