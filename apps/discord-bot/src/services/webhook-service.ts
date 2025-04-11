@@ -2,7 +2,6 @@ import express from 'express'
 import bodyParser from 'body-parser'
 import { Client } from 'discord.js'
 import { Logger } from '../services/index.js'
-import { replaceGitHubMentions } from '../commands/index.js'
 import { RootController } from '../controllers/root-controller.js'
 import { Controller } from '../controllers/index.js'
 import { processResponseToEmbedFields } from '../commands/common.js'
@@ -45,27 +44,10 @@ export class WebhookService {
     const payload: MessagePayload = {}
 
     if (request.message) {
-      payload.content = replaceGitHubMentions(request.message)[0]
+      payload.content = request.message
     }
 
     if (request.embed) {
-      // Process embed description if it exists
-      if (request.embed.description) {
-        request.embed.description = replaceGitHubMentions(
-          request.embed.description,
-        )[0]
-      }
-
-      // Process all embed fields if they exist
-      if (request.embed.fields && Array.isArray(request.embed.fields)) {
-        request.embed.fields = request.embed.fields.map((field) => ({
-          ...field,
-          value: field.value
-            ? replaceGitHubMentions(field.value)[0]
-            : field.value,
-        }))
-      }
-
       if (request.embed.table) {
         request.embed.fields = await processResponseToEmbedFields(
           this.client,
