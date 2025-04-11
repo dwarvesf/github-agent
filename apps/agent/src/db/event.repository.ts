@@ -1,4 +1,5 @@
-import type { EventType, EventCategory, Event } from '.'
+import type { Event, EventCategory, EventType } from '.'
+import type { Prisma } from './.generated' // Import Prisma types
 import { getPrisma } from './connection'
 
 export enum NotificationType {
@@ -7,12 +8,14 @@ export enum NotificationType {
   PR_PENDING_MERGE = 'pr_pending_merge',
   WRONG_CONVENTION = 'wrong_convention',
   DAILY_REPORT = 'daily_report',
+  REVIEWER_REMINDER = 'reviewer_reminder',
 }
 
 // Types for event data
 export type EventData = {
   message?: string
   userId?: string
+  reviewer?: string
   notificationType?: NotificationType
   discordChannelId?: string
   discordUserId?: string
@@ -52,11 +55,30 @@ export type EventMetadata = {
 }
 
 /**
+ * Options for filtering events.
+ * Excludes pagination options like limit/offset.
+ */
+type EventFilterOptions = {
+  organizationId: string
+  eventCategories?: EventCategory[]
+  eventTypes?: EventType[]
+  fromDate?: Date
+  toDate?: Date
+  repositoryId?: string
+  actorId?: string
+  workflowId?: string
+  contextId?: string
+  tags?: string[]
+  eventData?: EventData
+}
+
+/**
  * Repository for database operations using Prisma
  */
 export class EventRepository {
   /**
-   * Log an event in the system with enhanced fields
+   * Log an event in the system with enhanced fields.
+   * Returns the newly created event.
    */
   static async logEvent(event: {
     eventCategory: EventCategory
@@ -73,10 +95,10 @@ export class EventRepository {
     createdAt?: Date
     updatedAt?: Date
     resolvedAt?: Date
-  }): Promise<Event> {
+  }): Promise<{ id: string }> {
     const prisma = getPrisma()
 
-    const result = await prisma.event.create({
+    return prisma.event.create({
       data: {
         ...event,
       },
@@ -84,31 +106,18 @@ export class EventRepository {
         id: true,
       },
     })
-
-    return result as any
   }
 
   /**
-   * Get all events for an organization with enhanced filtering and pagination
+   * Build the where conditions for event queries based on filter options.
+   * @param options - Filtering criteria.
+   * @returns A Prisma where input object.
    */
-  static async getEvents(
-    organizationId: string,
-    options?: {
-      eventCategories?: EventCategory[]
-      eventTypes?: EventType[]
-      fromDate?: Date
-      toDate?: Date
-      repositoryId?: string
-      actorId?: string
-      workflowId?: string
-      contextId?: string
-      tags?: string[]
-      limit?: number
-      offset?: number
-    },
-  ) {
-    const prisma = getPrisma()
+  private static _buildWhereConditions(
+    options?: EventFilterOptions,
+  ): Prisma.EventWhereInput {
     const {
+      organizationId,
       eventCategories,
       eventTypes,
       fromDate,
@@ -118,13 +127,12 @@ export class EventRepository {
       workflowId,
       contextId,
       tags,
-      limit = 100,
-      offset = 0,
+      eventData,
     } = options || {}
 
-    // Build where conditions
-    const whereConditions: any = {
-      organizationId,
+    // Use Prisma.EventWhereInput for type safety
+    const whereConditions: Prisma.EventWhereInput = {
+      organizationId, // Required
     }
 
     if (eventCategories && eventCategories.length > 0) {
@@ -139,17 +147,13 @@ export class EventRepository {
       }
     }
 
-    if (fromDate) {
-      whereConditions.createdAt = {
-        ...whereConditions.createdAt,
-        gt: fromDate,
+    if (fromDate || toDate) {
+      whereConditions.createdAt = {}
+      if (fromDate) {
+        whereConditions.createdAt.gte = fromDate // Use gte for inclusive start
       }
-    }
-
-    if (toDate) {
-      whereConditions.createdAt = {
-        ...whereConditions.createdAt,
-        lt: toDate,
+      if (toDate) {
+        whereConditions.createdAt.lt = toDate // lt remains exclusive end
       }
     }
 
@@ -175,6 +179,48 @@ export class EventRepository {
       }
     }
 
+    // Add event data filtering using Prisma JSON filtering
+    if (eventData && Object.keys(eventData).length > 0) {
+      const jsonFilters = Object.entries(eventData).map(([key, value]) => ({
+        eventData: {
+          path: [key],
+          equals: value,
+        },
+      }))
+
+      if (!whereConditions.AND) {
+        whereConditions.AND = []
+      }
+      if (Array.isArray(whereConditions.AND)) {
+        whereConditions.AND.push(...jsonFilters)
+      } else {
+        whereConditions.AND = [whereConditions.AND, ...jsonFilters]
+      }
+
+      delete (whereConditions as any).eventData
+    }
+
+    return whereConditions
+  }
+
+  /**
+   * Get events matching criteria with pagination.
+   */
+  static async getEvents(
+    organizationId: string,
+    options?: Omit<EventFilterOptions, 'organizationId'> & {
+      limit?: number
+      offset?: number
+    },
+  ): Promise<Event[]> {
+    const prisma = getPrisma()
+    const { limit = 100, offset = 0, ...filterOptions } = options || {}
+
+    const whereConditions = this._buildWhereConditions({
+      organizationId,
+      ...filterOptions,
+    })
+
     return prisma.event.findMany({
       where: whereConditions,
       orderBy: {
@@ -182,6 +228,23 @@ export class EventRepository {
       },
       take: limit,
       skip: offset,
+    })
+  }
+
+  /**
+   * Find the most recent event matching the given criteria.
+   */
+  static async findLastEvent(
+    options: EventFilterOptions,
+  ): Promise<Event | null> {
+    const prisma = getPrisma()
+    const whereConditions = this._buildWhereConditions(options)
+
+    return prisma.event.findFirst({
+      where: whereConditions,
+      orderBy: {
+        createdAt: 'desc',
+      },
     })
   }
 }

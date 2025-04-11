@@ -1,10 +1,53 @@
 import { Step, Workflow } from '@mastra/core/workflows'
 import { z } from 'zod'
-import { discordClient } from '../../lib/discord'
-import { GITHUB_REPO, githubClient } from '../../lib/github'
-import { PullRequest } from '../../lib/type'
-import { formatDate } from '../../utils/datetime'
 import { DISCORD_GITHUB_MAP } from '../../constants/discord'
+import {
+  Event,
+  EventCategory,
+  EventRepository,
+  EventType,
+  NotificationType,
+} from '../../db'
+import { discordClient } from '../../lib/discord'
+import { GITHUB_OWNER, GITHUB_REPO, githubClient } from '../../lib/github'
+import { PullRequest } from '../../lib/type'
+import { NotificationTimingService } from '../../lib/notification-timing'
+import { startOfDay } from 'date-fns'
+
+interface ReviewerData {
+  reviewer: string
+  pendingPRs: Array<{
+    prNumber: number
+    prURL: string
+    title: string
+    author: string
+  }>
+}
+
+interface NotificationEventMetadata {
+  notifiedTimes: string[]
+  [key: string]: unknown
+}
+
+interface NotificationEventData {
+  notificationType: NotificationType
+  message: string
+  prList: Array<{
+    number: number
+    title: string
+    url: string
+    author: string
+  }>
+  reviewer: string
+  details: {
+    embed: {
+      title: string
+      color: number
+      description: string
+      inline: boolean
+    }
+  }
+}
 
 class NotifyReviewersWorkflow {
   private workflow: Workflow
@@ -92,9 +135,23 @@ class NotifyReviewersWorkflow {
     },
   })
 
-  private notifyReviewers = new Step({
-    id: 'notify-reviewers',
-    outputSchema: z.object({}),
+  private processReviewers = new Step({
+    id: 'process-reviewers',
+    outputSchema: z.object({
+      reviewers: z.array(
+        z.object({
+          reviewer: z.string(),
+          pendingPRs: z.array(
+            z.object({
+              prNumber: z.number(),
+              prURL: z.string(),
+              title: z.string(),
+              author: z.string(),
+            }),
+          ),
+        }),
+      ),
+    }),
     execute: async ({ context }) => {
       if (context.steps['get-pending-reviews']?.status === 'success') {
         const { todayPRs } = context.steps['get-pending-reviews'].output as {
@@ -104,7 +161,12 @@ class NotifyReviewersWorkflow {
         // Create a map of reviewers to their assigned PRs
         const reviewerToPRs = new Map<
           string,
-          Array<{ prNumber: number; prURL: string; title: string }>
+          Array<{
+            prNumber: number
+            prURL: string
+            title: string
+            author: string
+          }>
         >()
 
         // Iterate through PRs and build the reviewer mapping
@@ -117,6 +179,7 @@ class NotifyReviewersWorkflow {
               prNumber: pr.number,
               prURL: pr.url,
               title: pr.title,
+              author: pr.author,
             })
           })
         })
@@ -129,13 +192,102 @@ class NotifyReviewersWorkflow {
           }),
         )
 
-        // for each reviewer, send a message to discord
+        return { reviewers }
+      }
+      return { reviewers: [] }
+    },
+  })
+
+  private checkNotificationHistory = new Step({
+    id: 'check-notification-history',
+    outputSchema: z.object({
+      reviewers: z.array(
+        z.object({
+          reviewer: z.string(),
+          pendingPRs: z.array(
+            z.object({
+              prNumber: z.number(),
+              prURL: z.string(),
+              title: z.string(),
+              author: z.string(),
+            }),
+          ),
+          shouldNotify: z.boolean(),
+          lastEvent: z.custom<Event>().optional(),
+        }),
+      ),
+    }),
+    execute: async ({ context }) => {
+      if (context.steps['process-reviewers']?.status === 'success') {
+        const { reviewers } = context.steps['process-reviewers'].output as {
+          reviewers: ReviewerData[]
+        }
+
+        // Get last notification time for each reviewer
+        const reviewersWithHistory = await Promise.all(
+          reviewers.map(async (reviewer) => {
+            // Get all notifications for this reviewer in the last 24 hours
+            const lastEvent = await EventRepository.findLastEvent({
+              organizationId: GITHUB_OWNER!,
+              eventCategories: [EventCategory.NOTIFICATION_DISCORD],
+              eventTypes: [EventType.PR_NOTIFIED],
+              tags: [
+                'reviewer-notification',
+                'pending-review',
+                'discord',
+                'github',
+              ],
+              fromDate: startOfDay(new Date()), // From start of current date for resetting on each day
+              eventData: {
+                notificationType: NotificationType.REVIEWER_REMINDER,
+                reviewer: reviewer.reviewer,
+              },
+            })
+
+            // Use NotificationTimingService to check if we should notify
+            const { shouldNotify } =
+              NotificationTimingService.checkNotificationHistory(lastEvent)
+
+            return {
+              reviewer: reviewer.reviewer,
+              pendingPRs: reviewer.pendingPRs,
+              shouldNotify,
+              lastEvent: (lastEvent || {}) as Event,
+            }
+          }),
+        )
+
+        return { reviewers: reviewersWithHistory }
+      }
+      return { reviewers: [] }
+    },
+  })
+
+  private sendDiscordNotifications = new Step({
+    id: 'send-discord-notifications',
+    outputSchema: z.object({}),
+    execute: async ({ context }) => {
+      if (context.steps['check-notification-history']?.status === 'success') {
+        const { reviewers } = context.steps['check-notification-history']
+          .output as {
+          reviewers: Array<
+            ReviewerData & { shouldNotify: boolean; lastEvent?: Event }
+          >
+        }
+
+        // for each reviewer, send a message to discord and log event
         await Promise.all(
           reviewers.map(async (reviewer) => {
+            if (!reviewer.shouldNotify) {
+              return
+            }
+
             const discordUserId =
               DISCORD_GITHUB_MAP[
                 reviewer.reviewer as keyof typeof DISCORD_GITHUB_MAP
               ]
+
+            // Create Discord embed
             const embed = {
               title: `🔔 Need your review`,
               color: 15158332,
@@ -143,20 +295,62 @@ class NotifyReviewersWorkflow {
               inline: false,
             }
 
-            await discordClient.sendMessageToUser({
+            // Send Discord notification
+            const response = await discordClient.sendMessageToUser({
               userId: discordUserId,
               message: '',
               embed,
             })
+
+            // Log event for each notification
+            const eventData: NotificationEventData = {
+              notificationType: NotificationType.REVIEWER_REMINDER,
+              message: embed.title,
+              prList: reviewer.pendingPRs.map((pr) => ({
+                number: pr.prNumber,
+                title: pr.title,
+                url: pr.prURL,
+                author: pr.author,
+              })),
+              reviewer: reviewer.reviewer,
+              details: {
+                embed,
+              },
+            }
+
+            await EventRepository.logEvent({
+              eventCategory: EventCategory.NOTIFICATION_DISCORD,
+              eventType: EventType.PR_NOTIFIED,
+              organizationId: GITHUB_OWNER!,
+              eventData,
+              metadata: {
+                response,
+                notifiedTimes: [
+                  ...((reviewer.lastEvent?.metadata as any)?.notifiedTimes ||
+                    []),
+                  new Date().toISOString(),
+                ],
+              },
+              tags: [
+                'reviewer-notification',
+                'pending-review',
+                'discord',
+                'github',
+              ],
+            })
           }),
         )
       }
-      return 'ok'
+      return {}
     },
   })
 
   public configure() {
-    return this.workflow.step(this.getPendingReviews).then(this.notifyReviewers)
+    return this.workflow
+      .step(this.getPendingReviews)
+      .then(this.processReviewers)
+      .then(this.checkNotificationHistory)
+      .then(this.sendDiscordNotifications)
   }
 
   public commit() {
