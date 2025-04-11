@@ -30,9 +30,6 @@
     "node": ">=18"
   },
   "pnpm": {
-    "overrides": {
-      "@mastra/core": "0.6.4"
-    },
     "onlyBuiltDependencies": [
       "@swc/core",
       "esbuild"

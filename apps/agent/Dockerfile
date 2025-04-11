@@ -22,8 +22,7 @@ RUN pnpm install \
     --no-frozen-lockfile \
     --ignore-scripts \
     && cd apps/agent \
-    && npx -y prisma generate \
-    && pnpm add @mastra/core@0.6.4 mastra@0.4.3
+    && npx -y prisma generate
 
 # Copy remaining source files
 COPY . .

@@ -299,8 +299,8 @@ Mastra build process:
    {
      "dependencies": {
        "zod": "^3.22.0",
-       "@mastra/core": "^0.4.4",
-       "mastra": "^0.2.8"
+       "@mastra/core": "^0.8.2",
+       "mastra": "^0.4.8"
      }
    }
    ```

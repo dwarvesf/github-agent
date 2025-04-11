@@ -2,7 +2,7 @@
 export * from './connection'
 
 // Export schema
-export * from './.generated/edge'
+export * from '@prisma/client'
 
 // Export repository
 export * from './event.repository'
