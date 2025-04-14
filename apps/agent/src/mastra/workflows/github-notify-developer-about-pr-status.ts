@@ -1,16 +1,18 @@
 import { Step, Workflow } from '@mastra/core/workflows'
 import { DISCORD_GITHUB_MAP } from '../../constants/discord'
+import { EventRepository, NotificationType } from '../../db/event.repository'
 import { discordClient } from '../../lib/discord'
 import { GITHUB_OWNER, GITHUB_REPO, githubClient } from '../../lib/github'
+import { NotificationTimingService } from '../../lib/notification-timing'
 import { PullRequest } from '../../lib/type'
 import { groupBy } from '../../utils/array'
 import { formatDate } from '../../utils/datetime'
 import { prTitleFormatValid } from '../../utils/string'
 import { suggestPRDescriptionAgent } from '../agents/analyze-github-prs'
-import { EventRepository, NotificationType } from '../../db/event.repository'
 
 import { nanoid } from 'nanoid'
 import { EventCategory, EventType } from '../../db'
+import { startOfDay } from 'date-fns'
 
 async function handleApprovedNotMerged(
   discordUserId: string,
@@ -22,6 +24,29 @@ async function handleApprovedNotMerged(
   )
 
   if (approvedNotMergedPRs.length > 0) {
+    const lastEvent = await EventRepository.findLastEvent({
+      organizationId: GITHUB_OWNER!,
+      repositoryId: GITHUB_REPO!,
+      eventCategories: [EventCategory.NOTIFICATION_DISCORD],
+      eventTypes: [EventType.PR_NOTIFIED],
+      tags: ['notification', 'discord', 'pr-pending-merge', 'pr-status'],
+      fromDate: startOfDay(new Date()), // From start of current date for resetting on each day
+      eventData: {
+        notificationType: NotificationType.PR_PENDING_MERGE,
+        discordUserId,
+      },
+    })
+
+    const { shouldNotify } =
+      NotificationTimingService.checkNotificationHistory(lastEvent)
+
+    if (!shouldNotify) {
+      console.log(
+        `Skipping PR_PENDING_MERGE notification for ${discordUserId} due to timing rules.`,
+      )
+      return
+    }
+
     const isPlural = approvedNotMergedPRs.length > 1
     const embed = {
       title: `✅ ${isPlural ? 'Your PRs are' : 'Your PR is'} approved and ready to merge`,
@@ -57,6 +82,10 @@ async function handleApprovedNotMerged(
       },
       metadata: {
         response,
+        notifiedTimes: [
+          ...((lastEvent?.metadata as any)?.notifiedTimes || []),
+          new Date().toISOString(),
+        ],
       },
       contextId: ctxId,
       tags: ['notification', 'discord', 'pr-pending-merge', 'pr-status'],
@@ -117,6 +146,27 @@ async function handleUnconventionalTitleOrDescription(
   )
 
   if (wrongConventionPRs.length > 0) {
+    const lastEvent = await EventRepository.findLastEvent({
+      organizationId: GITHUB_OWNER!,
+      repositoryId: GITHUB_REPO!,
+      eventCategories: [EventCategory.NOTIFICATION_DISCORD],
+      eventTypes: [EventType.PR_NOTIFIED],
+      eventData: {
+        notificationType: NotificationType.WRONG_CONVENTION,
+        discordUserId,
+      },
+    })
+
+    const { shouldNotify } =
+      NotificationTimingService.checkNotificationHistory(lastEvent)
+
+    if (!shouldNotify) {
+      console.log(
+        `Skipping WRONG_CONVENTION notification for ${discordUserId} due to timing rules.`,
+      )
+      return wrongConventionPRs
+    }
+
     const notifyMessage =
       '\n\n• Ensure title follows: `type(scope?): message`\n• Include a clear description of the problem and solution'
 
@@ -157,6 +207,10 @@ async function handleUnconventionalTitleOrDescription(
       },
       metadata: {
         response,
+        notifiedTimes: [
+          ...((lastEvent?.metadata as any)?.notifiedTimes || []),
+          new Date().toISOString(),
+        ],
       },
       contextId: ctxId,
       tags: ['notification', 'discord', 'wrong-convention', 'pr-status'],
