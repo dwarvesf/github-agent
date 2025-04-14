@@ -5,9 +5,10 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider        = "prisma-client-js"
+  provider        = "prisma-client"
   previewFeatures = ["multiSchema"]
   output          = "../src/db/.generated"
+  moduleFormat    = "esm"
   binaryTargets   = ["native", "linux-musl", "linux-musl-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x"]
 }
 
