@@ -79,3 +79,74 @@ enum EventType {
   PERMISSION_CHANGED
   USER_ACTION
 }
+
+// Platform enum for channels
+enum Platform {
+  discord
+  slack
+}
+
+// Organizations table
+model Organization {
+  id            Int       @id @default(autoincrement())
+  githubTokenId String?   @map("github_token_id") @db.VarChar(255)
+  githubName    String    @unique @map("github_name") @db.VarChar(255)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt     DateTime? @updatedAt @map("updated_at") @db.Timestamp()
+
+  // Relations
+  channels     Channel[]
+  repositories Repository[]
+
+  @@map("organizations")
+}
+
+// Members table
+model Member {
+  id           Int       @id @default(autoincrement())
+  githubId     String    @map("github_id") @db.VarChar(255)
+  platformId   String    @map("platform_id") @db.VarChar(255)
+  platformType String    @map("platform_type") @db.VarChar(255)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt    DateTime? @updatedAt @map("updated_at") @db.Timestamp()
+
+  @@unique([githubId, platformId, platformType])
+  @@map("members")
+}
+
+// Channels table
+model Channel {
+  id                Int       @id @default(autoincrement())
+  name              String    @db.VarChar(255)
+  platform          Platform  @default(discord)
+  platformChannelId String    @map("platform_channel_id") @db.VarChar(255)
+  organizationId    Int       @map("organization_id")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt         DateTime? @updatedAt @map("updated_at") @db.Timestamp()
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id])
+  repositories Repository[]
+
+  @@unique([platform, platformChannelId])
+  @@index([organizationId])
+  @@map("channels")
+}
+
+// Repositories table
+model Repository {
+  id             Int       @id @default(autoincrement())
+  githubRepoName String    @map("github_repo_name") @db.VarChar(255)
+  organizationId Int       @map("organization_id")
+  channelId      Int       @map("channel_id")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamp()
+  updatedAt      DateTime? @updatedAt @map("updated_at") @db.Timestamp()
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id])
+  channel      Channel      @relation(fields: [channelId], references: [id])
+
+  @@unique([organizationId, githubRepoName])
+  @@index([channelId])
+  @@map("repositories")
+}
