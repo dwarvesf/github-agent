@@ -1,4 +1,4 @@
-import { Mastra, createLogger } from '@mastra/core'
+import { Mastra } from '@mastra/core'
 import {
   sendTodayPRListToDiscordWorkflow,
   notifyDeveloperAboutPRStatus,
@@ -6,6 +6,7 @@ import {
   notifyReviewersWorkflow,
 } from './workflows'
 import { githubAgent } from './agents'
+import { logger } from '../utils/logger'
 
 export const mastra: Mastra = new Mastra({
   workflows: {
@@ -17,8 +18,5 @@ export const mastra: Mastra = new Mastra({
   agents: {
     githubAgent,
   },
-  logger: createLogger({
-    name: 'Mastra',
-    level: 'debug',
-  }),
+  logger,
 })

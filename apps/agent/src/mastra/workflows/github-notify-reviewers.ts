@@ -2,17 +2,30 @@ import { Step, Workflow } from '@mastra/core/workflows'
 import { z } from 'zod'
 import {
   $Enums,
+  EventCategory,
   EventData,
+  EventRepository,
+  EventType,
   MemberRepository,
+  NotificationType,
   OrganizationRepository,
 } from '../../db'
+import { NotificationTimingService } from '../../lib/notification-timing'
 import { discordClient } from '../../lib/discord'
 import { GitHubAPIPullRequest, GitHubClient } from '../../lib/github'
 import { GithubDataManager } from '../../lib/github-data-manager'
 import { NotificationEmbedBuilder } from '../../lib/notification-embed'
 import { PullRequest } from '../../lib/type'
+import { groupBy } from '../../utils/array'
+import { NOTIFICATION_CONFIG } from '../../constants/notification'
+import { getStartOfDateInTz } from '../../utils/datetime'
 
 // Types
+type PlatformsWithNotifiedTimes = Array<
+  Awaited<ReturnType<typeof MemberRepository.getByGithubId>>[number] & {
+    notifiedTimes?: string[]
+  }
+>
 interface ReviewerWithPRs {
   reviewer: string
   prList: PullRequest[]
@@ -135,20 +148,62 @@ class NotifyReviewersWorkflow {
 
   private async notifyReviewerOnPlatforms(
     reviewer: string,
-    repos: NonNullable<EventData['repositoriesPRs']>,
+    repos: {
+      data: NonNullable<EventData['repositoriesPRs']>
+      platforms?: PlatformsWithNotifiedTimes
+    },
   ): Promise<void> {
-    const authorPlatformsInfo = await MemberRepository.getByGithubId(reviewer)
+    const authorPlatformsInfo = repos.platforms || []
 
     for (const authorPlatformInfo of authorPlatformsInfo) {
       const { platformId, platformType: platform } = authorPlatformInfo
 
-      if (!platformId) continue
+      if (!platformId) {
+        continue
+      }
 
       if (platform === $Enums.Platform.discord) {
-        await discordClient.sendMessageToUser({
+        const embed = createDiscordEmbed(repos.data)
+        const response = await discordClient.sendMessageToUser({
           userId: platformId,
           message: '',
-          embed: createDiscordEmbed(repos),
+          embed,
+        })
+
+        // Log event for each notification
+        const eventData: EventData = {
+          repositoriesPRs: repos.data,
+          notificationType: NotificationType.REVIEWER_REMINDER,
+          message: embed.title,
+          reviewer,
+          details: {
+            embed,
+            platform: {
+              ...authorPlatformInfo,
+            },
+            notifiedTimes: [
+              ...(authorPlatformInfo.notifiedTimes || []),
+              new Date().toISOString(),
+            ],
+          },
+        }
+        const orgs = EventRepository.getOrganizationsString(repos.data)
+
+        await EventRepository.logEvent({
+          workflowId: 'notifyReviewers',
+          eventCategory: EventCategory.NOTIFICATION_DISCORD,
+          eventType: EventType.PR_NOTIFIED,
+          organizationId: orgs,
+          eventData,
+          metadata: {
+            response,
+          },
+          tags: [
+            'reviewer-notification',
+            'pending-review',
+            authorPlatformInfo.platformType,
+            'github',
+          ],
         })
       }
 
@@ -182,34 +237,115 @@ class NotifyReviewersWorkflow {
     },
   })
 
-  private notifyReviewers = new Step({
-    id: 'notify-reviewers',
-    outputSchema: z.object({}),
+  private getShouldNotifyReviewer = async (
+    reviewer: string,
+    platform: string,
+  ) => {
+    const latestEvent = await EventRepository.findLastEvent({
+      workflowId: 'notifyReviewers',
+      eventCategories: [EventCategory.NOTIFICATION_DISCORD],
+      eventTypes: [EventType.PR_NOTIFIED],
+      eventData: {
+        notificationType: NotificationType.REVIEWER_REMINDER,
+        reviewer,
+      },
+      fromDate: getStartOfDateInTz(new Date()), // Start from today for resetting notified times
+      tags: ['reviewer-notification', 'pending-review', platform, 'github'],
+    })
+
+    return NotificationTimingService.checkNotificationHistory(
+      (latestEvent?.eventData as EventData)?.details?.notifiedTimes,
+      // TODO: Use a config for an uniq member + platform instead of a constant
+      NOTIFICATION_CONFIG,
+    )
+  }
+
+  private getNotifiableReviewers = new Step({
+    id: 'get-notifiable-reviewers',
     execute: async ({ context }) => {
       if (context.steps['get-pending-reviews']?.status === 'success') {
         const { orgReposPRs } = context.steps['get-pending-reviews'].output as {
           orgReposPRs: Array<RepoPRs[]>
         }
-
+        const reviewersPRs: Record<
+          string,
+          {
+            data: { repositoryId: string; prList: PullRequest[] }[]
+            platforms?: PlatformsWithNotifiedTimes
+          }
+        > = {}
         for (const reposPRs of orgReposPRs) {
-          const reviewerPRs: Record<
-            string,
-            { repositoryId: string; prList: PullRequest[] }[]
-          > = {}
           reposPRs.forEach(async (repo) => {
             const reviewers = this.mapReviewersToPRs(repo)
             reviewers.forEach((item) => {
               const { reviewer, prList } = item
-              reviewerPRs[reviewer] = [
-                ...(reviewerPRs[reviewer] || []),
-                { repositoryId: repo.repoName, prList },
-              ]
+              reviewersPRs[reviewer] = {
+                data: [
+                  ...(reviewersPRs[reviewer]?.data || []),
+                  { repositoryId: repo.repoName, prList },
+                ],
+              }
             })
           })
+        }
 
-          for (const [reviewer, repos] of Object.entries(reviewerPRs)) {
-            this.notifyReviewerOnPlatforms(reviewer, repos)
+        const allAuthors = Object.keys(reviewersPRs)
+        const allMembers = await MemberRepository.getByGithubIds(allAuthors)
+        const allMembersById = groupBy(allMembers, (member) => member.githubId)
+        for (const reviewerId of Object.keys(allMembersById)) {
+          if (
+            !reviewerId ||
+            !reviewersPRs[reviewerId] ||
+            !allMembersById[reviewerId]?.length
+          ) {
+            continue
           }
+          const platforms = [...allMembersById[reviewerId]]
+          for (const platform of platforms) {
+            const shouldNotify = await this.getShouldNotifyReviewer(
+              reviewerId,
+              platform.platformType,
+            )
+            if (!shouldNotify) {
+              continue
+            }
+
+            const notificationPlatforms =
+              reviewersPRs[reviewerId]?.platforms || []
+
+            reviewersPRs[reviewerId]!.platforms = [
+              ...notificationPlatforms,
+              { ...platform, notifiedTimes: shouldNotify.notifiedTimes },
+            ]
+          }
+        }
+
+        return { reviewersPRs }
+      }
+    },
+  })
+
+  private notifyReviewers = new Step({
+    id: 'notify-reviewers',
+    outputSchema: z.object({}),
+    execute: async ({ context }) => {
+      if (
+        context.steps['get-pending-reviews']?.status === 'success' &&
+        context.steps['get-notifiable-reviewers']?.status === 'success'
+      ) {
+        const { reviewersPRs } = context.steps['get-notifiable-reviewers']
+          .output as {
+          reviewersPRs: Record<
+            string,
+            {
+              data: NonNullable<EventData['repositoriesPRs']>
+              platforms?: PlatformsWithNotifiedTimes
+            }
+          >
+        }
+
+        for (const [reviewer, reposData] of Object.entries(reviewersPRs)) {
+          await this.notifyReviewerOnPlatforms(reviewer, reposData)
         }
       }
       return 'ok'
@@ -217,7 +353,10 @@ class NotifyReviewersWorkflow {
   })
 
   public configure() {
-    return this.workflow.step(this.getPendingReviews).then(this.notifyReviewers)
+    return this.workflow
+      .step(this.getPendingReviews)
+      .then(this.getNotifiableReviewers)
+      .then(this.notifyReviewers)
   }
 
   public commit() {
