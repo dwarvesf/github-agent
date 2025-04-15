@@ -135,31 +135,29 @@ export default function Repositories() {
   }
 
   return (
-    <div className="p-4">
+    <>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Repositories</h1>
-        <Button onClick={() => openDialog()}>Add Repository</Button>
+        <h3 className="text-lg font-bold">Repositories</h3>
+        <Button onClick={() => openDialog()}>Add repository</Button>
       </div>
 
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>ID</TableHead>
-            <TableHead>Repository Name</TableHead>
+            <TableHead>Repository name</TableHead>
             <TableHead>Channel</TableHead>
-            <TableHead>Actions</TableHead>
+            <TableHead />
           </TableRow>
         </TableHeader>
         <TableBody>
           {repositories?.map((repo: any) => (
             <TableRow key={repo.id}>
-              <TableCell>{repo.id}</TableCell>
               <TableCell>{repo.github_repo_name}</TableCell>
               <TableCell>
                 {channels?.find((ch: any) => ch.id === repo.channel_id)?.name ??
                   "N/A"}
               </TableCell>
-              <TableCell className="space-x-2">
+              <TableCell className="space-x-2 text-right">
                 <Button
                   variant="outline"
                   size="sm"
@@ -181,7 +179,7 @@ export default function Repositories() {
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Confirm Delete</DialogTitle>
+                      <DialogTitle>Confirm delete</DialogTitle>
                       <DialogDescription>
                         Are you sure you want to delete this repository?
                       </DialogDescription>
@@ -221,7 +219,7 @@ export default function Repositories() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingRepo ? "Edit Repository" : "Add Repository"}
+              {editingRepo ? "Edit repository" : "Add repository"}
             </DialogTitle>
             <DialogDescription>
               {editingRepo
@@ -236,7 +234,7 @@ export default function Repositories() {
                 name="github_repo_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Repository Name</FormLabel>
+                    <FormLabel>Repository name</FormLabel>
                     <FormControl>
                       <Input placeholder="Repository name" {...field} />
                     </FormControl>
@@ -283,6 +281,6 @@ export default function Repositories() {
           </Form>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

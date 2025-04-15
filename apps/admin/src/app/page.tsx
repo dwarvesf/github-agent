@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -25,7 +25,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -148,154 +147,150 @@ export default function Home() {
 
   return (
     <>
-      <div className="p-4">
-        <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Organizations</h1>
-          <Button
-            onClick={() => {
-              setEditingOrg(null);
-              form.reset();
-              setOpenDialog(true);
-            }}
-          >
-            New Organization
-          </Button>
-        </div>
-
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={2} className="text-center">
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : !organizations || organizations.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={2} className="text-center">
-                  No organizations found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              organizations.map((org: { id: number; github_name: string }) => (
-                <TableRow key={org.id}>
-                  <TableCell>
-                    <a
-                      href={`/organization/${org.id}`}
-                      className="text-blue-600 hover:underline"
-                    >
-                      {org.github_name}
-                    </a>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mr-2"
-                      onClick={() => onEdit(org)}
-                    >
-                      Edit
-                    </Button>
-                    <AlertDialog
-                      open={deleteDialogOpen && deletingOrg?.id === org.id}
-                      onOpenChange={setDeleteDialogOpen}
-                    >
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => setDeletingOrg(org)}
-                        >
-                          Delete
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>
-                            Delete Organization
-                          </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete the organization "
-                            {org.github_name}"? This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={onDelete}>
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-
-        <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {editingOrg ? "Edit Organization" : "New Organization"}
-              </DialogTitle>
-              <DialogDescription>
-                {editingOrg
-                  ? "Update the organization details below."
-                  : "Fill in the details to create a new organization."}
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-4"
-                noValidate
-              >
-                <FormField
-                  control={form.control}
-                  name="github_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Organization name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="github_token_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>GitHub Token ID</FormLabel>
-                      <FormControl>
-                        <Input placeholder="GitHub Token ID" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button type="submit">
-                    {editingOrg ? "Update" : "Create"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-
-        <Toaster />
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Organizations</h1>
+        <Button
+          onClick={() => {
+            setEditingOrg(null);
+            form.reset();
+            setOpenDialog(true);
+          }}
+        >
+          New organization
+        </Button>
       </div>
+
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead className="text-right" />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {isLoading ? (
+            <TableRow>
+              <TableCell colSpan={2} className="text-center">
+                Loading...
+              </TableCell>
+            </TableRow>
+          ) : !organizations || organizations.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={2} className="text-center">
+                No organizations found.
+              </TableCell>
+            </TableRow>
+          ) : (
+            organizations.map((org: { id: number; github_name: string }) => (
+              <TableRow key={org.id}>
+                <TableCell>
+                  <a
+                    href={`/organization/${org.id}`}
+                    className="text-blue-600 hover:underline"
+                  >
+                    {org.github_name}
+                  </a>
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mr-2"
+                    onClick={() => onEdit(org)}
+                  >
+                    Edit
+                  </Button>
+                  <AlertDialog
+                    open={deleteDialogOpen && deletingOrg?.id === org.id}
+                    onOpenChange={setDeleteDialogOpen}
+                  >
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setDeletingOrg(org)}
+                      >
+                        Delete
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete organization</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete the organization "
+                          {org.github_name}"? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={onDelete}>
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingOrg ? "Edit organization" : "New organization"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingOrg
+                ? "Update the organization details below."
+                : "Fill in the details to create a new organization."}
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="space-y-4"
+              noValidate
+            >
+              <FormField
+                control={form.control}
+                name="github_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Organization name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="github_token_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>GitHub Token ID</FormLabel>
+                    <FormControl>
+                      <Input placeholder="GitHub Token ID" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit">
+                  {editingOrg ? "Update" : "Create"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <Toaster />
     </>
   );
 }

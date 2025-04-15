@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -19,7 +19,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -43,6 +42,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import type { Platform } from "@prisma/client";
 
 const channelSchema = z.object({
   id: z.number().optional(),
@@ -122,14 +122,14 @@ export default function Channels() {
       updateMutation.mutate({
         id: editingChannel.id!,
         name: values.name,
-        platform: values.platform,
+        platform: values.platform as Platform,
         platform_channel_id: values.platform_channel_id,
         organization_id: orgId,
       });
     } else {
       createMutation.mutate({
         name: values.name,
-        platform: values.platform,
+        platform: values.platform as Platform,
         platform_channel_id: values.platform_channel_id,
         organization_id: orgId,
       });
@@ -171,8 +171,8 @@ export default function Channels() {
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Platform</TableHead>
-            <TableHead>Platform Channel ID</TableHead>
-            <TableHead>Actions</TableHead>
+            <TableHead>Platform channel ID</TableHead>
+            <TableHead className="text-right" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -188,7 +188,7 @@ export default function Channels() {
                 <TableCell>{channel.name}</TableCell>
                 <TableCell>{channel.platform}</TableCell>
                 <TableCell>{channel.platform_channel_id}</TableCell>
-                <TableCell>
+                <TableCell className="text-right">
                   <Button
                     variant="outline"
                     size="sm"

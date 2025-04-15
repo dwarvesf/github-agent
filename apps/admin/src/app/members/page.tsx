@@ -54,7 +54,7 @@ import { Input } from "@/components/ui/input";
 const memberSchema = z.object({
   github_id: z.string().min(1, "GitHub ID is required"),
   platform_id: z.string().min(1, "Platform ID is required"),
-  platform_type: z.string().min(1, "Platform Type is required"),
+  platform_type: z.string().min(1, "Platform type is required"),
 });
 
 type MemberFormValues = z.infer<typeof memberSchema>;
@@ -141,95 +141,91 @@ export default function MembersPage() {
   }
 
   return (
-    <main style={{ padding: "1rem" }}>
-      <h1 className="mb-4 text-2xl font-bold">Members</h1>
-
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogTrigger asChild>
-          <Button className="mb-4">Create Member</Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create Member</DialogTitle>
-            <DialogDescription>
-              Fill in the form to create a new member.
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...createForm}>
-            <form
-              onSubmit={createForm.handleSubmit(onCreateSubmit)}
-              className="space-y-4"
-            >
-              <FormField
-                control={createForm.control}
-                name="github_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>GitHub ID</FormLabel>
-                    <FormControl>
-                      <Input placeholder="GitHub ID" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={createForm.control}
-                name="platform_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Platform ID</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Platform ID" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={createForm.control}
-                name="platform_type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Platform Type</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Platform Type" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button
-                  type="submit"
-                  disabled={createMember.isLoading ?? false}
-                >
-                  Create
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+    <>
+      <div className="flex items-center justify-between">
+        <h1 className="mb-4 text-2xl font-bold">Members</h1>
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+          <DialogTrigger asChild>
+            <Button className="mb-4">Create member</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create member</DialogTitle>
+              <DialogDescription>
+                Fill in the form to create a new member.
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...createForm}>
+              <form
+                onSubmit={createForm.handleSubmit(onCreateSubmit)}
+                className="space-y-4"
+              >
+                <FormField
+                  control={createForm.control}
+                  name="github_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>GitHub ID</FormLabel>
+                      <FormControl>
+                        <Input placeholder="GitHub ID" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={createForm.control}
+                  name="platform_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Platform ID</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Platform ID" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={createForm.control}
+                  name="platform_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Platform type</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Platform type" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter>
+                  <Button type="submit" disabled={createMember.isPending}>
+                    Create
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>ID</TableHead>
             <TableHead>GitHub ID</TableHead>
             <TableHead>Platform ID</TableHead>
-            <TableHead>Platform Type</TableHead>
-            <TableHead>Actions</TableHead>
+            <TableHead>Platform type</TableHead>
+            <TableHead className="text-right" />
           </TableRow>
         </TableHeader>
         <TableBody>
           {membersQuery.data?.map((member) => (
             <TableRow key={member.id}>
-              <TableCell>{member.id}</TableCell>
               <TableCell>{member.github_id}</TableCell>
               <TableCell>{member.platform_id}</TableCell>
               <TableCell>{member.platform_type}</TableCell>
-              <TableCell>
+              <TableCell className="text-right">
                 <Dialog
                   open={editOpen && editingMember?.id === member.id}
                   onOpenChange={setEditOpen}
@@ -246,7 +242,7 @@ export default function MembersPage() {
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Edit Member</DialogTitle>
+                      <DialogTitle>Edit member</DialogTitle>
                       <DialogDescription>
                         Update the member details.
                       </DialogDescription>
@@ -287,9 +283,9 @@ export default function MembersPage() {
                           name="platform_type"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Platform Type</FormLabel>
+                              <FormLabel>Platform type</FormLabel>
                               <FormControl>
-                                <Input placeholder="Platform Type" {...field} />
+                                <Input placeholder="Platform type" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -298,7 +294,7 @@ export default function MembersPage() {
                         <DialogFooter>
                           <Button
                             type="submit"
-                            disabled={updateMember.isMutating}
+                            disabled={updateMember.isPending}
                           >
                             Update
                           </Button>
@@ -345,6 +341,6 @@ export default function MembersPage() {
           ))}
         </TableBody>
       </Table>
-    </main>
+    </>
   );
 }

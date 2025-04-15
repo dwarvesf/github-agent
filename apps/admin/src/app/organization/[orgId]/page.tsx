@@ -81,22 +81,20 @@ export default function OrganizationDetailPage() {
 
   return (
     <>
-      <div className="mx-auto max-w-lg p-4">
-        <h1 className="mb-4 text-2xl font-bold">{organization.github_name}</h1>
+      <h1 className="mb-4 text-2xl font-bold">{organization.github_name}</h1>
 
-        <Tabs defaultValue="repositories" className="mb-4">
-          <TabsList>
-            <TabsTrigger value="repositories">Repositories</TabsTrigger>
-            <TabsTrigger value="channels">Channels</TabsTrigger>
-          </TabsList>
-          <TabsContent value="repositories" className="mb-8">
-            <Repositories />
-          </TabsContent>
-          <TabsContent value="channels">
-            <Channels />
-          </TabsContent>
-        </Tabs>
-      </div>
+      <Tabs defaultValue="repositories" className="mb-4">
+        <TabsList>
+          <TabsTrigger value="repositories">Repositories</TabsTrigger>
+          <TabsTrigger value="channels">Channels</TabsTrigger>
+        </TabsList>
+        <TabsContent value="repositories" className="mb-8">
+          <Repositories />
+        </TabsContent>
+        <TabsContent value="channels">
+          <Channels />
+        </TabsContent>
+      </Tabs>
     </>
   );
 }
