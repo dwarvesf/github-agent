@@ -186,7 +186,7 @@ export default function Home() {
                 <TableCell>
                   <a
                     href={`/organization/${org.id}`}
-                    className="text-blue-600 hover:underline"
+                    className="hover:underline"
                   >
                     {org.github_name}
                   </a>

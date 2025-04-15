@@ -48,7 +48,7 @@ const channelSchema = z.object({
   id: z.number().optional(),
   name: z.string().min(1, "Name is required"),
   platform: z.string().min(1, "Platform is required"),
-  platform_channel_id: z.string().min(1, "Platform Channel ID is required"),
+  platform_channel_id: z.string().min(1, "Platform channel ID is required"),
 });
 
 type ChannelFormValues = z.infer<typeof channelSchema>;
@@ -122,14 +122,14 @@ export default function Channels() {
       updateMutation.mutate({
         id: editingChannel.id!,
         name: values.name,
-        platform: values.platform as Platform,
+        platform: "discord",
         platform_channel_id: values.platform_channel_id,
         organization_id: orgId,
       });
     } else {
       createMutation.mutate({
         name: values.name,
-        platform: values.platform as Platform,
+        platform: "discord",
         platform_channel_id: values.platform_channel_id,
         organization_id: orgId,
       });
@@ -162,7 +162,7 @@ export default function Channels() {
             setOpenDialog(true);
           }}
         >
-          New Channel
+          New channel
         </Button>
       </div>
 
@@ -245,7 +245,7 @@ export default function Channels() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingChannel ? "Edit Channel" : "New Channel"}
+              {editingChannel ? "Edit channel" : "New channel"}
             </DialogTitle>
           </DialogHeader>
           <Form {...form}>
@@ -274,7 +274,12 @@ export default function Channels() {
                   <FormItem>
                     <FormLabel>Platform</FormLabel>
                     <FormControl>
-                      <Input placeholder="Platform" {...field} />
+                      <Input
+                        placeholder="Platform"
+                        {...field}
+                        value="discord"
+                        disabled
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -285,9 +290,9 @@ export default function Channels() {
                 name="platform_channel_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Platform Channel ID</FormLabel>
+                    <FormLabel>Platform channel ID</FormLabel>
                     <FormControl>
-                      <Input placeholder="Platform Channel ID" {...field} />
+                      <Input placeholder="Platform channel ID" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
@@ -24,7 +24,6 @@ import {
   DialogFooter,
   DialogTitle,
   DialogDescription,
-  DialogClose,
 } from "@/components/ui/dialog";
 
 import {
@@ -103,7 +102,7 @@ export default function MembersPage() {
     defaultValues: {
       github_id: "",
       platform_id: "",
-      platform_type: "",
+      platform_type: "discord",
     },
   });
 
@@ -112,7 +111,7 @@ export default function MembersPage() {
     defaultValues: {
       github_id: "",
       platform_id: "",
-      platform_type: "",
+      platform_type: "discord",
     },
   });
 
@@ -121,7 +120,7 @@ export default function MembersPage() {
       editForm.reset({
         github_id: editingMember.github_id,
         platform_id: editingMember.platform_id,
-        platform_type: editingMember.platform_type,
+        platform_type: "discord",
       });
     }
   }, [editingMember, editForm]);
@@ -193,7 +192,12 @@ export default function MembersPage() {
                     <FormItem>
                       <FormLabel>Platform type</FormLabel>
                       <FormControl>
-                        <Input placeholder="Platform type" {...field} />
+                        <Input
+                          placeholder="Platform type"
+                          {...field}
+                          disabled
+                          value="discord"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

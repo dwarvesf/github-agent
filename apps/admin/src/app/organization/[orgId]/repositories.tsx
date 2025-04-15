@@ -41,6 +41,7 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -252,7 +253,7 @@ export default function Repositories() {
                       onValueChange={(value) => field.onChange(Number(value))}
                       value={String(field.value)}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select a channel" />
                       </SelectTrigger>
                       <SelectContent>
