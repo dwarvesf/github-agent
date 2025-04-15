@@ -8,10 +8,13 @@ import { createCallerFactory, createTRPCRouter } from "@/server/api/trpc";
  *
  * All routers added in /api/routers should be manually added here.
  */
+import { repositoryRouter } from "@/server/api/routers/repository";
+
 export const appRouter = createTRPCRouter({
   organization: orgRouter,
   members: membersRouter,
   channel: channelRouter,
+  repository: repositoryRouter,
 });
 
 // export type definition of API

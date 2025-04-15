@@ -14,8 +14,8 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "postinstall": "prisma generate",
-    "lint": "next lint",
-    "lint:fix": "next lint --fix",
+    "lint": "eslint . --cache --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint . --fix --cache --ext .js,.jsx,.ts,.tsx",
     "preview": "next build && next start",
     "start": "next start",
     "typecheck": "tsc --noEmit"
@@ -50,20 +50,20 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@packages/eslint-config": "workspace:*",
+    "@packages/typescript-config": "workspace:*",
     "@eslint/eslintrc": "^3.3.1",
     "@tailwindcss/postcss": "^4.0.15",
     "@types/node": "^20.14.10",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "eslint": "^9.23.0",
-    "eslint-config-next": "^15.2.3",
     "postcss": "^8.5.3",
     "prettier": "^3.5.3",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "prisma": "^6.5.0",
     "tailwindcss": "^4.0.15",
-    "typescript": "^5.8.2",
-    "typescript-eslint": "^8.27.0"
+    "typescript": "^5.8.2"
   },
   "ct3aMetadata": {
     "initVersion": "7.39.3"

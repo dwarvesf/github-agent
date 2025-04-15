@@ -1,4 +1,5 @@
 {
+  "extends": "@packages/typescript-config/base.json",
   "compilerOptions": {
     /* Base Options: */
     "esModuleInterop": true,
