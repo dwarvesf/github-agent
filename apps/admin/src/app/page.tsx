@@ -50,6 +50,7 @@ import { toast } from "sonner";
 const organizationSchema = z.object({
   id: z.number().optional(),
   github_name: z.string().min(1, "Name is required"),
+  github_token_id: z.string().optional(),
 });
 
 type OrganizationFormValues = z.infer<typeof organizationSchema>;
@@ -63,12 +64,14 @@ export default function Home() {
   const [deletingOrg, setDeletingOrg] = useState<{
     id: number;
     github_name: string;
+    github_token_id?: string;
   } | null>(null);
 
   const form = useForm<OrganizationFormValues>({
     resolver: zodResolver(organizationSchema),
     defaultValues: {
       github_name: "",
+      github_token_id: "",
     },
   });
 
@@ -182,7 +185,14 @@ export default function Home() {
             ) : (
               organizations.map((org: { id: number; github_name: string }) => (
                 <TableRow key={org.id}>
-                  <TableCell>{org.github_name}</TableCell>
+                  <TableCell>
+                    <a
+                      href={`/organization/${org.id}`}
+                      className="text-blue-600 hover:underline"
+                    >
+                      {org.github_name}
+                    </a>
+                  </TableCell>
                   <TableCell>
                     <Button
                       variant="outline"
@@ -256,6 +266,19 @@ export default function Home() {
                       <FormLabel>Name</FormLabel>
                       <FormControl>
                         <Input placeholder="Organization name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="github_token_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>GitHub Token ID</FormLabel>
+                      <FormControl>
+                        <Input placeholder="GitHub Token ID" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
