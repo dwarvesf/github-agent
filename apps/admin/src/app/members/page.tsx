@@ -120,7 +120,7 @@ export default function MembersPage() {
       editForm.reset({
         github_id: editingMember.github_id,
         platform_id: editingMember.platform_id,
-        platform_type: "discord",
+        platform_type: editingMember.platform_type,
       });
     }
   }, [editingMember, editForm]);
@@ -145,11 +145,11 @@ export default function MembersPage() {
         <h1 className="mb-4 text-2xl font-bold">Members</h1>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
-            <Button className="mb-4">Create member</Button>
+            <Button size="sm">New member</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create member</DialogTitle>
+              <DialogTitle>New member</DialogTitle>
               <DialogDescription>
                 Fill in the form to create a new member.
               </DialogDescription>

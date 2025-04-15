@@ -139,7 +139,9 @@ export default function Repositories() {
     <>
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-lg font-bold">Repositories</h3>
-        <Button onClick={() => openDialog()}>Add repository</Button>
+        <Button size="sm" onClick={() => openDialog()}>
+          New repository
+        </Button>
       </div>
 
       <Table>

@@ -150,6 +150,7 @@ export default function Home() {
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Organizations</h1>
         <Button
+          size="sm"
           onClick={() => {
             setEditingOrg(null);
             form.reset();
@@ -164,74 +165,84 @@ export default function Home() {
         <TableHeader>
           <TableRow>
             <TableHead>Name</TableHead>
+            <TableHead>Repositories</TableHead>
             <TableHead className="text-right" />
           </TableRow>
         </TableHeader>
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan={2} className="text-center">
+              <TableCell colSpan={3} className="text-center">
                 Loading...
               </TableCell>
             </TableRow>
           ) : !organizations || organizations.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={2} className="text-center">
+              <TableCell colSpan={3} className="text-center">
                 No organizations found.
               </TableCell>
             </TableRow>
           ) : (
-            organizations.map((org: { id: number; github_name: string }) => (
-              <TableRow key={org.id}>
-                <TableCell>
-                  <a
-                    href={`/organization/${org.id}`}
-                    className="hover:underline"
-                  >
-                    {org.github_name}
-                  </a>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mr-2"
-                    onClick={() => onEdit(org)}
-                  >
-                    Edit
-                  </Button>
-                  <AlertDialog
-                    open={deleteDialogOpen && deletingOrg?.id === org.id}
-                    onOpenChange={setDeleteDialogOpen}
-                  >
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => setDeletingOrg(org)}
-                      >
-                        Delete
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete organization</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to delete the organization "
-                          {org.github_name}"? This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={onDelete}>
+            organizations.map(
+              (org: {
+                id: number;
+                github_name: string;
+                _count: { repositories: number };
+              }) => (
+                <TableRow key={org.id}>
+                  <TableCell>
+                    <a
+                      href={`/organization/${org.id}`}
+                      className="hover:underline"
+                    >
+                      {org.github_name}
+                    </a>
+                  </TableCell>
+                  <TableCell>{org._count.repositories}</TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mr-2"
+                      onClick={() => onEdit(org)}
+                    >
+                      Edit
+                    </Button>
+                    <AlertDialog
+                      open={deleteDialogOpen && deletingOrg?.id === org.id}
+                      onOpenChange={setDeleteDialogOpen}
+                    >
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => setDeletingOrg(org)}
+                        >
                           Delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </TableCell>
-              </TableRow>
-            ))
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            Delete organization
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete the organization "
+                            {org.github_name}"? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={onDelete}>
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </TableCell>
+                </TableRow>
+              ),
+            )
           )}
         </TableBody>
       </Table>

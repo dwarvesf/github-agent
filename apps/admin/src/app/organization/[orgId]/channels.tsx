@@ -156,6 +156,7 @@ export default function Channels() {
       <div className="mb-4 flex justify-between">
         <h2 className="text-lg font-semibold">Channels</h2>
         <Button
+          size="sm"
           onClick={() => {
             setEditingChannel(null);
             form.reset();

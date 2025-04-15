@@ -13,6 +13,11 @@ export const orgRouter = createTRPCRouter({
   getAll: publicProcedure.query(async ({ ctx }) => {
     const orgs = await ctx.db.organization.findMany({
       orderBy: { created_at: "desc" },
+      include: {
+        _count: {
+          select: { repositories: true },
+        },
+      },
     });
     return orgs;
   }),
