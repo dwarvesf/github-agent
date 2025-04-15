@@ -16,13 +16,29 @@ const geist = Geist({
   variable: "--font-geist-sans",
 });
 
+import Link from "next/link";
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${geist.variable}`}>
       <body>
-        <TRPCReactProvider>{children}</TRPCReactProvider>
+        <TRPCReactProvider>
+          <header
+            style={{
+              padding: "1rem",
+              borderBottom: "1px solid #ccc",
+              marginBottom: "1rem",
+            }}
+          >
+            <nav style={{ display: "flex", gap: "1rem" }}>
+              <Link href="/">Home</Link>
+              <Link href="/members">Members</Link>
+            </nav>
+          </header>
+          {children}
+        </TRPCReactProvider>
       </body>
     </html>
   );
