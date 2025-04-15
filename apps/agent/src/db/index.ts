@@ -4,8 +4,9 @@ export * from './connection'
 // Export schema
 export * from './.generated'
 
-// Export repository
+// Export repositories
+export * from './organization.repository'
+export * from './channel.repository'
+export * from './member.repository'
+export * from './repository'
 export * from './event.repository'
-
-// Re-export drizzle types for convenience
-export type { PostgresJsDatabase } from 'drizzle-orm/postgres-js'

@@ -1,212 +1,287 @@
 import { Step, Workflow } from '@mastra/core/workflows'
-import { DISCORD_GITHUB_MAP } from '../../constants/discord'
+import { z } from 'zod'
+import { nanoid } from 'nanoid'
+import { $Enums, EventCategory, EventType, MemberRepository } from '../../db'
+import { EventRepository, NotificationType } from '../../db/event.repository'
 import { discordClient } from '../../lib/discord'
-import { GITHUB_OWNER, GITHUB_REPO, githubClient } from '../../lib/github'
+import { GitHubAPIPullRequest, GitHubClient } from '../../lib/github'
 import { PullRequest } from '../../lib/type'
+import { RepositoryDMChannelUser } from '../../lib/repository-dm-user'
 import { groupBy } from '../../utils/array'
-import { formatDate } from '../../utils/datetime'
 import { prTitleFormatValid } from '../../utils/string'
 import { suggestPRDescriptionAgent } from '../agents/analyze-github-prs'
-import { EventRepository, NotificationType } from '../../db/event.repository'
 
-import { nanoid } from 'nanoid'
-import { EventCategory, EventType } from '../../db'
+// Types
+type NotificationContext = {
+  ctxId: string
+  organizationId: string
+  repositoryId: string
+  platform: $Enums.Platform
+}
 
-async function handleApprovedNotMerged(
-  discordUserId: string,
+type NotificationEmbed = {
+  title: string
+  color: number
+  description?: string
+  fields?: Array<{
+    name: string
+    value: string
+    inline: boolean
+  }>
+}
+
+// Helper Functions
+function createPRNotificationEmbed(
+  organizationId: string,
   prs: PullRequest[],
-  ctxId: string,
-) {
-  const approvedNotMergedPRs = prs.filter(
-    (pr: PullRequest) => pr.isApprovedWaitingForMerging,
-  )
-
-  if (approvedNotMergedPRs.length > 0) {
-    const isPlural = approvedNotMergedPRs.length > 1
-    const embed = {
+  type: 'approved' | 'convention',
+): NotificationEmbed {
+  if (type === 'approved') {
+    const isPlural = prs.length > 1
+    return {
       title: `✅ ${isPlural ? 'Your PRs are' : 'Your PR is'} approved and ready to merge`,
+      description: `\`${organizationId}:\`.`,
       color: 3066993, // Green color
-      fields: approvedNotMergedPRs.map((pr) => ({
+      fields: prs.map((pr) => ({
         name: `#${pr.number} ${pr.title}`,
         value: `Created at: ${new Date(pr.createdAt).toISOString().split('T')[0]} | [link](${pr.url})`,
         inline: false,
       })),
     }
+  }
 
-    const response = await discordClient.sendMessageToUser({
-      userId: discordUserId,
-      message: '',
-      embed,
-    })
+  const listInText = prs
+    .map((pr) => `[#${pr.number}](${pr.url}) | ${pr.title}`)
+    .join('\n')
+  const notifyMessage =
+    '\n\n• Ensure title follows: `type(scope?): message`\n• Include a clear description of the problem and solution'
 
-    // Log event for merge conflicts notification
-    await EventRepository.logEvent({
-      workflowId: 'notifyDeveloperAboutPRStatus',
-      eventCategory: EventCategory.NOTIFICATION_DISCORD,
-      eventType: EventType.PR_NOTIFIED,
-      organizationId: GITHUB_OWNER!,
-      repositoryId: GITHUB_REPO!,
-      eventData: {
-        notificationType: NotificationType.PR_PENDING_MERGE,
-        message: embed.title,
-        prList: approvedNotMergedPRs,
-        discordUserId: discordUserId,
-        details: {
-          embed,
-        },
-      },
-      metadata: {
-        response,
-      },
-      contextId: ctxId,
-      tags: ['notification', 'discord', 'pr-pending-merge', 'pr-status'],
-    })
+  return {
+    title: '📝 Improve PR clarity',
+    color: 15158332,
+    description: [
+      `\`${organizationId}:\``,
+      `${listInText}${notifyMessage}`,
+    ].join('\n'),
   }
 }
 
-async function handleUnconventionalTitleOrDescription(
-  discordUserId: string,
+async function logNotificationEvent(
+  eventCategory: EventCategory,
+  notificationType: NotificationType,
+  userId: string,
   prs: PullRequest[],
-  ctxId: string,
+  context: NotificationContext,
+  embed: NotificationEmbed,
+  response: unknown,
 ) {
-  const readyToCheckPRs = prs.filter((pr: PullRequest) => !pr.isWIP)
+  try {
+    await EventRepository.logEvent({
+      workflowId: 'notifyDeveloperAboutPRStatus',
+      eventCategory,
+      eventType: EventType.PR_NOTIFIED,
+      organizationId: context.organizationId,
+      repositoryId: context.repositoryId,
+      eventData: {
+        notificationType,
+        message: embed.title,
+        prList: prs,
+        discordUserId: userId,
+        details: { embed },
+      },
+      metadata: { response },
+      contextId: context.ctxId,
+      tags: ['notification', 'discord', notificationType, 'pr-status'],
+    })
+  } catch (error) {
+    console.error(`Failed to log notification event: ${error}`)
+  }
+}
 
-  // Check all PR descriptions in one batch
+async function analyzeConventions(prs: PullRequest[]): Promise<PullRequest[]> {
+  const readyToCheckPRs = prs.filter((pr) => !pr.isWIP)
+  if (readyToCheckPRs.length === 0) return []
+
   let prsNeedingDescriptionImprovement: PullRequest[] = []
 
-  if (readyToCheckPRs.length > 0) {
-    try {
-      const agentResponse = await suggestPRDescriptionAgent.generate([
-        {
-          role: 'user',
-          content: JSON.stringify(
-            readyToCheckPRs.map((pr) => ({
-              url: pr.url,
-              title: pr.title,
-              body: pr.body,
-            })),
-          ),
-        },
-      ])
+  try {
+    // Check PR descriptions using LLM
+    const agentResponse = await suggestPRDescriptionAgent.generate([
+      {
+        role: 'user',
+        content: JSON.stringify(
+          readyToCheckPRs.map((pr) => ({
+            url: pr.url,
+            title: pr.title,
+            body: pr.body,
+          })),
+        ),
+      },
+    ])
 
-      try {
-        const prsNeedingImprovement = JSON.parse(agentResponse.text) as string[]
-        if (Array.isArray(prsNeedingImprovement)) {
-          prsNeedingDescriptionImprovement = readyToCheckPRs.filter((pr) =>
-            prsNeedingImprovement.includes(pr.url),
-          )
-        } else {
-          console.error('Invalid response format from LLM:', agentResponse.text)
-        }
-      } catch (parseError) {
-        console.error('Failed to parse LLM response:', parseError)
-      }
-    } catch (agentError) {
-      console.error('Failed to get LLM suggestions:', agentError)
+    const jsonContent =
+      agentResponse.text.match(/```(?:json)?\s*([\s\S]*?)\s*```/)?.[1] ||
+      agentResponse.text
+    const prsNeedingImprovement = JSON.parse(jsonContent) as string[]
+
+    if (Array.isArray(prsNeedingImprovement)) {
+      prsNeedingDescriptionImprovement = readyToCheckPRs.filter((pr) =>
+        prsNeedingImprovement.includes(pr.url),
+      )
     }
+  } catch (error) {
+    console.error('Failed to analyze PR descriptions:', error)
   }
 
-  // Check for invalid titles
+  // Check PR titles
   const invalidTitlePRs = readyToCheckPRs.filter(
     (pr) => !prTitleFormatValid(pr.title),
   )
 
-  // Combine both sets of PRs using Set to remove duplicates
-  const wrongConventionPRs = Array.from(
+  // Combine and deduplicate
+  return Array.from(
     new Set([...invalidTitlePRs, ...prsNeedingDescriptionImprovement]),
   )
+}
 
-  if (wrongConventionPRs.length > 0) {
-    const notifyMessage =
-      '\n\n• Ensure title follows: `type(scope?): message`\n• Include a clear description of the problem and solution'
+async function handleApprovedNotMerged(
+  userId: string,
+  prs: PullRequest[],
+  context: NotificationContext,
+) {
+  try {
+    const approvedNotMergedPRs = prs.filter(
+      (pr) => pr.isApprovedWaitingForMerging,
+    )
+    if (approvedNotMergedPRs.length === 0) return
 
-    const listInText = wrongConventionPRs
-      .map((pr) => {
-        return `[#${pr.number}](${pr.url}) | ${pr.title}`
+    if (context.platform === $Enums.Platform.discord) {
+      const embed = createPRNotificationEmbed(
+        context.organizationId,
+        approvedNotMergedPRs,
+        'approved',
+      )
+      const response = await discordClient.sendMessageToUser({
+        userId,
+        message: '',
+        embed,
       })
-      .join('\n')
 
-    const embed = {
-      title: `📝 Improve PR clarity`,
-      color: 15158332,
-      description: `${listInText}${notifyMessage}`,
-      inline: false,
+      await logNotificationEvent(
+        EventCategory.NOTIFICATION_DISCORD,
+        NotificationType.PR_PENDING_MERGE,
+        userId,
+        approvedNotMergedPRs,
+        context,
+        embed,
+        response,
+      )
+    }
+  } catch (error) {
+    console.error(`Failed to handle approved PRs notification: ${error}`)
+  }
+}
+
+async function handleUnconventionalTitleOrDescription(
+  userId: string,
+  prs: PullRequest[],
+  context: NotificationContext,
+) {
+  try {
+    const wrongConventionPRs = await analyzeConventions(prs)
+    if (wrongConventionPRs.length === 0) {
+      return
     }
 
-    const response = await discordClient.sendMessageToUser({
-      userId: discordUserId,
-      message: '',
-      embed,
-    })
+    if (context.platform === $Enums.Platform.discord) {
+      const embed = createPRNotificationEmbed(
+        context.organizationId,
+        wrongConventionPRs,
+        'convention',
+      )
+      const response = await discordClient.sendMessageToUser({
+        userId,
+        message: '',
+        embed,
+      })
 
-    // Log event
-    await EventRepository.logEvent({
-      workflowId: 'notifyDeveloperAboutPRStatus',
-      eventCategory: EventCategory.NOTIFICATION_DISCORD,
-      eventType: EventType.PR_NOTIFIED,
-      organizationId: GITHUB_OWNER!,
-      repositoryId: GITHUB_REPO!,
-      eventData: {
-        notificationType: NotificationType.WRONG_CONVENTION,
-        message: embed.title,
-        prList: wrongConventionPRs,
-        discordUserId: discordUserId,
-        details: {
-          embed,
-        },
-      },
-      metadata: {
+      await logNotificationEvent(
+        EventCategory.NOTIFICATION_DISCORD,
+        NotificationType.WRONG_CONVENTION,
+        userId,
+        wrongConventionPRs,
+        context,
+        embed,
         response,
-      },
-      contextId: ctxId,
-      tags: ['notification', 'discord', 'wrong-convention', 'pr-status'],
-    })
-  }
+      )
+    }
 
-  return wrongConventionPRs
+    // TODO: Slack platform
+    if (context.platform === $Enums.Platform.slack) {
+      //
+    }
+  } catch (error) {
+    console.error(`Failed to handle convention check notification: ${error}`)
+  }
 }
 
 const notifyDeveloperAboutPRStatus = new Workflow({
   name: 'Notify developer about PR status',
+  triggerSchema: z.object({
+    organizationOwner: z.string(),
+  }),
 })
   .step(
     new Step({
       id: 'get-today-pr-list',
-      execute: async () => {
-        const prs = await githubClient.getRepoPRs(GITHUB_REPO, {
-          from: formatDate(new Date()),
-          isMerged: false,
-          isOpen: true,
-        })
+      execute: async ({ context }) => {
+        try {
+          const organizationReposInstance = new RepositoryDMChannelUser()
+          await organizationReposInstance.initClient(
+            context.triggerData.organizationOwner,
+          )
 
-        const todayPRsWithReviews = await Promise.all(
-          prs.map((pr) => {
-            return githubClient.getPRReviews(pr)
-          }),
-        )
+          const repositories = organizationReposInstance.groupRepositories()
+          const githubClient = organizationReposInstance.getGithubClient()
 
-        return {
-          todayPRs: todayPRsWithReviews.map((pr) => ({
-            number: pr.number,
-            title: pr.title,
-            url: pr.html_url,
-            author: pr.user.login,
-            createdAt: pr.created_at,
-            updatedAt: pr.updated_at,
-            mergedAt: pr.merged_at,
-            isMerged: pr.merged_at !== null,
-            isWaitingForReview: githubClient.isWaitingForReview(pr),
-            hasMergeConflicts: githubClient.hasMergeConflicts(pr),
-            isApprovedWaitingForMerging:
-              githubClient.isApprovedButNotMerged(pr),
-            draft: pr.draft,
-            isWIP: githubClient.isWIP(pr),
-            labels: pr.labels.map((label) => label.name),
-            reviewers: pr.requested_reviewers.map((reviewer) => reviewer.login),
-            hasComments: pr.comments > 0 || pr.review_comments > 0,
-            hasReviews: pr.reviews && pr.reviews.length > 0,
-            body: pr.body,
-          })),
+          // Get PRs from all repositories
+          const allPRs = await Promise.all(
+            repositories.map(async (repo) => {
+              const prs = (await githubClient.getRepoPRs(repo.repoName, {
+                isMerged: false,
+                isOpen: true,
+              })) as unknown as GitHubAPIPullRequest[]
+              return { repo: repo.repoName, prs }
+            }),
+          )
+
+          // Process PR details with reviews
+          const todayPRsWithReviews = await Promise.all(
+            allPRs.map(async (item) => {
+              const prs = await Promise.all(
+                item.prs.map(async (pr) => {
+                  const prWithReviews = await githubClient.getPRReviews(pr)
+                  return githubClient.convertApiPullRequestToPullRequest(
+                    prWithReviews,
+                  )
+                }),
+              )
+
+              return {
+                org: context.triggerData.organizationOwner,
+                repo: item.repo,
+                prs,
+              }
+            }),
+          )
+
+          return {
+            channels: organizationReposInstance.getOrganizationData().channels,
+            todayPRs: todayPRsWithReviews,
+          }
+        } catch (error) {
+          console.error('Failed to fetch PR list:', error)
+          throw error
         }
       },
     }),
@@ -215,36 +290,67 @@ const notifyDeveloperAboutPRStatus = new Workflow({
     new Step({
       id: 'send-to-discord',
       execute: async ({ context }) => {
-        if (context.steps['get-today-pr-list']?.status === 'success') {
+        if (context.steps['get-today-pr-list']?.status !== 'success') {
+          return
+        }
+
+        try {
           const { todayPRs } = context.steps['get-today-pr-list'].output as {
-            todayPRs: PullRequest[]
+            todayPRs: { org: string; repo: string; prs: PullRequest[] }[]
+            channels: Awaited<
+              ReturnType<typeof GitHubClient.getOrganizationData>
+            >['channels']
           }
-          const byAuthor = groupBy(
-            todayPRs || [],
-            (pr: PullRequest) => pr.author,
-          )
-          const ctxId = nanoid()
 
           await Promise.all(
-            Object.entries(byAuthor).map(async ([author, prs]) => {
-              const discordUserId =
-                DISCORD_GITHUB_MAP[author as keyof typeof DISCORD_GITHUB_MAP]
-              if (discordUserId) {
-                await handleApprovedNotMerged(
-                  discordUserId,
-                  prs as PullRequest[],
-                  ctxId,
-                )
-                await handleUnconventionalTitleOrDescription(
-                  discordUserId,
-                  prs as PullRequest[],
-                  ctxId,
-                )
-              }
+            todayPRs.map(async (repoPRs) => {
+              const byAuthor = groupBy(
+                repoPRs.prs,
+                (pr: PullRequest) => pr.author,
+              )
+
+              const authorPromises = Object.entries(byAuthor).map(
+                async ([author, prs]) => {
+                  const platformInfo =
+                    await MemberRepository.getByGithubId(author)
+                  if (!platformInfo.length) return
+
+                  const notificationContext = {
+                    ctxId: nanoid(),
+                    organizationId: repoPRs.org,
+                    repositoryId: repoPRs.repo,
+                  }
+
+                  await Promise.all(
+                    platformInfo.map(async (platform) => {
+                      if (!platform.platformId) return
+
+                      await handleApprovedNotMerged(platform.platformId, prs, {
+                        ...notificationContext,
+                        platform: platform.platformType as $Enums.Platform,
+                      })
+
+                      await handleUnconventionalTitleOrDescription(
+                        platform.platformId,
+                        prs,
+                        {
+                          ...notificationContext,
+                          platform: platform.platformType as $Enums.Platform,
+                        },
+                      )
+                    }),
+                  )
+                },
+              )
+
+              await Promise.all(authorPromises)
             }),
           )
 
           return 'ok'
+        } catch (error) {
+          console.error('Failed to process notifications:', error)
+          throw error
         }
       },
     }),

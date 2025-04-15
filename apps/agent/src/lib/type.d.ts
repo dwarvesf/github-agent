@@ -5,10 +5,11 @@ export interface PullRequest {
   author: string
   createdAt: string
   updatedAt: string
+  mergedAt: string | null
   draft: boolean
-  isWaitingForReview: boolean
-  hasMergeConflicts: boolean
-  isApprovedWaitingForMerging: boolean
+  isWaitingForReview?: boolean
+  hasMergeConflicts?: boolean
+  isApprovedWaitingForMerging?: boolean
   isWIP: boolean
   isMerged: boolean
   labels: string[]

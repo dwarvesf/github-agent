@@ -1,11 +1,21 @@
 import { createTool } from '@mastra/core/tools'
 import { z } from 'zod'
-import { GITHUB_REPO, githubClient } from '../../lib/github'
+import {
+  GITHUB_OWNER,
+  GITHUB_REPO,
+  GITHUB_TOKEN,
+  GitHubClient,
+} from '../../lib/github'
 import {
   convertArrayToMarkdownTableList,
   convertNestedArrayToTreeList,
 } from '../../utils/string'
 import { githubIdMapper } from '../../lib/id-mapper'
+
+const githubClient = new GitHubClient({
+  githubOwner: GITHUB_OWNER!,
+  githubToken: GITHUB_TOKEN!,
+})
 
 const prListSchema = z.object({
   list: z.array(

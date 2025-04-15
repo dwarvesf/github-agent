@@ -19,7 +19,7 @@ export const suggestPRDescriptionAgent = new Agent({
     - body: PR description
 
     Output Format:
-    Return a JSON array containing the PR numbers that need description improvements.
+    Return a JSON stringified array containing the PR numbers that need description improvements.
     Example: ["https://github.com/dwarvesf/github-agent/pull/31", "https://github.com/dwarvesf/github-agent/pull/12"]
 
     Example Input:

@@ -22,7 +22,7 @@ export type EventData = {
     author: string
     createdAt?: string
     updatedAt?: string
-    mergedAt?: string
+    mergedAt?: string | null
     url?: string
     [key: string]: any
   }[]
