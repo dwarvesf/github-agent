@@ -41,7 +41,6 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -49,6 +48,7 @@ import {
 import { Button } from "@/components/ui/button";
 
 import { api } from "@/trpc/react";
+import { Spinner } from "@/components/ui/spinner";
 
 const repositorySchema = z.object({
   id: z.number().optional(),
@@ -65,10 +65,13 @@ export default function Repositories() {
   const [editingRepo, setEditingRepo] = useState<RepositoryForm | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const { data: repositories, refetch } =
-    api.repository.getByOrganization.useQuery(orgId, {
-      enabled: !!orgId,
-    });
+  const {
+    data: repositories,
+    isLoading,
+    refetch,
+  } = api.repository.getByOrganization.useQuery(orgId, {
+    enabled: !!orgId,
+  });
 
   const { data: channels } = api.channel.getByOrganization.useQuery(orgId, {
     enabled: !!orgId,
@@ -78,7 +81,6 @@ export default function Repositories() {
     resolver: zodResolver(repositorySchema),
     defaultValues: {
       github_repo_name: "",
-      channel_id: 0,
     },
   });
 
@@ -88,7 +90,7 @@ export default function Repositories() {
       form.reset(repo);
     } else {
       setEditingRepo(null);
-      form.reset({ github_repo_name: "", channel_id: 0 });
+      form.reset({ github_repo_name: "", channel_id: undefined });
     }
     setIsDialogOpen(true);
   }
@@ -147,74 +149,85 @@ export default function Repositories() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Repository name</TableHead>
+            <TableHead>Name</TableHead>
             <TableHead>Channel</TableHead>
             <TableHead />
           </TableRow>
         </TableHeader>
         <TableBody>
-          {repositories?.map((repo: any) => (
-            <TableRow key={repo.id}>
-              <TableCell>{repo.github_repo_name}</TableCell>
-              <TableCell>
-                {channels?.find((ch: any) => ch.id === repo.channel_id)?.name ??
-                  "N/A"}
-              </TableCell>
-              <TableCell className="space-x-2 text-right">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    openDialog({
-                      id: repo.id,
-                      github_repo_name: repo.github_repo_name,
-                      channel_id: repo.channel_id,
-                    })
-                  }
-                >
-                  Edit
-                </Button>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="destructive" size="sm">
-                      Delete
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Confirm delete</DialogTitle>
-                      <DialogDescription>
-                        Are you sure you want to delete this repository?
-                      </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                      <DialogClose asChild>
-                        <Button variant="outline">Cancel</Button>
-                      </DialogClose>
-                      <Button
-                        variant="destructive"
-                        onClick={() => {
-                          deleteMutation.mutate({ id: repo.id });
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </TableCell>
-            </TableRow>
-          ))}
-          {!repositories || repositories.length === 0 ? (
+          {isLoading ? (
             <TableRow>
-              <TableCell
-                colSpan={4}
-                className="text-muted-foreground text-center"
-              >
-                No repositories found.
+              <TableCell colSpan={3} className="text-center">
+                <Spinner className="mx-auto" />
               </TableCell>
             </TableRow>
-          ) : null}
+          ) : (
+            <>
+              {!repositories || repositories.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={4}
+                    className="text-muted-foreground text-center"
+                  >
+                    No repositories found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                repositories?.map((repo) => (
+                  <TableRow key={repo.id}>
+                    <TableCell>{repo.github_repo_name}</TableCell>
+                    <TableCell>
+                      {channels?.find((ch) => ch.id === repo.channel_id)
+                        ?.name ?? "N/A"}
+                    </TableCell>
+                    <TableCell className="space-x-2 text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          openDialog({
+                            id: repo.id,
+                            github_repo_name: repo.github_repo_name,
+                            channel_id: repo.channel_id,
+                          })
+                        }
+                      >
+                        Edit
+                      </Button>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="destructive" size="sm">
+                            Delete
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Confirm delete</DialogTitle>
+                            <DialogDescription>
+                              Are you sure you want to delete this repository?
+                            </DialogDescription>
+                          </DialogHeader>
+                          <DialogFooter>
+                            <DialogClose asChild>
+                              <Button variant="outline">Cancel</Button>
+                            </DialogClose>
+                            <Button
+                              variant="destructive"
+                              onClick={() => {
+                                deleteMutation.mutate({ id: repo.id });
+                              }}
+                            >
+                              Delete
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </>
+          )}
         </TableBody>
       </Table>
 
@@ -260,7 +273,7 @@ export default function Repositories() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
-                          {channels?.map((ch: any) => (
+                          {channels?.map((ch) => (
                             <SelectItem key={ch.id} value={String(ch.id)}>
                               {ch.name}
                             </SelectItem>

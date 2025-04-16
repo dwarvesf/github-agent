@@ -42,7 +42,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import type { Platform } from "@prisma/client";
+import { Spinner } from "@/components/ui/spinner";
 
 const channelSchema = z.object({
   id: z.number().optional(),
@@ -153,8 +153,8 @@ export default function Channels() {
 
   return (
     <div>
-      <div className="mb-4 flex justify-between">
-        <h2 className="text-lg font-semibold">Channels</h2>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-lg font-bold">Channels</h2>
         <Button
           size="sm"
           onClick={() => {
@@ -173,14 +173,14 @@ export default function Channels() {
             <TableHead>Name</TableHead>
             <TableHead>Platform</TableHead>
             <TableHead>Platform channel ID</TableHead>
-            <TableHead className="text-right" />
+            <TableHead />
           </TableRow>
         </TableHeader>
         <TableBody>
           {isLoading ? (
             <TableRow>
               <TableCell colSpan={4} className="text-center">
-                Loading...
+                <Spinner className="mx-auto" />
               </TableCell>
             </TableRow>
           ) : channels && channels.length > 0 ? (

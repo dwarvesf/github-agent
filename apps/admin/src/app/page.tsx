@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/table";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
+import { Spinner } from "@/components/ui/spinner";
 
 const organizationSchema = z.object({
   id: z.number().optional(),
@@ -173,7 +174,7 @@ export default function Home() {
           {isLoading ? (
             <TableRow>
               <TableCell colSpan={3} className="text-center">
-                Loading...
+                <Spinner className="mx-auto" />
               </TableCell>
             </TableRow>
           ) : !organizations || organizations.length === 0 ? (
@@ -233,9 +234,9 @@ export default function Home() {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={onDelete}>
+                          <Button onClick={onDelete} variant="destructive">
                             Delete
-                          </AlertDialogAction>
+                          </Button>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>

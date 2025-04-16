@@ -49,6 +49,7 @@ import {
 } from "@/components/ui/form";
 
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 
 const memberSchema = z.object({
   github_id: z.string().min(1, "GitHub ID is required"),
@@ -220,129 +221,141 @@ export default function MembersPage() {
             <TableHead>GitHub ID</TableHead>
             <TableHead>Platform ID</TableHead>
             <TableHead>Platform type</TableHead>
-            <TableHead className="text-right" />
+            <TableHead />
           </TableRow>
         </TableHeader>
         <TableBody>
-          {membersQuery.data?.map((member) => (
-            <TableRow key={member.id}>
-              <TableCell>{member.github_id}</TableCell>
-              <TableCell>{member.platform_id}</TableCell>
-              <TableCell>{member.platform_type}</TableCell>
-              <TableCell className="text-right">
-                <Dialog
-                  open={editOpen && editingMember?.id === member.id}
-                  onOpenChange={setEditOpen}
-                >
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditingMember(member)}
-                      className="mr-2"
-                    >
-                      Edit
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Edit member</DialogTitle>
-                      <DialogDescription>
-                        Update the member details.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <Form {...editForm}>
-                      <form
-                        onSubmit={editForm.handleSubmit(onEditSubmit)}
-                        className="space-y-4"
-                      >
-                        <FormField
-                          control={editForm.control}
-                          name="github_id"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>GitHub ID</FormLabel>
-                              <FormControl>
-                                <Input placeholder="GitHub ID" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={editForm.control}
-                          name="platform_id"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Platform ID</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Platform ID" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={editForm.control}
-                          name="platform_type"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Platform type</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Platform type" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <DialogFooter>
-                          <Button
-                            type="submit"
-                            disabled={updateMember.isPending}
-                          >
-                            Update
-                          </Button>
-                        </DialogFooter>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
-
-                <AlertDialog
-                  open={deleteOpen && deletingMember?.id === member.id}
-                  onOpenChange={setDeleteOpen}
-                >
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setDeletingMember(member)}
-                    >
-                      Delete
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action cannot be undone. This will permanently
-                        delete the member with GitHub ID "{member.github_id}".
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={onDeleteConfirm}
-                        className="bg-destructive"
-                      >
-                        Delete
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+          {membersQuery.isLoading ? (
+            <TableRow>
+              <TableCell colSpan={4}>
+                <Spinner className="mx-auto" />
               </TableCell>
             </TableRow>
-          ))}
+          ) : (
+            membersQuery.data?.map((member) => (
+              <TableRow key={member.id}>
+                <TableCell>{member.github_id}</TableCell>
+                <TableCell>{member.platform_id}</TableCell>
+                <TableCell>{member.platform_type}</TableCell>
+                <TableCell className="text-right">
+                  <Dialog
+                    open={editOpen && editingMember?.id === member.id}
+                    onOpenChange={setEditOpen}
+                  >
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditingMember(member)}
+                        className="mr-2"
+                      >
+                        Edit
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Edit member</DialogTitle>
+                        <DialogDescription>
+                          Update the member details.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <Form {...editForm}>
+                        <form
+                          onSubmit={editForm.handleSubmit(onEditSubmit)}
+                          className="space-y-4"
+                        >
+                          <FormField
+                            control={editForm.control}
+                            name="github_id"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>GitHub ID</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="GitHub ID" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={editForm.control}
+                            name="platform_id"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Platform ID</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Platform ID" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={editForm.control}
+                            name="platform_type"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Platform type</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="Platform type"
+                                    {...field}
+                                    disabled
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <DialogFooter>
+                            <Button
+                              type="submit"
+                              disabled={updateMember.isPending}
+                            >
+                              Update
+                            </Button>
+                          </DialogFooter>
+                        </form>
+                      </Form>
+                    </DialogContent>
+                  </Dialog>
+
+                  <AlertDialog
+                    open={deleteOpen && deletingMember?.id === member.id}
+                    onOpenChange={setDeleteOpen}
+                  >
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setDeletingMember(member)}
+                      >
+                        Delete
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently
+                          delete the member with GitHub ID "{member.github_id}".
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={onDeleteConfirm}
+                          className="bg-destructive"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
     </>

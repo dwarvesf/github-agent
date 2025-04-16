@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import Channels from "./channels";
 import Repositories from "./repositories";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Spinner } from "@/components/ui/spinner";
 
 const organizationSchema = z.object({
   id: z.number().optional(),
@@ -72,7 +73,7 @@ export default function OrganizationDetailPage() {
   };
 
   if (isLoading) {
-    return <div>Loading organization details...</div>;
+    return <Spinner className="mx-auto" />;
   }
 
   if (!organization) {
