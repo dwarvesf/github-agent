@@ -5,6 +5,7 @@ import {
   convertArrayToMarkdownTableList,
   convertNestedArrayToTreeList,
 } from '../../utils/string'
+import { githubIdMapper } from '../../lib/id-mapper'
 
 const prListSchema = z.object({
   list: z.array(
@@ -38,6 +39,10 @@ export const getPullRequestTool = createTool({
     authorId: z.string().describe('Reviewer ID').optional(),
     isOpen: z.boolean().describe('Filter by open PRs').optional(),
     isMerged: z.boolean().describe('Filter by merged PRs').optional(),
+    useDiscordIdMapping: z
+      .boolean()
+      .describe('Use Discord ID mapping')
+      .optional(),
     fromDate: z
       .string()
       .describe(
@@ -64,25 +69,39 @@ export const getPullRequestTool = createTool({
     })
 
     return {
-      list: prs.map((pr) => ({
-        number: pr.number,
-        title: pr.title,
-        url: pr.html_url,
-        author: pr.user.login,
-        createdAt: pr.created_at,
-        updatedAt: pr.updated_at,
-        mergedAt: pr.merged_at,
-        isMerged: pr.merged_at !== null,
-        hasMergeConflicts: githubClient.hasMergeConflicts(pr),
-        draft: pr.draft,
-        isWIP: githubClient.isWIP(pr),
-        isWaitingForReview: githubClient.isWaitingForReview(pr),
-        labels: pr.labels.map((label) => label.name),
-        reviewers: pr.requested_reviewers.map((reviewer) => reviewer.login),
-        hasComments: pr.comments > 0 || pr.review_comments > 0,
-        hasReviews: pr.reviews && pr.reviews.length > 0,
-        body: pr.body,
-      })),
+      list: prs.map((pr) => {
+        let author = pr.user.login
+        let reviewers = pr.requested_reviewers.map((reviewer) => reviewer.login)
+
+        if (context.useDiscordIdMapping) {
+          const discordId = githubIdMapper.getDiscordID(author)
+          author = discordId ? `<@!${discordId}>` : `@${author}`
+          reviewers = reviewers.map((reviewer) => {
+            const discordId = githubIdMapper.getDiscordID(reviewer)
+            return discordId ? `<@!${discordId}>` : `@${reviewer}`
+          })
+        }
+
+        return {
+          number: pr.number,
+          title: pr.title,
+          url: pr.html_url,
+          author: author,
+          createdAt: pr.created_at,
+          updatedAt: pr.updated_at,
+          mergedAt: pr.merged_at,
+          isMerged: pr.merged_at !== null,
+          hasMergeConflicts: githubClient.hasMergeConflicts(pr),
+          draft: pr.draft,
+          isWIP: githubClient.isWIP(pr),
+          isWaitingForReview: githubClient.isWaitingForReview(pr),
+          labels: pr.labels.map((label) => label.name),
+          reviewers: reviewers,
+          hasComments: pr.comments > 0 || pr.review_comments > 0,
+          hasReviews: pr.reviews && pr.reviews.length > 0,
+          body: pr.body,
+        }
+      }),
     }
   },
 })
@@ -105,6 +124,10 @@ export const getCommitsTool = createTool({
   description: 'Get a list of commits from a repo',
   inputSchema: z.object({
     authorId: z.string().describe('Author of the commits').optional(),
+    useDiscordIdMapping: z
+      .boolean()
+      .describe('Use Discord ID mapping')
+      .optional(),
     fromDate: z
       .string()
       .describe('From date where the commits were created')
@@ -125,12 +148,20 @@ export const getCommitsTool = createTool({
     })
 
     return {
-      list: commits.map((c) => ({
-        sha: c.sha.substring(0, 8),
-        author: c.author.login,
-        url: c.html_url,
-        message: c.message,
-      })),
+      list: commits.map((c) => {
+        let author = c.author.login
+        if (context.useDiscordIdMapping) {
+          const discordId = githubIdMapper.getDiscordID(author)
+          author = discordId ? `<@!${discordId}>` : `@${author}`
+        }
+
+        return {
+          sha: c.sha,
+          author: author,
+          url: c.html_url,
+          message: c.commit.message,
+        }
+      }),
     }
   },
 })
