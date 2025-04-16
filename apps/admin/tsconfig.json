@@ -1,5 +1,5 @@
 {
-  "extends": "@packages/typescript-config/base.json",
+  "extends": "@packages/typescript-config/nextjs.json",
   "compilerOptions": {
     /* Base Options: */
     "esModuleInterop": true,
