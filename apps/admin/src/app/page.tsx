@@ -180,10 +180,12 @@ export default function Home() {
       updateMutation.mutate({
         id: editingOrg.id!,
         github_name: values.github_name,
+        github_token_id: values.github_token_id,
       })
     } else {
       createMutation.mutate({
         github_name: values.github_name,
+        github_token_id: values.github_token_id,
       })
     }
   }

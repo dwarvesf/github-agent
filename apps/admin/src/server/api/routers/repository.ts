@@ -23,7 +23,7 @@ export const repositoryRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const repository = await ctx.db.repository.create({
         data: {
-          github_repo_name: input.github_repo_name,
+          github_repo_name: input.github_repo_name.trim(),
           organization_id: input.organization_id,
           channel_id: input.channel_id,
         },
@@ -44,7 +44,7 @@ export const repositoryRouter = createTRPCRouter({
       const repository = await ctx.db.repository.update({
         where: { id: input.id },
         data: {
-          github_repo_name: input.github_repo_name,
+          github_repo_name: input.github_repo_name.trim(),
           organization_id: input.organization_id,
           channel_id: input.channel_id,
         },
