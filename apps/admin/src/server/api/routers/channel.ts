@@ -24,9 +24,9 @@ export const channelRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const channel = await ctx.db.channel.create({
         data: {
-          name: input.name,
+          name: input.name.trim(),
           platform: input.platform,
-          platform_channel_id: input.platform_channel_id,
+          platform_channel_id: input.platform_channel_id.trim(),
           organization_id: input.organization_id,
         },
       })
@@ -47,9 +47,9 @@ export const channelRouter = createTRPCRouter({
       const channel = await ctx.db.channel.update({
         where: { id: input.id },
         data: {
-          name: input.name,
+          name: input.name.trim(),
           platform: input.platform,
-          platform_channel_id: input.platform_channel_id,
+          platform_channel_id: input.platform_channel_id.trim(),
           organization_id: input.organization_id,
         },
       })

@@ -25,8 +25,8 @@ export const membersRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       return await ctx.db.member.create({
         data: {
-          github_id: input.github_id,
-          platform_id: input.platform_id,
+          github_id: input.github_id.trim(),
+          platform_id: input.platform_id.trim(),
           platform_type: input.platform_type,
         },
       })
@@ -45,8 +45,8 @@ export const membersRouter = createTRPCRouter({
       return await ctx.db.member.update({
         where: { id: input.id },
         data: {
-          github_id: input.github_id,
-          platform_id: input.platform_id,
+          github_id: input.github_id.trim(),
+          platform_id: input.platform_id.trim(),
           platform_type: input.platform_type,
         },
       })

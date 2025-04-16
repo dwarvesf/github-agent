@@ -26,12 +26,14 @@ export const orgRouter = createTRPCRouter({
     .input(
       z.object({
         github_name: z.string().min(1),
+        github_token_id: z.string().min(1),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const org = await ctx.db.organization.create({
         data: {
-          github_name: input.github_name,
+          github_name: input.github_name.trim(),
+          github_token_id: input.github_token_id.trim(),
         },
       })
       return org
@@ -42,13 +44,15 @@ export const orgRouter = createTRPCRouter({
       z.object({
         id: z.number(),
         github_name: z.string().min(1),
+        github_token_id: z.string().min(1),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const org = await ctx.db.organization.update({
         where: { id: input.id },
         data: {
-          github_name: input.github_name,
+          github_name: input.github_name.trim(),
+          github_token_id: input.github_token_id.trim(),
         },
       })
       return org
