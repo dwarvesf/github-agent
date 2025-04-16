@@ -1,0 +1,71 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+enum Platform {
+    discord
+    slack
+}
+
+model Organization {
+    id              Int       @id @default(autoincrement())
+    github_token_id String?   @db.VarChar(255)
+    github_name     String    @unique @db.VarChar(255)
+    created_at      DateTime  @default(now()) @db.Timestamp(6)
+    updated_at      DateTime? @db.Timestamp(6)
+
+    channels     Channel[]
+    repositories Repository[]
+
+    @@map("organizations")
+}
+
+model Member {
+    id            Int       @id @default(autoincrement())
+    github_id     String    @db.VarChar(255)
+    platform_id   String    @db.VarChar(255)
+    platform_type String    @db.VarChar(255)
+    created_at    DateTime  @default(now()) @db.Timestamp(6)
+    updated_at    DateTime? @db.Timestamp(6)
+
+    @@unique([github_id, platform_id, platform_type])
+    @@map("members")
+}
+
+model Channel {
+    id                  Int       @id @default(autoincrement())
+    name                String    @db.VarChar(255)
+    platform            Platform  @default(discord)
+    platform_channel_id String    @db.VarChar(255)
+    organization_id     Int
+    created_at          DateTime  @default(now()) @db.Timestamp(6)
+    updated_at          DateTime? @db.Timestamp(6)
+
+    organization Organization @relation(fields: [organization_id], references: [id])
+    repositories Repository[]
+
+    @@unique([platform, platform_channel_id])
+    @@index([organization_id])
+    @@map("channels")
+}
+
+model Repository {
+    id               Int       @id @default(autoincrement())
+    github_repo_name String    @db.VarChar(255)
+    organization_id  Int
+    channel_id       Int
+    created_at       DateTime  @default(now()) @db.Timestamp(6)
+    updated_at       DateTime? @db.Timestamp(6)
+
+    organization Organization @relation(fields: [organization_id], references: [id])
+    channel      Channel      @relation(fields: [channel_id], references: [id])
+
+    @@unique([organization_id, github_repo_name])
+    @@index([channel_id])
+    @@map("repositories")
+}
