@@ -1,4 +1,5 @@
 import type { EventType, EventCategory, Event } from '.'
+import { PullRequest } from '../lib/type'
 import { getPrisma } from './connection'
 
 export enum NotificationType {
@@ -9,6 +10,18 @@ export enum NotificationType {
   DAILY_REPORT = 'daily_report',
 }
 
+export type PRList = Partial<
+  PullRequest & {
+    number: number
+    title: string
+    author: string
+    createdAt?: string
+    updatedAt?: string
+    mergedAt?: string | null
+    url?: string
+    [key: string]: any
+  }
+>
 // Types for event data
 export type EventData = {
   message?: string
@@ -16,16 +29,11 @@ export type EventData = {
   notificationType?: NotificationType
   discordChannelId?: string
   discordUserId?: string
-  prList?: {
-    number: number
-    title: string
-    author: string
-    createdAt?: string
-    updatedAt?: string
-    mergedAt?: string
-    url?: string
-    [key: string]: any
-  }[]
+  repositoriesPRs?: Array<{
+    repositoryId: string
+    prList: Array<PRList>
+  }>
+  prList?: Array<PRList>
   commitList?: {
     message: string
     url: string

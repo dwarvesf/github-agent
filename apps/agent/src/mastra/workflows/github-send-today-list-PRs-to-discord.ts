@@ -1,7 +1,12 @@
 import { Step, Workflow } from '@mastra/core/workflows'
 import { z } from 'zod'
 import { DISCORD_CHANNEL_ID, discordClient } from '../../lib/discord'
-import { GITHUB_OWNER, GITHUB_REPO, githubClient } from '../../lib/github'
+import {
+  GITHUB_OWNER,
+  GITHUB_REPO,
+  GITHUB_TOKEN,
+  GitHubClient,
+} from '../../lib/github'
 import {
   convertArrayToMarkdownTableList,
   convertNestedArrayToTreeList,
@@ -10,6 +15,11 @@ import { formatDate } from '../../utils/datetime'
 import { nanoid } from 'nanoid'
 import { EventRepository, NotificationType } from '../../db/event.repository'
 import { EventCategory, EventType } from '../../db'
+
+const githubClient = new GitHubClient({
+  githubOwner: GITHUB_OWNER!,
+  githubToken: GITHUB_TOKEN!,
+})
 
 const stepOneSchema = z.object({
   todayPRs: z.array(

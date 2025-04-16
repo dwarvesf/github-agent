@@ -1,3 +1,5 @@
+import { NotificationEmbed } from './notification-embed'
+
 // Discord API configuration
 const DISCORD_BOT_BASE_URL = `${process.env.DISCORD_BOT_BASE_URL}/webhook`
 export const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID || ''
@@ -27,7 +29,7 @@ class DiscordClient {
   }: {
     channelId: string
     message?: string
-    embed?: Record<string, unknown>
+    embed?: NotificationEmbed
   }): Promise<string> {
     const response = await fetch(`${DISCORD_BOT_BASE_URL}/channel`, {
       method: 'POST',
@@ -59,7 +61,7 @@ class DiscordClient {
   }: {
     userId: string
     message?: string
-    embed?: Record<string, unknown>
+    embed?: NotificationEmbed
   }): Promise<string> {
     const response = await fetch(`${DISCORD_BOT_BASE_URL}/user`, {
       method: 'POST',

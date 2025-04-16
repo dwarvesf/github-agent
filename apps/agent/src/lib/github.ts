@@ -1,14 +1,22 @@
 import { getDaysDifference } from '../utils/datetime'
 import { getOneLineCommit } from '../utils/string'
-import { Commit } from './type'
+import { Commit, PullRequest } from './type'
+import {
+  $Enums,
+  Channel,
+  ChannelRepository,
+  OrganizationRepository,
+  Repository,
+  Repositories,
+} from '../db'
 
 // GitHub API configuration
 const GITHUB_API_URL = 'https://api.github.com'
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN
+export const GITHUB_TOKEN = process.env.GITHUB_TOKEN
 export const GITHUB_OWNER = process.env.GITHUB_OWNER
 export const GITHUB_REPO = process.env.GITHUB_REPO as string
 
-interface PullRequest {
+interface GitHubAPIPullRequest {
   number: number
   title: string
   html_url: string
@@ -48,33 +56,28 @@ interface PullRequest {
  */
 class GitHubClient {
   private headers: HeadersInit
+  private ghToken: string
   private owner: string
-  private repo: string
 
-  constructor() {
-    if (!GITHUB_TOKEN) {
-      throw new Error('GITHUB_TOKEN environment variable is not set')
+  constructor(p: { githubToken: string; githubOwner: string }) {
+    if (!p.githubToken) {
+      throw new Error('githubToken parameter is not set')
     }
 
-    if (!GITHUB_OWNER) {
-      throw new Error('GITHUB_OWNER environment variable is not set')
+    if (!p.githubOwner) {
+      throw new Error('githubOwner parameter is not set')
     }
 
-    if (!GITHUB_REPO) {
-      throw new Error(
-        'GITHUB_REPO environment variable is not set (needed for some operations)',
-      )
-    }
+    this.ghToken = p.githubToken
+    this.owner = p.githubOwner
 
     this.headers = {
-      Authorization: `token ${GITHUB_TOKEN}`,
+      Authorization: `token ${this.ghToken}`,
       Accept: 'application/vnd.github.v3+json',
     }
-    this.owner = GITHUB_OWNER
-    this.repo = GITHUB_REPO
   }
 
-  isWIP(pr: PullRequest): boolean {
+  isWIP(pr: GitHubAPIPullRequest): boolean {
     if (pr.draft) {
       return true
     }
@@ -110,7 +113,7 @@ class GitHubClient {
   /**
    * Check if PR is waiting for review
    */
-  isWaitingForReview(pr: PullRequest): boolean {
+  isWaitingForReview(pr: GitHubAPIPullRequest): boolean {
     if (this.isWIP(pr)) {
       return false
     }
@@ -135,7 +138,7 @@ class GitHubClient {
   /**
    * Check if PR has merge conflicts
    */
-  hasMergeConflicts(pr: PullRequest): boolean {
+  hasMergeConflicts(pr: GitHubAPIPullRequest): boolean {
     // mergeable can be true, false, or null (when GitHub hasn't computed it yet)
     // mergeable_state can be: clean, dirty, blocked, behind, unstable
     return pr.mergeable === false || pr.mergeable_state === 'dirty'
@@ -146,7 +149,7 @@ class GitHubClient {
    * @param pr Pull request to check
    * @returns boolean indicating if PR is approved but not merged
    */
-  isApprovedButNotMerged(pr: PullRequest): boolean {
+  isApprovedButNotMerged(pr: GitHubAPIPullRequest): boolean {
     // If PR is merged, it's not waiting for merge
     if (pr.merged_at !== null) {
       return false
@@ -200,8 +203,8 @@ class GitHubClient {
       from?: string // YYYY-MM-DD
       to?: string // YYYY-MM-DD
     },
-  ): Promise<PullRequest[]> {
-    const prs: PullRequest[] = []
+  ): Promise<GitHubAPIPullRequest[]> {
+    const apiPRs: GitHubAPIPullRequest[] = []
 
     const {
       isOpen = true,
@@ -235,7 +238,7 @@ class GitHubClient {
           repo ? ` repo:${this.owner}/${repo}` : ''
         }${reviewerFilter}${authorFilter}${commenterFilter}${dateFilter}`
         const openPrs = await this.fetchPRs(openQuery)
-        prs.push(...openPrs)
+        apiPRs.push(...openPrs)
       }
 
       // Fetch merged PRs
@@ -253,10 +256,10 @@ class GitHubClient {
           repo ? ` repo:${this.owner}/${repo}` : ''
         }${reviewerFilter}${authorFilter}${commenterFilter}${dateFilter}`
         const mergedPrs = await this.fetchPRs(mergedQuery)
-        prs.push(...mergedPrs)
+        apiPRs.push(...mergedPrs)
       }
 
-      return prs
+      return apiPRs
     } catch (error) {
       console.error('Error fetching organization PRs:', error)
       throw error
@@ -264,7 +267,7 @@ class GitHubClient {
   }
 
   // Helper function to fetch PRs from the GitHub search API
-  private async fetchPRs(query: string): Promise<PullRequest[]> {
+  private async fetchPRs(query: string): Promise<GitHubAPIPullRequest[]> {
     const url = `${GITHUB_API_URL}/search/issues?q=${encodeURIComponent(query)}&sort=updated&order=desc`
 
     const response = await fetch(url, { headers: this.headers })
@@ -283,7 +286,9 @@ class GitHubClient {
     return Promise.all(prPromises)
   }
 
-  public async getPRReviews(pr: PullRequest): Promise<PullRequest> {
+  public async getPRReviews(
+    pr: GitHubAPIPullRequest,
+  ): Promise<GitHubAPIPullRequest> {
     const urlParts = pr.html_url.split('/')
     const repoName = urlParts[urlParts.length - 3]
     const prNumber = parseInt(urlParts[urlParts.length - 1]!, 10)
@@ -306,7 +311,7 @@ class GitHubClient {
   }
 
   // Helper function to fetch full PR details
-  private async fetchPRDetails(item: any): Promise<PullRequest> {
+  private async fetchPRDetails(item: any): Promise<GitHubAPIPullRequest> {
     const urlParts = item.html_url.split('/')
     const repoName = urlParts[urlParts.length - 3]
     const prNumber = parseInt(urlParts[urlParts.length - 1], 10)
@@ -371,6 +376,81 @@ class GitHubClient {
   }
 
   /**
+   * Retrieves channel repositories for a given organization
+   * @param organizationId The unique identifier of the organization
+   * @param channelId The unique identifier of the channel
+   * @returns Object containing the organization's channels
+   */
+  static getChannelRepositories(organizationId: number, channelId: number) {
+    return Repositories.getByChannel({
+      organizationId: organizationId,
+      channelId: channelId,
+    })
+  }
+
+  /**
+   * Retrieves organization channels
+   * @param organizationId The unique identifier of the organization
+   * @param channelType Optional channel type to filter by
+   * @returns Object containing the organization's channels
+   */
+  static getOrganizationChannels(
+    organizationId: number,
+    channelType?: $Enums.Platform,
+  ) {
+    return ChannelRepository.getByOrganization({
+      where: {
+        organizationId: {
+          equals: organizationId,
+        },
+        platform: channelType,
+      },
+    })
+  }
+
+  /**
+   * Retrieves all channels for a specific organization along with their associated repositories.
+   *
+   * @example
+   * const channelsWithRepos = await GitHub.getChannelsRepositories(12345);
+   */
+  static async getChannelsRepositories(
+    organizationId: number,
+  ): Promise<Array<Channel & { repositories: Repository[] }>> {
+    const channels = await this.getOrganizationChannels(organizationId)
+    return await Promise.all(
+      channels.map(async (channel) => {
+        const repositories = await this.getChannelRepositories(
+          organizationId,
+          channel.id,
+        )
+        return {
+          ...channel,
+          repositories,
+        }
+      }),
+    )
+  }
+
+  /**
+   * Retrieves organization data with optional related entities (channels, members, repositories)
+   * @param organizationOwner The unique identifier of the organization
+   * @returns Object containing the organization and its related data based on specified options
+   */
+  static async getOrganizationData(organizationOwner: string) {
+    const organization =
+      await OrganizationRepository.getUnique(organizationOwner)
+    const channels = organization
+      ? await this.getChannelsRepositories(organization.id)
+      : []
+
+    return {
+      organization,
+      channels,
+    }
+  }
+
+  /**
    * Get open PRs that have been inactive (no updates or comments) for a specified period
    * @param repo Repository name
    * @param inactiveDays Number of days without activity to consider PR as inactive
@@ -379,7 +459,7 @@ class GitHubClient {
   async getInactivePRs(
     repo: string,
     inactiveDays: number = 3,
-  ): Promise<PullRequest[]> {
+  ): Promise<GitHubAPIPullRequest[]> {
     try {
       // Get all open PRs
       const openPRs = await this.getRepoPRs(repo, {
@@ -388,7 +468,7 @@ class GitHubClient {
       })
       const now = new Date()
 
-      // Filter PRs based on last activity
+      // Filter PRs based on last activity and convert to our type
       const inactivePRs = openPRs.filter((pr) => {
         // Get the most recent date between updated_at and the latest review
         const lastUpdated = new Date(pr.updated_at)
@@ -412,7 +492,36 @@ class GitHubClient {
       throw error
     }
   }
+
+  public convertApiPullRequestToPullRequest(
+    apiPullRequest: GitHubAPIPullRequest,
+  ): PullRequest {
+    return {
+      number: apiPullRequest.number,
+      title: apiPullRequest.title,
+      url: apiPullRequest.html_url,
+      author: apiPullRequest.user.login,
+      createdAt: apiPullRequest.created_at,
+      updatedAt: apiPullRequest.updated_at,
+      mergedAt: apiPullRequest.merged_at,
+      draft: apiPullRequest.draft,
+      isMerged: apiPullRequest.merged_at !== null,
+      isWaitingForReview: this.isWaitingForReview(apiPullRequest),
+      hasMergeConflicts: this.hasMergeConflicts(apiPullRequest),
+      isApprovedWaitingForMerging: this.isApprovedButNotMerged(apiPullRequest),
+      isWIP: this.isWIP(apiPullRequest),
+      labels: apiPullRequest.labels.map((label) => label.name),
+      reviewers: apiPullRequest.requested_reviewers.map(
+        (reviewer) => reviewer.login,
+      ),
+      hasComments:
+        apiPullRequest.comments > 0 || apiPullRequest.review_comments > 0,
+      hasReviews: apiPullRequest.reviews?.length > 0,
+      body: apiPullRequest.body,
+    }
+  }
 }
 
-// Create the GitHubClient instance
-export const githubClient = new GitHubClient()
+// Export the GitHubClient class for consumers to instantiate with their own credentials
+export { GitHubClient }
+export type { GitHubAPIPullRequest }
