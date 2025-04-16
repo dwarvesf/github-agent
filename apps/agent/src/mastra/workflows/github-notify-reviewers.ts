@@ -3,19 +3,19 @@ import { z } from 'zod'
 import { discordClient } from '../../lib/discord'
 import { PullRequest } from '../../lib/type'
 import { RepositoryDMChannelUser } from '../../lib/repository-dm-user'
-import { $Enums, MemberRepository, OrganizationRepository } from '../../db'
+import {
+  $Enums,
+  EventData,
+  MemberRepository,
+  OrganizationRepository,
+} from '../../db'
 import { GitHubAPIPullRequest, GitHubClient } from '../../lib/github'
+import { NotificationEmbedBuilder } from '../../lib/notification-embed'
 
 // Types
-interface ReviewerPR {
-  prNumber: number
-  prURL: string
-  title: string
-}
-
 interface ReviewerWithPRs {
   reviewer: string
-  pendingPRs: ReviewerPR[]
+  prList: PullRequest[]
 }
 
 interface RepoPRs {
@@ -67,16 +67,13 @@ const isReviewNeeded = async (
   return true
 }
 
-const createDiscordEmbed = (repoName: string, reviewer: ReviewerWithPRs) => {
-  return {
+const createDiscordEmbed = (
+  input: NonNullable<EventData['repositoriesPRs']>,
+) => {
+  return NotificationEmbedBuilder.createEmbed(input, {
     title: `🔔 Need your review`,
     color: 15158332,
-    description: [
-      `You have **${reviewer.pendingPRs.length}** pending PRs in \`${repoName}\` that need your review.`,
-      `${reviewer.pendingPRs.map((pr) => `- **[#${pr.prNumber}](${pr.prURL})** | ${pr.title}`).join('\n')}`,
-    ].join('\n'),
-    inline: false,
-  }
+  })
 }
 
 class NotifyReviewersWorkflow {
@@ -118,7 +115,7 @@ class NotifyReviewersWorkflow {
   }
 
   private mapReviewersToPRs(repo: RepoPRs): ReviewerWithPRs[] {
-    const reviewerToPRs = new Map<string, ReviewerPR[]>()
+    const reviewerToPRs = new Map<string, PullRequest[]>()
     const { prs } = repo
 
     prs.forEach((pr) => {
@@ -126,27 +123,21 @@ class NotifyReviewersWorkflow {
         if (!reviewerToPRs.has(reviewer)) {
           reviewerToPRs.set(reviewer, [])
         }
-        reviewerToPRs.get(reviewer)?.push({
-          prNumber: pr.number,
-          prURL: pr.url,
-          title: pr.title,
-        })
+        reviewerToPRs.get(reviewer)?.push(pr)
       })
     })
 
     return Array.from(reviewerToPRs.entries()).map(([reviewer, prs]) => ({
       reviewer,
-      pendingPRs: prs,
+      prList: prs,
     }))
   }
 
   private async notifyReviewerOnPlatforms(
-    reviewer: ReviewerWithPRs,
-    repoName: string,
+    reviewer: string,
+    repos: NonNullable<EventData['repositoriesPRs']>,
   ): Promise<void> {
-    const authorPlatformsInfo = await MemberRepository.getByGithubId(
-      reviewer.reviewer,
-    )
+    const authorPlatformsInfo = await MemberRepository.getByGithubId(reviewer)
 
     for (const authorPlatformInfo of authorPlatformsInfo) {
       const { platformId, platformType: platform } = authorPlatformInfo
@@ -157,7 +148,7 @@ class NotifyReviewersWorkflow {
         await discordClient.sendMessageToUser({
           userId: platformId,
           message: '',
-          embed: createDiscordEmbed(repoName, reviewer),
+          embed: createDiscordEmbed(repos),
         })
       }
 
@@ -201,16 +192,24 @@ class NotifyReviewersWorkflow {
         }
 
         for (const reposPRs of orgReposPRs) {
-          await Promise.all(
-            reposPRs.map(async (repo) => {
-              const reviewers = this.mapReviewersToPRs(repo)
-              await Promise.all(
-                reviewers.map((reviewer) =>
-                  this.notifyReviewerOnPlatforms(reviewer, repo.repoName),
-                ),
-              )
-            }),
-          )
+          const reviewerPRs: Record<
+            string,
+            { repositoryId: string; prList: PullRequest[] }[]
+          > = {}
+          reposPRs.forEach(async (repo) => {
+            const reviewers = this.mapReviewersToPRs(repo)
+            reviewers.forEach((item) => {
+              const { reviewer, prList } = item
+              reviewerPRs[reviewer] = [
+                ...(reviewerPRs[reviewer] || []),
+                { repositoryId: repo.repoName, prList },
+              ]
+            })
+          })
+
+          for (const [reviewer, repos] of Object.entries(reviewerPRs)) {
+            this.notifyReviewerOnPlatforms(reviewer, repos)
+          }
         }
       }
       return 'ok'
