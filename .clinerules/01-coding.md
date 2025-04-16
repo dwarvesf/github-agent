@@ -25,6 +25,7 @@
 - **Tailwind CSS:** Primary utility-first styling framework.
 - **Shadcn UI:** Use for composable UI components (Radix + Tailwind based),
   added directly to codebase.
+- **Lucide React**: Use for lightweight and customizable icons in the UI.
 
 ### Optimization (App Router Focus)
 
