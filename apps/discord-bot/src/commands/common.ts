@@ -26,16 +26,13 @@ export function replaceGitHubMentions(
   ]
 }
 
-export function replaceDiscordMentions(
-  text: string,
-  idMap: Record<string, string> = hardCodeIDMap,
-): string {
-  return text.replace(/<@?(\d+)>/g, (match, discordId) => {
-    return (
-      '@' +
-      (Object.entries(idMap).find(([_, v]) => v === discordId)?.[0] || match)
-    )
+export function getDiscordMentions(text: string): Set<string> {
+  const foundDiscordIDs: Set<string> = new Set()
+  const _ = [...text.matchAll(/<@?(\d+)>/g)].forEach((match) => {
+    foundDiscordIDs.add(match[1])
   })
+
+  return foundDiscordIDs
 }
 
 export async function getUsername(
@@ -71,7 +68,7 @@ export async function processResponseToEmbedFields(
 ): Promise<APIEmbedField[]> {
   const fields: APIEmbedField[] = []
   const maxChunkSize = 800
-  const [lines, discordIDs] = replaceGitHubMentions(response)
+  const discordIDs = getDiscordMentions(response)
   let currentChunk = ''
   let isTable = false
   const idUsernameMap = await mapDiscordUsernameToID(
@@ -93,7 +90,7 @@ export async function processResponseToEmbedFields(
     }
   }
 
-  for (const line of lines.split('\n')) {
+  for (const line of response.split('\n')) {
     const isCurrentLineTable = line.trim().startsWith('|') && line.includes('|')
 
     if (isCurrentLineTable !== isTable) {

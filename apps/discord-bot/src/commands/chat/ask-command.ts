@@ -10,7 +10,6 @@ import {
   processResponseToEmbedFields,
 } from '../index.js'
 import dotenv from 'dotenv'
-import { replaceDiscordMentions } from '../common.js'
 dotenv.config()
 
 export class AskCommand implements Command {
@@ -69,9 +68,7 @@ export class AskCommand implements Command {
     let response = ''
     try {
       // Process the stream
-      for await (const chunk of getStreamedResponse(
-        `I am <@${intr.user.id}>, ${question}`,
-      )) {
+      for await (const chunk of getStreamedResponse(intr.user.id, question)) {
         response += chunk
       }
 
@@ -117,6 +114,7 @@ export class AskCommand implements Command {
 }
 
 async function* getStreamedResponse(
+  discordUserId: string,
   question: string,
 ): AsyncGenerator<string, void, unknown> {
   const AGENT_STREAM_URL = process.env.AGENT_STREAM_URL
@@ -127,8 +125,6 @@ async function* getStreamedResponse(
     return
   }
 
-  question = replaceDiscordMentions(question)
-
   try {
     const response = await fetch(AGENT_STREAM_URL, {
       method: 'POST',
@@ -136,7 +132,10 @@ async function* getStreamedResponse(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        messages: [{ role: 'user', content: question }],
+        messages: [
+          { role: 'user', content: `I am <@${discordUserId}>` },
+          { role: 'user', content: question },
+        ],
       }),
     })
 
