@@ -1,10 +1,10 @@
-"use client";
+'use client'
 
-import React, { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { api } from "@/trpc/react";
+import React, { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
+import { api } from '@/trpc/react'
 import {
   Table,
   TableBody,
@@ -12,14 +12,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -27,9 +27,9 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,117 +40,117 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
-import { Spinner } from "@/components/ui/spinner";
-import { Badge } from "@/components/ui/badge";
+} from '@/components/ui/alert-dialog'
+import { toast } from 'sonner'
+import { Spinner } from '@/components/ui/spinner'
+import { Badge } from '@/components/ui/badge'
 
 const channelSchema = z.object({
   id: z.number().optional(),
-  name: z.string().min(1, "Name is required"),
-  platform: z.string().min(1, "Platform is required"),
-  platform_channel_id: z.string().min(1, "Platform channel ID is required"),
-});
+  name: z.string().min(1, 'Name is required'),
+  platform: z.string().min(1, 'Platform is required'),
+  platform_channel_id: z.string().min(1, 'Platform channel ID is required'),
+})
 
-type ChannelFormValues = z.infer<typeof channelSchema>;
+type ChannelFormValues = z.infer<typeof channelSchema>
 
 export default function Channels() {
   const orgId = Number(
-    window.location.pathname.split("/").filter(Boolean).pop(),
-  );
+    window.location.pathname.split('/').filter(Boolean).pop(),
+  )
 
-  const [openDialog, setOpenDialog] = useState(false);
+  const [openDialog, setOpenDialog] = useState(false)
   const [editingChannel, setEditingChannel] =
-    useState<ChannelFormValues | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    useState<ChannelFormValues | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deletingChannel, setDeletingChannel] =
-    useState<ChannelFormValues | null>(null);
+    useState<ChannelFormValues | null>(null)
 
   const form = useForm<ChannelFormValues>({
     resolver: zodResolver(channelSchema),
     defaultValues: {
-      name: "",
-      platform: "",
-      platform_channel_id: "",
+      name: '',
+      platform: '',
+      platform_channel_id: '',
     },
-  });
+  })
 
   const {
     data: channels,
     refetch,
     isLoading,
-  } = api.channel.getByOrganization.useQuery(orgId);
+  } = api.channel.getByOrganization.useQuery(orgId)
 
   const createMutation = api.channel.create.useMutation({
     onSuccess: () => {
-      toast.success("Channel created");
-      refetch();
-      setOpenDialog(false);
-      form.reset();
+      toast.success('Channel created')
+      refetch()
+      setOpenDialog(false)
+      form.reset()
     },
     onError: () => {
-      toast.error("Failed to create channel");
+      toast.error('Failed to create channel')
     },
-  });
+  })
 
   const updateMutation = api.channel.update.useMutation({
     onSuccess: () => {
-      toast.success("Channel updated");
-      refetch();
-      setOpenDialog(false);
-      setEditingChannel(null);
-      form.reset();
+      toast.success('Channel updated')
+      refetch()
+      setOpenDialog(false)
+      setEditingChannel(null)
+      form.reset()
     },
     onError: () => {
-      toast.error("Failed to update channel");
+      toast.error('Failed to update channel')
     },
-  });
+  })
 
   const deleteMutation = api.channel.delete.useMutation({
     onSuccess: () => {
-      toast.success("Channel deleted");
-      refetch();
-      setDeleteDialogOpen(false);
-      setDeletingChannel(null);
+      toast.success('Channel deleted')
+      refetch()
+      setDeleteDialogOpen(false)
+      setDeletingChannel(null)
     },
     onError: () => {
-      toast.error("Failed to delete channel");
+      toast.error('Failed to delete channel')
     },
-  });
+  })
 
   const onSubmit = (values: ChannelFormValues) => {
     if (editingChannel) {
       updateMutation.mutate({
         id: editingChannel.id!,
         name: values.name,
-        platform: "discord",
+        platform: 'discord',
         platform_channel_id: values.platform_channel_id,
         organization_id: orgId,
-      });
+      })
     } else {
       createMutation.mutate({
         name: values.name,
-        platform: "discord",
+        platform: 'discord',
         platform_channel_id: values.platform_channel_id,
         organization_id: orgId,
-      });
+      })
     }
-  };
+  }
 
   const onEdit = (channel: ChannelFormValues) => {
-    setEditingChannel(channel);
-    form.reset(channel);
-    setOpenDialog(true);
-  };
+    setEditingChannel(channel)
+    form.reset(channel)
+    setOpenDialog(true)
+  }
 
   const onDelete = () => {
-    if (!deletingChannel) return;
-    deleteMutation.mutate({ id: deletingChannel.id! });
-  };
+    if (!deletingChannel) return
+    deleteMutation.mutate({ id: deletingChannel.id! })
+  }
 
   React.useEffect(() => {
-    setDeleteDialogOpen(deletingChannel !== null);
-  }, [deletingChannel]);
+    setDeleteDialogOpen(deletingChannel !== null)
+  }, [deletingChannel])
 
   return (
     <div>
@@ -159,13 +159,13 @@ export default function Channels() {
         <Button
           size="sm"
           onClick={() => {
-            setEditingChannel(null);
+            setEditingChannel(null)
             form.reset({
-              name: "",
-              platform: "discord",
-              platform_channel_id: "",
-            });
-            setOpenDialog(true);
+              name: '',
+              platform: 'discord',
+              platform_channel_id: '',
+            })
+            setOpenDialog(true)
           }}
         >
           New channel
@@ -255,7 +255,7 @@ export default function Channels() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingChannel ? "Edit channel" : "New channel"}
+              {editingChannel ? 'Edit channel' : 'New channel'}
             </DialogTitle>
           </DialogHeader>
           <Form {...form}>
@@ -310,7 +310,7 @@ export default function Channels() {
               />
               <DialogFooter>
                 <Button type="submit">
-                  {editingChannel ? "Update" : "Create"}
+                  {editingChannel ? 'Update' : 'Create'}
                 </Button>
               </DialogFooter>
             </form>
@@ -318,5 +318,5 @@ export default function Channels() {
         </DialogContent>
       </Dialog>
     </div>
-  );
+  )
 }

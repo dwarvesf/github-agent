@@ -1,42 +1,42 @@
-"use client";
+'use client'
 
-import React from "react";
-import { useParams } from "next/navigation";
-import { api } from "@/trpc/react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import Channels from "./channels";
-import Repositories from "./repositories";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Spinner } from "@/components/ui/spinner";
+import React from 'react'
+import { useParams } from 'next/navigation'
+import { api } from '@/trpc/react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
+import Channels from './channels'
+import Repositories from './repositories'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Spinner } from '@/components/ui/spinner'
 
 const organizationSchema = z.object({
   id: z.number().optional(),
-  github_name: z.string().min(1, "Name is required"),
+  github_name: z.string().min(1, 'Name is required'),
   github_token_id: z.string().optional(),
-});
+})
 
-type OrganizationFormValues = z.infer<typeof organizationSchema>;
+type OrganizationFormValues = z.infer<typeof organizationSchema>
 
 export default function OrganizationDetailPage() {
-  const params = useParams();
-  const orgId = Number(params.orgId);
+  const params = useParams()
+  const orgId = Number(params.orgId)
 
   const { data: organization, isLoading } = api.organization.getAll.useQuery(
     undefined,
     {
       select: (orgs) => orgs.find((o) => o.id === orgId),
     },
-  );
+  )
 
   const form = useForm<OrganizationFormValues>({
     resolver: zodResolver(organizationSchema),
     defaultValues: {
-      github_name: "",
-      github_token_id: "",
+      github_name: '',
+      github_token_id: '',
     },
-  });
+  })
 
   React.useEffect(() => {
     if (organization) {
@@ -44,17 +44,17 @@ export default function OrganizationDetailPage() {
       const resetData = {
         ...organization,
         github_token_id: organization.github_token_id ?? undefined,
-      };
-      form.reset(resetData);
+      }
+      form.reset(resetData)
     }
-  }, [organization, form]);
+  }, [organization, form])
 
   if (isLoading) {
-    return <Spinner className="mx-auto" />;
+    return <Spinner className="mx-auto" />
   }
 
   if (!organization) {
-    return <div>Organization not found.</div>;
+    return <div>Organization not found.</div>
   }
 
   return (
@@ -74,5 +74,5 @@ export default function OrganizationDetailPage() {
         </TabsContent>
       </Tabs>
     </>
-  );
+  )
 }

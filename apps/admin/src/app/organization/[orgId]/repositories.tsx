@@ -1,10 +1,10 @@
-"use client";
+'use client'
 
-import React, { useState } from "react";
-import { useParams } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import React, { useState } from 'react'
+import { useParams } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
 
 import {
   Table,
@@ -13,7 +13,7 @@ import {
   TableRow,
   TableHead,
   TableCell,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 
 import {
   Dialog,
@@ -24,7 +24,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogClose,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 
 import {
   Form,
@@ -33,9 +33,9 @@ import {
   FormLabel,
   FormControl,
   FormMessage,
-} from "@/components/ui/form";
+} from '@/components/ui/form'
 
-import { Input } from "@/components/ui/input";
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -43,27 +43,27 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select'
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button'
 
-import { api } from "@/trpc/react";
-import { Spinner } from "@/components/ui/spinner";
+import { api } from '@/trpc/react'
+import { Spinner } from '@/components/ui/spinner'
 
 const repositorySchema = z.object({
   id: z.number().optional(),
-  github_repo_name: z.string().min(1, "Repository name is required"),
-  channel_id: z.number().min(1, "Channel is required"),
-});
+  github_repo_name: z.string().min(1, 'Repository name is required'),
+  channel_id: z.number().min(1, 'Channel is required'),
+})
 
-type RepositoryForm = z.infer<typeof repositorySchema>;
+type RepositoryForm = z.infer<typeof repositorySchema>
 
 export default function Repositories() {
-  const params = useParams();
-  const orgId = Number(params.orgId);
+  const params = useParams()
+  const orgId = Number(params.orgId)
 
-  const [editingRepo, setEditingRepo] = useState<RepositoryForm | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingRepo, setEditingRepo] = useState<RepositoryForm | null>(null)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   const {
     data: repositories,
@@ -71,55 +71,55 @@ export default function Repositories() {
     refetch,
   } = api.repository.getByOrganization.useQuery(orgId, {
     enabled: !!orgId,
-  });
+  })
 
   const { data: channels } = api.channel.getByOrganization.useQuery(orgId, {
     enabled: !!orgId,
-  });
+  })
 
   const form = useForm<RepositoryForm>({
     resolver: zodResolver(repositorySchema),
     defaultValues: {
-      github_repo_name: "",
+      github_repo_name: '',
       channel_id: undefined,
     },
-  });
+  })
 
   function openDialog(repo?: RepositoryForm) {
     if (repo) {
-      setEditingRepo(repo);
-      form.reset(repo);
+      setEditingRepo(repo)
+      form.reset(repo)
     } else {
-      setEditingRepo(null);
-      form.reset({ github_repo_name: "", channel_id: undefined });
+      setEditingRepo(null)
+      form.reset({ github_repo_name: '', channel_id: undefined })
     }
-    setIsDialogOpen(true);
+    setIsDialogOpen(true)
   }
 
   function closeDialog() {
-    setIsDialogOpen(false);
-    setEditingRepo(null);
+    setIsDialogOpen(false)
+    setEditingRepo(null)
   }
 
   const createMutation = api.repository.create.useMutation({
     onSuccess: () => {
-      refetch();
-      closeDialog();
+      refetch()
+      closeDialog()
     },
-  });
+  })
 
   const updateMutation = api.repository.update.useMutation({
     onSuccess: () => {
-      refetch();
-      closeDialog();
+      refetch()
+      closeDialog()
     },
-  });
+  })
 
   const deleteMutation = api.repository.delete.useMutation({
     onSuccess: () => {
-      refetch();
+      refetch()
     },
-  });
+  })
 
   async function onSubmit(data: RepositoryForm) {
     if (editingRepo && editingRepo.id) {
@@ -128,13 +128,13 @@ export default function Repositories() {
         github_repo_name: data.github_repo_name,
         organization_id: orgId,
         channel_id: data.channel_id,
-      });
+      })
     } else {
       await createMutation.mutateAsync({
         github_repo_name: data.github_repo_name,
         organization_id: orgId,
         channel_id: data.channel_id,
-      });
+      })
     }
   }
 
@@ -179,7 +179,7 @@ export default function Repositories() {
                     <TableCell>{repo.github_repo_name}</TableCell>
                     <TableCell>
                       {channels?.find((ch) => ch.id === repo.channel_id)
-                        ?.name ?? "N/A"}
+                        ?.name ?? 'N/A'}
                     </TableCell>
                     <TableCell className="space-x-2 text-right">
                       <Button
@@ -215,7 +215,7 @@ export default function Repositories() {
                             <Button
                               variant="destructive"
                               onClick={() => {
-                                deleteMutation.mutate({ id: repo.id });
+                                deleteMutation.mutate({ id: repo.id })
                               }}
                             >
                               Delete
@@ -236,12 +236,12 @@ export default function Repositories() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingRepo ? "Edit repository" : "Add repository"}
+              {editingRepo ? 'Edit repository' : 'Add repository'}
             </DialogTitle>
             <DialogDescription>
               {editingRepo
-                ? "Update the repository details below."
-                : "Fill in the details to add a new repository."}
+                ? 'Update the repository details below.'
+                : 'Fill in the details to add a new repository.'}
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
@@ -267,7 +267,7 @@ export default function Repositories() {
                     <FormLabel>Channel</FormLabel>
                     <Select
                       onValueChange={(value) => field.onChange(Number(value))}
-                      value={field.value ? String(field.value) : ""}
+                      value={field.value ? String(field.value) : ''}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select a channel" />
@@ -291,7 +291,7 @@ export default function Repositories() {
                   Cancel
                 </Button>
                 <Button type="submit">
-                  {editingRepo ? "Update" : "Create"}
+                  {editingRepo ? 'Update' : 'Create'}
                 </Button>
               </div>
             </form>
@@ -299,5 +299,5 @@ export default function Repositories() {
         </DialogContent>
       </Dialog>
     </>
-  );
+  )
 }

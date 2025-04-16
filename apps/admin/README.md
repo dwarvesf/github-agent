@@ -12,10 +12,12 @@ This is the admin app of the project, built with the T3 Stack.
 
 ## Getting Started
 
-Start by running the development server and explore the scaffolding. Add features as needed.
+Start by running the development server and explore the scaffolding. Add
+features as needed.
 
 ## Deployment
 
 Refer to the main repo's deployment guides for Vercel, Netlify, and Docker.
 
-For more info on the T3 Stack, visit [https://create.t3.gg/](https://create.t3.gg/).
+For more info on the T3 Stack, visit
+[https://create.t3.gg/](https://create.t3.gg/).

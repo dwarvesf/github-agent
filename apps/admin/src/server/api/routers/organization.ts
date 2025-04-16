@@ -1,25 +1,25 @@
-import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
-import { z } from "zod";
+import { createTRPCRouter, publicProcedure } from '@/server/api/trpc'
+import { z } from 'zod'
 
 export const orgRouter = createTRPCRouter({
   getLatest: publicProcedure.query(async ({ ctx }) => {
     const orgs = await ctx.db.organization.findFirst({
-      orderBy: { created_at: "desc" },
-    });
+      orderBy: { created_at: 'desc' },
+    })
 
-    return orgs ?? null;
+    return orgs ?? null
   }),
 
   getAll: publicProcedure.query(async ({ ctx }) => {
     const orgs = await ctx.db.organization.findMany({
-      orderBy: { created_at: "desc" },
+      orderBy: { created_at: 'desc' },
       include: {
         _count: {
           select: { repositories: true },
         },
       },
-    });
-    return orgs;
+    })
+    return orgs
   }),
 
   create: publicProcedure
@@ -33,8 +33,8 @@ export const orgRouter = createTRPCRouter({
         data: {
           github_name: input.github_name,
         },
-      });
-      return org;
+      })
+      return org
     }),
 
   update: publicProcedure
@@ -50,8 +50,8 @@ export const orgRouter = createTRPCRouter({
         data: {
           github_name: input.github_name,
         },
-      });
-      return org;
+      })
+      return org
     }),
 
   delete: publicProcedure
@@ -63,7 +63,7 @@ export const orgRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await ctx.db.organization.delete({
         where: { id: input.id },
-      });
-      return { success: true };
+      })
+      return { success: true }
     }),
-});
+})

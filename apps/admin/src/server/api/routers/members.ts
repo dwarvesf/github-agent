@@ -1,9 +1,9 @@
-import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
+import { z } from 'zod'
+import { createTRPCRouter, publicProcedure } from '@/server/api/trpc'
 
 export const membersRouter = createTRPCRouter({
   getAll: publicProcedure.query(async ({ ctx }) => {
-    return await ctx.db.member.findMany();
+    return await ctx.db.member.findMany()
   }),
 
   getById: publicProcedure
@@ -11,7 +11,7 @@ export const membersRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       return await ctx.db.member.findUnique({
         where: { id: input.id },
-      });
+      })
     }),
 
   create: publicProcedure
@@ -29,7 +29,7 @@ export const membersRouter = createTRPCRouter({
           platform_id: input.platform_id,
           platform_type: input.platform_type,
         },
-      });
+      })
     }),
 
   update: publicProcedure
@@ -49,7 +49,7 @@ export const membersRouter = createTRPCRouter({
           platform_id: input.platform_id,
           platform_type: input.platform_type,
         },
-      });
+      })
     }),
 
   delete: publicProcedure
@@ -57,6 +57,6 @@ export const membersRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       return await ctx.db.member.delete({
         where: { id: input.id },
-      });
+      })
     }),
-});
+})

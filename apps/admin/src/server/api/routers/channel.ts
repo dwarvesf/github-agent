@@ -1,5 +1,5 @@
-import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
-import { z } from "zod";
+import { createTRPCRouter, publicProcedure } from '@/server/api/trpc'
+import { z } from 'zod'
 
 export const channelRouter = createTRPCRouter({
   getByOrganization: publicProcedure
@@ -7,16 +7,16 @@ export const channelRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const channels = await ctx.db.channel.findMany({
         where: { organization_id: input },
-        orderBy: { created_at: "desc" },
-      });
-      return channels;
+        orderBy: { created_at: 'desc' },
+      })
+      return channels
     }),
 
   create: publicProcedure
     .input(
       z.object({
         name: z.string().min(1),
-        platform: z.enum(["discord", "slack"]),
+        platform: z.enum(['discord', 'slack']),
         platform_channel_id: z.string().min(1),
         organization_id: z.number(),
       }),
@@ -29,8 +29,8 @@ export const channelRouter = createTRPCRouter({
           platform_channel_id: input.platform_channel_id,
           organization_id: input.organization_id,
         },
-      });
-      return channel;
+      })
+      return channel
     }),
 
   update: publicProcedure
@@ -38,7 +38,7 @@ export const channelRouter = createTRPCRouter({
       z.object({
         id: z.number(),
         name: z.string().min(1),
-        platform: z.enum(["discord", "slack"]),
+        platform: z.enum(['discord', 'slack']),
         platform_channel_id: z.string().min(1),
         organization_id: z.number(),
       }),
@@ -52,8 +52,8 @@ export const channelRouter = createTRPCRouter({
           platform_channel_id: input.platform_channel_id,
           organization_id: input.organization_id,
         },
-      });
-      return channel;
+      })
+      return channel
     }),
 
   delete: publicProcedure
@@ -61,7 +61,7 @@ export const channelRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await ctx.db.channel.delete({
         where: { id: input.id },
-      });
-      return { success: true };
+      })
+      return { success: true }
     }),
-});
+})

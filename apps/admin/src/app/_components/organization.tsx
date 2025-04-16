@@ -1,9 +1,9 @@
-"use client";
+'use client'
 
-import { api } from "@/trpc/react";
+import { api } from '@/trpc/react'
 
 export function LatestPost() {
-  const [lastestOrgs] = api.organization.getLatest.useSuspenseQuery();
+  const [lastestOrgs] = api.organization.getLatest.useSuspenseQuery()
 
   return (
     <div className="w-full max-w-xs">
@@ -15,5 +15,5 @@ export function LatestPost() {
         <p>You have no posts yet.</p>
       )}
     </div>
-  );
+  )
 }

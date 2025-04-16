@@ -1,11 +1,11 @@
-"use client";
+'use client'
 
-import React, { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import React, { useState, useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
 
-import { api } from "@/trpc/react";
+import { api } from '@/trpc/react'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -15,9 +15,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { Edit } from "lucide-react";
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { Edit } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -25,7 +25,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -33,8 +33,8 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -42,38 +42,38 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Toaster } from "@/components/ui/sonner";
-import { toast } from "sonner";
-import { Spinner } from "@/components/ui/spinner";
+} from '@/components/ui/table'
+import { Toaster } from '@/components/ui/sonner'
+import { toast } from 'sonner'
+import { Spinner } from '@/components/ui/spinner'
 
 const organizationSchema = z.object({
   id: z.number().optional(),
-  github_name: z.string().min(1, "Name is required"),
-  github_token_id: z.string().min(1, "Token ID is required"),
-});
+  github_name: z.string().min(1, 'Name is required'),
+  github_token_id: z.string().min(1, 'Token ID is required'),
+})
 
-type OrganizationFormValues = z.infer<typeof organizationSchema>;
+type OrganizationFormValues = z.infer<typeof organizationSchema>
 
 function GitHubTokenInput({
   field,
   editingOrg,
 }: {
-  field: any;
-  editingOrg: OrganizationFormValues | null;
+  field: any
+  editingOrg: OrganizationFormValues | null
 }) {
-  const [isEditingToken, setIsEditingToken] = useState(false);
+  const [isEditingToken, setIsEditingToken] = useState(false)
 
   // Function to truncate the token value like abc..xyz
   const truncateToken = (token: string) => {
-    if (token.length <= 16) return token;
-    return `${token.slice(0, 8)}........${token.slice(-8)}`;
-  };
+    if (token.length <= 16) return token
+    return `${token.slice(0, 8)}........${token.slice(-8)}`
+  }
 
   useEffect(() => {
     // Reset editing state when dialog is opened or editingOrg changes
-    setIsEditingToken(false);
-  }, [editingOrg]);
+    setIsEditingToken(false)
+  }, [editingOrg])
 
   return (
     <FormItem>
@@ -83,17 +83,17 @@ function GitHubTokenInput({
           <div className="relative">
             <Input
               placeholder="GitHub Token ID"
-              value={field.value ? truncateToken(field.value) : ""}
+              value={field.value ? truncateToken(field.value) : ''}
               disabled
             />
             <Button
               size="sm"
               variant="ghost"
               type="button"
-              className="absolute top-1/2 right-1 -translate-y-1/2 p-1"
+              className="absolute right-1 top-1/2 -translate-y-1/2 p-1"
               onClick={() => {
-                setIsEditingToken(true);
-                field.onChange("");
+                setIsEditingToken(true)
+                field.onChange('')
               }}
               aria-label="Edit GitHub Token ID"
             >
@@ -104,108 +104,108 @@ function GitHubTokenInput({
           <Input
             placeholder="GitHub Token ID"
             {...field}
-            value={field.value || ""}
+            value={field.value || ''}
             autoFocus
           />
         )}
       </FormControl>
       <FormMessage />
     </FormItem>
-  );
+  )
 }
 
 export default function Home() {
-  const [openDialog, setOpenDialog] = useState(false);
+  const [openDialog, setOpenDialog] = useState(false)
   const [editingOrg, setEditingOrg] = useState<OrganizationFormValues | null>(
     null,
-  );
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  )
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deletingOrg, setDeletingOrg] = useState<{
-    id: number;
-  } | null>(null);
+    id: number
+  } | null>(null)
 
   const form = useForm<OrganizationFormValues>({
     resolver: zodResolver(organizationSchema),
     defaultValues: {
-      github_name: "",
-      github_token_id: "",
+      github_name: '',
+      github_token_id: '',
     },
-  });
+  })
 
   const {
     data: organizations,
     isLoading,
     refetch,
-  } = api.organization.getAll.useQuery();
+  } = api.organization.getAll.useQuery()
 
   const createMutation = api.organization.create.useMutation({
     onSuccess: () => {
-      toast.success("Organization created");
-      refetch();
-      setOpenDialog(false);
-      form.reset();
+      toast.success('Organization created')
+      refetch()
+      setOpenDialog(false)
+      form.reset()
     },
     onError: () => {
-      toast.error("Failed to create organization");
+      toast.error('Failed to create organization')
     },
-  });
+  })
 
   const updateMutation = api.organization.update.useMutation({
     onSuccess: () => {
-      toast.success("Organization updated");
-      refetch();
-      setOpenDialog(false);
-      setEditingOrg(null);
-      form.reset();
+      toast.success('Organization updated')
+      refetch()
+      setOpenDialog(false)
+      setEditingOrg(null)
+      form.reset()
     },
     onError: () => {
-      toast.error("Failed to update organization");
+      toast.error('Failed to update organization')
     },
-  });
+  })
 
   const deleteMutation = api.organization.delete.useMutation({
     onSuccess: () => {
-      toast.success("Organization deleted");
-      refetch();
-      setDeleteDialogOpen(false);
-      setDeletingOrg(null);
+      toast.success('Organization deleted')
+      refetch()
+      setDeleteDialogOpen(false)
+      setDeletingOrg(null)
     },
     onError: () => {
-      toast.error("Failed to delete organization");
+      toast.error('Failed to delete organization')
     },
-  });
+  })
 
   const onSubmit = (values: OrganizationFormValues) => {
     if (editingOrg) {
       updateMutation.mutate({
         id: editingOrg.id!,
         github_name: values.github_name,
-      });
+      })
     } else {
       createMutation.mutate({
         github_name: values.github_name,
-      });
+      })
     }
-  };
+  }
 
   const onEdit = (org: {
-    id: number;
-    github_name: string;
-    github_token_id: string;
+    id: number
+    github_name: string
+    github_token_id: string
   }) => {
-    setEditingOrg(org);
-    form.reset(org);
-    setOpenDialog(true);
-  };
+    setEditingOrg(org)
+    form.reset(org)
+    setOpenDialog(true)
+  }
 
   const onDelete = () => {
-    if (!deletingOrg) return;
-    deleteMutation.mutate({ id: deletingOrg.id });
-  };
+    if (!deletingOrg) return
+    deleteMutation.mutate({ id: deletingOrg.id })
+  }
 
   useEffect(() => {
-    setDeleteDialogOpen(deletingOrg !== null);
-  }, [deletingOrg]);
+    setDeleteDialogOpen(deletingOrg !== null)
+  }, [deletingOrg])
 
   return (
     <>
@@ -214,9 +214,9 @@ export default function Home() {
         <Button
           size="sm"
           onClick={() => {
-            form.reset({ github_name: "", github_token_id: "" });
-            setEditingOrg(null);
-            setOpenDialog(true);
+            form.reset({ github_name: '', github_token_id: '' })
+            setEditingOrg(null)
+            setOpenDialog(true)
           }}
         >
           New organization
@@ -266,7 +266,7 @@ export default function Home() {
                     onClick={() =>
                       onEdit({
                         github_name: org.github_name,
-                        github_token_id: org.github_token_id || "",
+                        github_token_id: org.github_token_id || '',
                         id: org.id,
                       })
                     }
@@ -314,12 +314,12 @@ export default function Home() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingOrg ? "Edit organization" : "New organization"}
+              {editingOrg ? 'Edit organization' : 'New organization'}
             </DialogTitle>
             <DialogDescription>
               {editingOrg
-                ? "Update the organization details below."
-                : "Fill in the details to create a new organization."}
+                ? 'Update the organization details below.'
+                : 'Fill in the details to create a new organization.'}
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
@@ -350,7 +350,7 @@ export default function Home() {
               />
               <DialogFooter>
                 <Button type="submit">
-                  {editingOrg ? "Update" : "Create"}
+                  {editingOrg ? 'Update' : 'Create'}
                 </Button>
               </DialogFooter>
             </form>
@@ -360,5 +360,5 @@ export default function Home() {
 
       <Toaster />
     </>
-  );
+  )
 }

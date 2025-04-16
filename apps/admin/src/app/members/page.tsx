@@ -1,11 +1,11 @@
-"use client";
+'use client'
 
-import React, { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import React, { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
 
-import { api as trpc } from "@/trpc/react";
+import { api as trpc } from '@/trpc/react'
 
 import {
   Table,
@@ -14,7 +14,7 @@ import {
   TableRow,
   TableHead,
   TableCell,
-} from "@/components/ui/table";
+} from '@/components/ui/table'
 
 import {
   Dialog,
@@ -24,7 +24,7 @@ import {
   DialogFooter,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog'
 
 import {
   AlertDialog,
@@ -36,9 +36,9 @@ import {
   AlertDialogDescription,
   AlertDialogAction,
   AlertDialogCancel,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog'
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button'
 import {
   Form,
   FormField,
@@ -46,76 +46,76 @@ import {
   FormLabel,
   FormControl,
   FormMessage,
-} from "@/components/ui/form";
+} from '@/components/ui/form'
 
-import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
-import { Badge } from "@/components/ui/badge";
+import { Input } from '@/components/ui/input'
+import { Spinner } from '@/components/ui/spinner'
+import { Badge } from '@/components/ui/badge'
 
 const memberSchema = z.object({
-  github_id: z.string().min(1, "GitHub ID is required"),
-  platform_id: z.string().min(1, "Platform ID is required"),
-  platform_type: z.string().min(1, "Platform type is required"),
-});
+  github_id: z.string().min(1, 'GitHub ID is required'),
+  platform_id: z.string().min(1, 'Platform ID is required'),
+  platform_type: z.string().min(1, 'Platform type is required'),
+})
 
-type MemberFormValues = z.infer<typeof memberSchema>;
+type MemberFormValues = z.infer<typeof memberSchema>
 
 export default function MembersPage() {
-  const utils = trpc.useContext();
-  const membersQuery = trpc.members.getAll.useQuery();
+  const utils = trpc.useContext()
+  const membersQuery = trpc.members.getAll.useQuery()
 
   const createMember = trpc.members.create.useMutation({
     onSuccess: () => {
-      utils.members.getAll.invalidate();
-      setCreateOpen(false);
+      utils.members.getAll.invalidate()
+      setCreateOpen(false)
     },
-  });
+  })
 
   const updateMember = trpc.members.update.useMutation({
     onSuccess: () => {
-      utils.members.getAll.invalidate();
-      setEditOpen(false);
-      setEditingMember(null);
+      utils.members.getAll.invalidate()
+      setEditOpen(false)
+      setEditingMember(null)
     },
-  });
+  })
 
   const deleteMember = trpc.members.delete.useMutation({
     onSuccess: () => {
-      utils.members.getAll.invalidate();
-      setDeleteOpen(false);
-      setDeletingMember(null);
+      utils.members.getAll.invalidate()
+      setDeleteOpen(false)
+      setDeletingMember(null)
     },
-  });
+  })
 
-  const [createOpen, setCreateOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   const [editingMember, setEditingMember] = useState<
     (MemberFormValues & { id: number }) | null
-  >(null);
+  >(null)
   const [deletingMember, setDeletingMember] = useState<{
-    id: number;
-    github_id: string;
-  } | null>(null);
+    id: number
+    github_id: string
+  } | null>(null)
 
   const createForm = useForm<MemberFormValues>({
     resolver: zodResolver(memberSchema),
     defaultValues: {
-      github_id: "",
-      platform_id: "",
-      platform_type: "discord",
+      github_id: '',
+      platform_id: '',
+      platform_type: 'discord',
     },
-  });
+  })
 
   const editForm = useForm<MemberFormValues>({
     resolver: zodResolver(memberSchema),
     defaultValues: {
-      github_id: "",
-      platform_id: "",
-      platform_type: "discord",
+      github_id: '',
+      platform_id: '',
+      platform_type: 'discord',
     },
-  });
+  })
 
   React.useEffect(() => {
     if (editingMember) {
@@ -123,22 +123,22 @@ export default function MembersPage() {
         github_id: editingMember.github_id,
         platform_id: editingMember.platform_id,
         platform_type: editingMember.platform_type,
-      });
+      })
     }
-  }, [editingMember, editForm]);
+  }, [editingMember, editForm])
 
   function onCreateSubmit(data: MemberFormValues) {
-    createMember.mutate(data);
+    createMember.mutate(data)
   }
 
   function onEditSubmit(data: MemberFormValues) {
-    if (!editingMember) return;
-    updateMember.mutate({ id: editingMember.id, ...data });
+    if (!editingMember) return
+    updateMember.mutate({ id: editingMember.id, ...data })
   }
 
   function onDeleteConfirm() {
-    if (!deletingMember) return;
-    deleteMember.mutate({ id: deletingMember.id });
+    if (!deletingMember) return
+    deleteMember.mutate({ id: deletingMember.id })
   }
 
   return (
@@ -365,5 +365,5 @@ export default function MembersPage() {
         </TableBody>
       </Table>
     </>
-  );
+  )
 }
