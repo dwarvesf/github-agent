@@ -51,6 +51,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { Badge } from '@/components/ui/badge'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 const memberSchema = z.object({
   github_id: z.string().min(1, 'GitHub ID is required'),
@@ -232,8 +233,8 @@ export default function MembersPage() {
                 <Spinner className="mx-auto" />
               </TableCell>
             </TableRow>
-          ) : (
-            membersQuery.data?.map((member) => (
+          ) : membersQuery.data && membersQuery.data.length > 0 ? (
+            membersQuery.data.map((member) => (
               <TableRow key={member.id}>
                 <TableCell>{member.github_id}</TableCell>
                 <TableCell>{member.platform_id}</TableCell>
@@ -343,8 +344,7 @@ export default function MembersPage() {
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
                           This action cannot be undone. This will permanently
-                          delete the member with GitHub ID &quot;
-                          {member.github_id}&quot;.
+                          delete the member with GitHub ID "{member.github_id}".
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -361,6 +361,12 @@ export default function MembersPage() {
                 </TableCell>
               </TableRow>
             ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={4} className="text-center">
+                <EmptyState message="No members found." />
+              </TableCell>
+            </TableRow>
           )}
         </TableBody>
       </Table>

@@ -44,6 +44,7 @@ import {
 import { toast } from 'sonner'
 import { Spinner } from '@/components/ui/spinner'
 import { Badge } from '@/components/ui/badge'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 const channelSchema = z.object({
   id: z.number().optional(),
@@ -244,7 +245,7 @@ export default function Channels() {
           ) : (
             <TableRow>
               <TableCell colSpan={4} className="text-center">
-                No channels found.
+                <EmptyState message="No channels found." />
               </TableCell>
             </TableRow>
           )}

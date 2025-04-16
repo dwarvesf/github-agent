@@ -18,6 +18,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Edit } from 'lucide-react'
+import { Box } from 'lucide-react'
+import { EmptyState } from '@/components/ui/EmptyState'
 import {
   Dialog,
   DialogContent,
@@ -243,7 +245,7 @@ export default function Home() {
           ) : !organizations || organizations.length === 0 ? (
             <TableRow>
               <TableCell colSpan={3} className="text-center">
-                No organizations found.
+                <EmptyState message="No organizations found." />
               </TableCell>
             </TableRow>
           ) : (

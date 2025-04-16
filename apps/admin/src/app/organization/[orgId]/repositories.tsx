@@ -49,6 +49,7 @@ import { Button } from '@/components/ui/button'
 
 import { api } from '@/trpc/react'
 import { Spinner } from '@/components/ui/spinner'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 const repositorySchema = z.object({
   id: z.number().optional(),
@@ -105,6 +106,7 @@ export default function Repositories() {
     onSuccess: () => {
       refetch()
       closeDialog()
+      form.reset({ channel_id: undefined, github_repo_name: '' })
     },
   })
 
@@ -112,6 +114,7 @@ export default function Repositories() {
     onSuccess: () => {
       refetch()
       closeDialog()
+      form.reset({ channel_id: undefined, github_repo_name: '' })
     },
   })
 
@@ -166,11 +169,8 @@ export default function Repositories() {
             <>
               {!repositories || repositories.length === 0 ? (
                 <TableRow>
-                  <TableCell
-                    colSpan={4}
-                    className="text-muted-foreground text-center"
-                  >
-                    No repositories found.
+                  <TableCell colSpan={3} className="text-center">
+                    <EmptyState message="No repositories found." />
                   </TableCell>
                 </TableRow>
               ) : (
