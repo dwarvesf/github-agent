@@ -48,12 +48,14 @@ export class OrganizationRepository {
   /**
    * List all organizations with optional filtering and pagination
    */
-  static async list(params: {
-    where?: Prisma.OrganizationWhereInput
-    orderBy?: Prisma.OrganizationOrderByWithRelationInput
-    skip?: number
-    take?: number
-  }) {
+  static async list(
+    params: {
+      where?: Prisma.OrganizationWhereInput
+      orderBy?: Prisma.OrganizationOrderByWithRelationInput
+      skip?: number
+      take?: number
+    } = {},
+  ) {
     const prisma = getPrisma()
     const { where, orderBy, skip, take } = params
     return prisma.organization.findMany({

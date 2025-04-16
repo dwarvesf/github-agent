@@ -1,10 +1,15 @@
 import { Step, Workflow } from '@mastra/core/workflows'
-import { z } from 'zod'
 import { nanoid } from 'nanoid'
-import { $Enums, EventCategory, EventType, MemberRepository } from '../../db'
+import {
+  $Enums,
+  EventCategory,
+  EventType,
+  MemberRepository,
+  OrganizationRepository,
+} from '../../db'
 import { EventRepository, NotificationType } from '../../db/event.repository'
 import { discordClient } from '../../lib/discord'
-import { GitHubAPIPullRequest, GitHubClient } from '../../lib/github'
+import { GitHubAPIPullRequest } from '../../lib/github'
 import { PullRequest } from '../../lib/type'
 import { RepositoryDMChannelUser } from '../../lib/repository-dm-user'
 import { groupBy } from '../../utils/array'
@@ -32,7 +37,7 @@ type NotificationEmbed = {
 
 // Helper Functions
 function createPRNotificationEmbed(
-  organizationId: string,
+  repo: string,
   prs: PullRequest[],
   type: 'approved' | 'convention',
 ): NotificationEmbed {
@@ -40,7 +45,7 @@ function createPRNotificationEmbed(
     const isPlural = prs.length > 1
     return {
       title: `✅ ${isPlural ? 'Your PRs are' : 'Your PR is'} approved and ready to merge`,
-      description: `\`${organizationId}:\`.`,
+      description: `\`${repo}:\`.`,
       color: 3066993, // Green color
       fields: prs.map((pr) => ({
         name: `#${pr.number} ${pr.title}`,
@@ -59,10 +64,7 @@ function createPRNotificationEmbed(
   return {
     title: '📝 Improve PR clarity',
     color: 15158332,
-    description: [
-      `\`${organizationId}:\``,
-      `${listInText}${notifyMessage}`,
-    ].join('\n'),
+    description: [`\`${repo}:\``, `${listInText}${notifyMessage}`].join('\n'),
   }
 }
 
@@ -157,7 +159,7 @@ async function handleApprovedNotMerged(
 
     if (context.platform === $Enums.Platform.discord) {
       const embed = createPRNotificationEmbed(
-        context.organizationId,
+        context.repositoryId,
         approvedNotMergedPRs,
         'approved',
       )
@@ -195,7 +197,7 @@ async function handleUnconventionalTitleOrDescription(
 
     if (context.platform === $Enums.Platform.discord) {
       const embed = createPRNotificationEmbed(
-        context.organizationId,
+        context.repositoryId,
         wrongConventionPRs,
         'convention',
       )
@@ -227,62 +229,65 @@ async function handleUnconventionalTitleOrDescription(
 
 const notifyDeveloperAboutPRStatus = new Workflow({
   name: 'Notify developer about PR status',
-  triggerSchema: z.object({
-    organizationOwner: z.string(),
-  }),
 })
   .step(
     new Step({
       id: 'get-today-pr-list',
-      execute: async ({ context }) => {
-        try {
-          const organizationReposInstance = new RepositoryDMChannelUser()
-          await organizationReposInstance.initClient(
-            context.triggerData.organizationOwner,
-          )
-
-          const repositories = organizationReposInstance.groupRepositories()
-          const githubClient = organizationReposInstance.getGithubClient()
-
-          // Get PRs from all repositories
-          const allPRs = await Promise.all(
-            repositories.map(async (repo) => {
-              const prs = (await githubClient.getRepoPRs(repo.repoName, {
-                isMerged: false,
-                isOpen: true,
-              })) as unknown as GitHubAPIPullRequest[]
-              return { repo: repo.repoName, prs }
-            }),
-          )
-
-          // Process PR details with reviews
-          const todayPRsWithReviews = await Promise.all(
-            allPRs.map(async (item) => {
-              const prs = await Promise.all(
-                item.prs.map(async (pr) => {
-                  const prWithReviews = await githubClient.getPRReviews(pr)
-                  return githubClient.convertApiPullRequestToPullRequest(
-                    prWithReviews,
-                  )
-                }),
-              )
-
-              return {
-                org: context.triggerData.organizationOwner,
-                repo: item.repo,
-                prs,
-              }
-            }),
-          )
-
-          return {
-            channels: organizationReposInstance.getOrganizationData().channels,
-            todayPRs: todayPRsWithReviews,
-          }
-        } catch (error) {
-          console.error('Failed to fetch PR list:', error)
-          throw error
+      execute: async () => {
+        const organizations = await OrganizationRepository.list()
+        if (!organizations.length) {
+          throw new Error('No organizations found')
         }
+        const todayPRsOutput: Array<
+          { org: string; repo: string; prs: PullRequest[] }[]
+        > = []
+        for (const organization of organizations) {
+          try {
+            const organizationReposInstance = new RepositoryDMChannelUser()
+            await organizationReposInstance.initClient(organization.githubName)
+
+            const repositories = organizationReposInstance.groupRepositories()
+            const githubClient = organizationReposInstance.getGithubClient()
+
+            // Get PRs from all repositories
+            const allPRs = await Promise.all(
+              repositories.map(async (repo) => {
+                const prs = (await githubClient.getRepoPRs(repo.repoName, {
+                  isMerged: false,
+                  isOpen: true,
+                })) as unknown as GitHubAPIPullRequest[]
+                return { repo: repo.repoName, prs }
+              }),
+            )
+
+            // Process PR details with reviews
+            const todayPRsWithReviews = await Promise.all(
+              allPRs.map(async (item) => {
+                const prs = await Promise.all(
+                  item.prs.map(async (pr) => {
+                    const prWithReviews = await githubClient.getPRReviews(pr)
+                    return githubClient.convertApiPullRequestToPullRequest(
+                      prWithReviews,
+                    )
+                  }),
+                )
+
+                return {
+                  org: organization.githubName,
+                  repo: item.repo,
+                  prs,
+                }
+              }),
+            )
+
+            todayPRsOutput.push(todayPRsWithReviews)
+          } catch (error) {
+            console.error('Failed to fetch PR list:', error)
+            throw error
+          }
+        }
+
+        return { todayPRsOutput }
       },
     }),
   )
@@ -295,57 +300,65 @@ const notifyDeveloperAboutPRStatus = new Workflow({
         }
 
         try {
-          const { todayPRs } = context.steps['get-today-pr-list'].output as {
-            todayPRs: { org: string; repo: string; prs: PullRequest[] }[]
-            channels: Awaited<
-              ReturnType<typeof GitHubClient.getOrganizationData>
-            >['channels']
+          const { todayPRsOutput } = context.steps['get-today-pr-list']
+            .output as {
+            todayPRsOutput: {
+              org: string
+              repo: string
+              prs: PullRequest[]
+            }[][]
           }
 
-          await Promise.all(
-            todayPRs.map(async (repoPRs) => {
-              const byAuthor = groupBy(
-                repoPRs.prs,
-                (pr: PullRequest) => pr.author,
-              )
+          for (const todayPRs of todayPRsOutput) {
+            await Promise.all(
+              todayPRs.map(async (repoPRs) => {
+                const byAuthor = groupBy(
+                  repoPRs.prs,
+                  (pr: PullRequest) => pr.author,
+                )
 
-              const authorPromises = Object.entries(byAuthor).map(
-                async ([author, prs]) => {
-                  const platformInfo =
-                    await MemberRepository.getByGithubId(author)
-                  if (!platformInfo.length) return
+                const authorPromises = Object.entries(byAuthor).map(
+                  async ([author, prs]) => {
+                    const platformInfo =
+                      await MemberRepository.getByGithubId(author)
+                    if (!platformInfo.length) return
 
-                  const notificationContext = {
-                    ctxId: nanoid(),
-                    organizationId: repoPRs.org,
-                    repositoryId: repoPRs.repo,
-                  }
+                    const notificationContext = {
+                      ctxId: nanoid(),
+                      organizationId: repoPRs.org,
+                      repositoryId: repoPRs.repo,
+                    }
 
-                  await Promise.all(
-                    platformInfo.map(async (platform) => {
-                      if (!platform.platformId) return
+                    await Promise.all(
+                      platformInfo.map(async (platform) => {
+                        if (!platform.platformId) return
 
-                      await handleApprovedNotMerged(platform.platformId, prs, {
-                        ...notificationContext,
-                        platform: platform.platformType as $Enums.Platform,
-                      })
+                        await handleApprovedNotMerged(
+                          platform.platformId,
+                          prs,
+                          {
+                            ...notificationContext,
+                            platform: platform.platformType as $Enums.Platform,
+                          },
+                        )
 
-                      await handleUnconventionalTitleOrDescription(
-                        platform.platformId,
-                        prs,
-                        {
-                          ...notificationContext,
-                          platform: platform.platformType as $Enums.Platform,
-                        },
-                      )
-                    }),
-                  )
-                },
-              )
+                        await handleUnconventionalTitleOrDescription(
+                          platform.platformId,
+                          prs,
+                          {
+                            ...notificationContext,
+                            platform: platform.platformType as $Enums.Platform,
+                          },
+                        )
+                      }),
+                    )
+                  },
+                )
 
-              await Promise.all(authorPromises)
-            }),
-          )
+                await Promise.all(authorPromises)
+              }),
+            )
+          }
 
           return 'ok'
         } catch (error) {

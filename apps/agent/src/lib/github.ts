@@ -1,7 +1,14 @@
 import { getDaysDifference } from '../utils/datetime'
 import { getOneLineCommit } from '../utils/string'
 import { Commit, PullRequest } from './type'
-import { ChannelRepository, OrganizationRepository, Repositories } from '../db'
+import {
+  $Enums,
+  Channel,
+  ChannelRepository,
+  OrganizationRepository,
+  Repository,
+  Repositories,
+} from '../db'
 
 // GitHub API configuration
 const GITHUB_API_URL = 'https://api.github.com'
@@ -369,45 +376,72 @@ class GitHubClient {
   }
 
   /**
+   * Retrieves channel repositories for a given organization
+   * @param organizationId The unique identifier of the organization
+   * @param channelId The unique identifier of the channel
+   * @returns Object containing the organization's channels
+   */
+  static getChannelRepositories(organizationId: number, channelId: number) {
+    return Repositories.getByChannel({
+      organizationId: organizationId,
+      channelId: channelId,
+    })
+  }
+
+  /**
+   * Retrieves organization channels
+   * @param organizationId The unique identifier of the organization
+   * @param channelType Optional channel type to filter by
+   * @returns Object containing the organization's channels
+   */
+  static getOrganizationChannels(
+    organizationId: number,
+    channelType?: $Enums.Platform,
+  ) {
+    return ChannelRepository.getByOrganization({
+      where: {
+        organizationId: {
+          equals: organizationId,
+        },
+        platform: channelType,
+      },
+    })
+  }
+
+  /**
+   * Retrieves all channels for a specific organization along with their associated repositories.
+   *
+   * @example
+   * const channelsWithRepos = await GitHub.getChannelsRepositories(12345);
+   */
+  static async getChannelsRepositories(
+    organizationId: number,
+  ): Promise<Array<Channel & { repositories: Repository[] }>> {
+    const channels = await this.getOrganizationChannels(organizationId)
+    return await Promise.all(
+      channels.map(async (channel) => {
+        const repositories = await this.getChannelRepositories(
+          organizationId,
+          channel.id,
+        )
+        return {
+          ...channel,
+          repositories,
+        }
+      }),
+    )
+  }
+
+  /**
    * Retrieves organization data with optional related entities (channels, members, repositories)
    * @param organizationOwner The unique identifier of the organization
-   * @param options Configuration object to specify which related entities to include
    * @returns Object containing the organization and its related data based on specified options
    */
-  static async getOrganizationData(
-    organizationOwner: string,
-    options: {
-      withChannels?: boolean
-      withRepositories?: boolean
-    } = {
-      withChannels: true,
-      withRepositories: true,
-    },
-  ) {
+  static async getOrganizationData(organizationOwner: string) {
     const organization =
       await OrganizationRepository.getUnique(organizationOwner)
-    const channels = options?.withChannels
-      ? await ChannelRepository.getByOrganization({
-          where: {
-            organizationId: {
-              equals: organization!.id,
-            },
-          },
-        }).then((data) => {
-          return Promise.all(
-            data.map(async (channel) => {
-              return {
-                ...channel,
-                repositories: options?.withRepositories
-                  ? await Repositories.getByChannel({
-                      organizationId: organization!.id,
-                      channelId: channel.id,
-                    })
-                  : [],
-              }
-            }),
-          )
-        })
+    const channels = organization
+      ? await this.getChannelsRepositories(organization.id)
       : []
 
     return {

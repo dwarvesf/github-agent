@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { discordClient } from '../../lib/discord'
 import { PullRequest } from '../../lib/type'
 import { RepositoryDMChannelUser } from '../../lib/repository-dm-user'
-import { $Enums, MemberRepository } from '../../db'
+import { $Enums, MemberRepository, OrganizationRepository } from '../../db'
 import { GitHubAPIPullRequest, GitHubClient } from '../../lib/github'
 
 // Types
@@ -85,9 +85,6 @@ class NotifyReviewersWorkflow {
   constructor() {
     this.workflow = new Workflow({
       name: 'Notify Reviewers',
-      triggerSchema: z.object({
-        organizationOwner: z.string(),
-      }),
     })
   }
 
@@ -173,18 +170,24 @@ class NotifyReviewersWorkflow {
 
   private getPendingReviews = new Step({
     id: 'get-pending-reviews',
-    execute: async ({ context }) => {
-      const organizationReposInstance = new RepositoryDMChannelUser()
-      await organizationReposInstance.initClient(
-        context.triggerData.organizationOwner,
-      )
+    execute: async () => {
+      const organizations = await OrganizationRepository.list()
+      if (!organizations.length) {
+        throw new Error('No organizations found')
+      }
+      const orgReposPRs: Array<RepoPRs[]> = []
+      for (const org of organizations) {
+        const organizationReposInstance = new RepositoryDMChannelUser()
+        await organizationReposInstance.initClient(org.githubName)
 
-      const repositories = organizationReposInstance.groupRepositories()
-      const githubClient = organizationReposInstance.getGithubClient()
+        const repositories = organizationReposInstance.groupRepositories()
+        const githubClient = organizationReposInstance.getGithubClient()
 
-      const reposPRs = await this.getPendingPRs(githubClient, repositories)
+        const reposPRs = await this.getPendingPRs(githubClient, repositories)
 
-      return { reposPRs }
+        orgReposPRs.push(reposPRs)
+      }
+      return { orgReposPRs }
     },
   })
 
@@ -193,20 +196,22 @@ class NotifyReviewersWorkflow {
     outputSchema: z.object({}),
     execute: async ({ context }) => {
       if (context.steps['get-pending-reviews']?.status === 'success') {
-        const { reposPRs } = context.steps['get-pending-reviews'].output as {
-          reposPRs: RepoPRs[]
+        const { orgReposPRs } = context.steps['get-pending-reviews'].output as {
+          orgReposPRs: Array<RepoPRs[]>
         }
 
-        await Promise.all(
-          reposPRs.map(async (repo) => {
-            const reviewers = this.mapReviewersToPRs(repo)
-            await Promise.all(
-              reviewers.map((reviewer) =>
-                this.notifyReviewerOnPlatforms(reviewer, repo.repoName),
-              ),
-            )
-          }),
-        )
+        for (const reposPRs of orgReposPRs) {
+          await Promise.all(
+            reposPRs.map(async (repo) => {
+              const reviewers = this.mapReviewersToPRs(repo)
+              await Promise.all(
+                reviewers.map((reviewer) =>
+                  this.notifyReviewerOnPlatforms(reviewer, repo.repoName),
+                ),
+              )
+            }),
+          )
+        }
       }
       return 'ok'
     },
