@@ -1,13 +1,11 @@
 "use client";
 
 import React from "react";
-import { useRouter } from "next/navigation";
 import { useParams } from "next/navigation";
 import { api } from "@/trpc/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { toast } from "sonner";
 import Channels from "./channels";
 import Repositories from "./repositories";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -24,7 +22,6 @@ type OrganizationFormValues = z.infer<typeof organizationSchema>;
 export default function OrganizationDetailPage() {
   const params = useParams();
   const orgId = Number(params.orgId);
-  const router = useRouter();
 
   const { data: organization, isLoading } = api.organization.getAll.useQuery(
     undefined,
@@ -51,26 +48,6 @@ export default function OrganizationDetailPage() {
       form.reset(resetData);
     }
   }, [organization, form]);
-
-  const updateMutation = api.organization.update.useMutation({
-    onSuccess: () => {
-      toast.success("Organization updated");
-      router.back();
-    },
-    onError: () => {
-      toast.error("Failed to update organization");
-    },
-  });
-
-  const onSubmit = (values: OrganizationFormValues) => {
-    updateMutation.mutate({
-      id: orgId,
-      github_name: values.github_name,
-      ...(values.github_token_id
-        ? { github_token_id: values.github_token_id }
-        : {}),
-    });
-  };
 
   if (isLoading) {
     return <Spinner className="mx-auto" />;

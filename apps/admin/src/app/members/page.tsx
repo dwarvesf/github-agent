@@ -50,6 +50,7 @@ import {
 
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { Badge } from "@/components/ui/badge";
 
 const memberSchema = z.object({
   github_id: z.string().min(1, "GitHub ID is required"),
@@ -218,8 +219,8 @@ export default function MembersPage() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>GitHub ID</TableHead>
-            <TableHead>Platform ID</TableHead>
+            <TableHead className="w-1/5">GitHub ID</TableHead>
+            <TableHead className="w-2/5">Platform ID</TableHead>
             <TableHead>Platform type</TableHead>
             <TableHead />
           </TableRow>
@@ -236,7 +237,11 @@ export default function MembersPage() {
               <TableRow key={member.id}>
                 <TableCell>{member.github_id}</TableCell>
                 <TableCell>{member.platform_id}</TableCell>
-                <TableCell>{member.platform_type}</TableCell>
+                <TableCell>
+                  <Badge variant="secondary" className="text-blue-600">
+                    {member.platform_type}
+                  </Badge>
+                </TableCell>
                 <TableCell className="text-right">
                   <Dialog
                     open={editOpen && editingMember?.id === member.id}
@@ -338,7 +343,8 @@ export default function MembersPage() {
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
                           This action cannot be undone. This will permanently
-                          delete the member with GitHub ID "{member.github_id}".
+                          delete the member with GitHub ID &quot;
+                          {member.github_id}&quot;.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>

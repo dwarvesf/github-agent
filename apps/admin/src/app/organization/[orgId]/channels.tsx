@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
+import { Badge } from "@/components/ui/badge";
 
 const channelSchema = z.object({
   id: z.number().optional(),
@@ -159,7 +160,11 @@ export default function Channels() {
           size="sm"
           onClick={() => {
             setEditingChannel(null);
-            form.reset();
+            form.reset({
+              name: "",
+              platform: "discord",
+              platform_channel_id: "",
+            });
             setOpenDialog(true);
           }}
         >
@@ -170,10 +175,10 @@ export default function Channels() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Platform</TableHead>
-            <TableHead>Platform channel ID</TableHead>
-            <TableHead />
+            <TableHead className="w-1/4">Name</TableHead>
+            <TableHead className="w-1/4">Platform</TableHead>
+            <TableHead className="w-1/4">Platform channel ID</TableHead>
+            <TableHead className="w-1/4" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -187,7 +192,11 @@ export default function Channels() {
             channels.map((channel) => (
               <TableRow key={channel.id}>
                 <TableCell>{channel.name}</TableCell>
-                <TableCell>{channel.platform}</TableCell>
+                <TableCell>
+                  <Badge variant="secondary" className="text-blue-600">
+                    {channel.platform}
+                  </Badge>
+                </TableCell>
                 <TableCell>{channel.platform_channel_id}</TableCell>
                 <TableCell className="text-right">
                   <Button

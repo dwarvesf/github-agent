@@ -81,6 +81,7 @@ export default function Repositories() {
     resolver: zodResolver(repositorySchema),
     defaultValues: {
       github_repo_name: "",
+      channel_id: undefined,
     },
   });
 
@@ -149,9 +150,9 @@ export default function Repositories() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Channel</TableHead>
-            <TableHead />
+            <TableHead className="w-1/3">Name</TableHead>
+            <TableHead className="w-1/3">Channel</TableHead>
+            <TableHead className="w-1/3" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -266,7 +267,7 @@ export default function Repositories() {
                     <FormLabel>Channel</FormLabel>
                     <Select
                       onValueChange={(value) => field.onChange(Number(value))}
-                      value={String(field.value)}
+                      value={field.value ? String(field.value) : ""}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select a channel" />
