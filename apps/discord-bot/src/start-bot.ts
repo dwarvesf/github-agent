@@ -73,7 +73,7 @@ async function start(): Promise<void> {
   // Initialize and start webhook service
   const webhookService = new WebhookService(
     client,
-    Config.webhook?.port || 3000,
+    Config.webhook?.port || 4000,
   )
   webhookService.start()
 }
