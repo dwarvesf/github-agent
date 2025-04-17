@@ -167,7 +167,7 @@ const stepFetchRepoData = new Step({
       // Create GitHub client for this organization
       const githubClient = new GitHubClient({
         githubOwner: org.githubName,
-        githubToken: org.githubTokenId || process.env.GITHUB_TOKEN!, // Fallback to default token if not set
+        githubToken: org.githubTokenId,
       })
 
       // Process each channel
