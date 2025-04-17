@@ -5,9 +5,9 @@ import {
   convertArrayToMarkdownTableList,
   convertNestedArrayToTreeList,
 } from '../../utils/string'
-import { githubIdMapper } from '../../lib/id-mapper'
 import { $Enums, OrganizationRepository, Repositories } from '../../db'
 import { groupBy } from '../../utils/array'
+import { MemberRepository } from '../../db'
 
 type OrganizationData = Awaited<
   ReturnType<typeof GitHubClient.getOrganizationData>
@@ -25,9 +25,9 @@ async function getOrganizations(params: {
       organization,
       channel
         ? {
-            platformChannelId: channel,
-            platform: $Enums.Platform.discord,
-          }
+          platformChannelId: channel,
+          platform: $Enums.Platform.discord,
+        }
         : undefined,
       repository,
     )
@@ -48,9 +48,9 @@ async function getOrganizations(params: {
           org.githubName,
           channel
             ? {
-                platformChannelId: channel,
-                platform: $Enums.Platform.discord,
-              }
+              platformChannelId: channel,
+              platform: $Enums.Platform.discord,
+            }
             : undefined,
           repository,
         )
@@ -102,15 +102,6 @@ async function fetchGitHubData<T>(
   return results
 }
 
-async function mapGitHubUser(
-  username: string,
-  useDiscordMapping?: boolean,
-): Promise<string> {
-  if (!useDiscordMapping) return username
-  const discordId = await githubIdMapper.getDiscordID(username)
-  return discordId ? `<@!${discordId}>` : `@${username}`
-}
-
 const prListSchema = z.object({
   list: z.array(
     z.object({
@@ -118,6 +109,7 @@ const prListSchema = z.object({
       title: z.string(),
       url: z.string(),
       author: z.string(),
+      authorDiscordId: z.string().optional(),
       createdAt: z.string(),
       updatedAt: z.string(),
       draft: z.boolean(),
@@ -126,6 +118,7 @@ const prListSchema = z.object({
       isWaitingForReview: z.boolean(),
       labels: z.array(z.string()),
       reviewers: z.array(z.string()),
+      reviewersDiscordIds: z.array(z.string().optional()),
       hasComments: z.boolean(),
       hasReviews: z.boolean(),
     }),
@@ -146,9 +139,9 @@ export const getPullRequestTool = createTool({
     authorId: z.string().describe('Reviewer ID').optional(),
     isOpen: z.boolean().describe('Filter by open PRs').optional(),
     isMerged: z.boolean().describe('Filter by merged PRs').optional(),
-    useDiscordIdMapping: z
+    withPlatformId: z
       .boolean()
-      .describe('Use Discord ID mapping')
+      .describe("Include Author, Reviewers's platform ID like Discord, Slack")
       .optional(),
     fromDate: z
       .string()
@@ -185,40 +178,56 @@ export const getPullRequestTool = createTool({
         }),
       { repository: context.repository },
     )
+    const githubIdDiscordMappings: { [key: string]: string } = {}
+    const mapGithubId = async (githubId: string) => {
+      if (githubIdDiscordMappings[githubId]) {
+        return
+      }
+
+      const authorPlatformsInfo = await MemberRepository.getByGithubId(githubId)
+      authorPlatformsInfo.forEach((authorPlatformsInfo) => {
+        if (authorPlatformsInfo.platformId) {
+          githubIdDiscordMappings[authorPlatformsInfo.githubId] =
+            authorPlatformsInfo.platformId
+        }
+      })
+    }
+
+    if (context.withPlatformId) {
+      for (const pr of prs) {
+        await mapGithubId(pr.user.login)
+        for (const reviewer of pr.requested_reviewers) {
+          await mapGithubId(reviewer.login)
+        }
+      }
+    }
 
     return {
-      list: await Promise.all(
-        prs.map(async (pr) => {
-          const author = await mapGitHubUser(
-            pr.user.login,
-            context.useDiscordIdMapping,
-          )
-          const reviewers = await Promise.all(
-            pr.requested_reviewers.map((reviewer) =>
-              mapGitHubUser(reviewer.login, context.useDiscordIdMapping),
-            ),
-          )
+      list: prs.map((pr) => {
+        const convertedPR =
+          GitHubClient.convertApiPullRequestToPullRequest(pr)
 
-          const convertedPR =
-            GitHubClient.convertApiPullRequestToPullRequest(pr)
-          return {
-            number: convertedPR.number,
-            title: convertedPR.title,
-            url: convertedPR.url,
-            createdAt: convertedPR.createdAt,
-            updatedAt: convertedPR.updatedAt,
-            draft: convertedPR.draft,
-            isWIP: convertedPR.isWIP,
-            hasMergeConflicts: convertedPR.hasMergeConflicts || false,
-            isWaitingForReview: convertedPR.isWaitingForReview || false,
-            labels: convertedPR.labels || [],
-            hasComments: convertedPR.hasComments || false,
-            hasReviews: convertedPR.hasReviews || false,
-            author,
-            reviewers,
-          }
-        }),
-      ),
+        return ({
+          number: convertedPR.number,
+          title: convertedPR.title,
+          url: convertedPR.url,
+          createdAt: convertedPR.createdAt,
+          updatedAt: convertedPR.updatedAt,
+          draft: convertedPR.draft,
+          isWIP: convertedPR.isWIP,
+          hasMergeConflicts: convertedPR.hasMergeConflicts || false,
+          isWaitingForReview: convertedPR.isWaitingForReview || false,
+          labels: convertedPR.labels || [],
+          hasComments: convertedPR.hasComments || false,
+          hasReviews: convertedPR.hasReviews || false,
+          author: convertedPR.author,
+          authorDiscordId: githubIdDiscordMappings[pr.user.login],
+          reviewers: convertedPR.reviewers || [],
+          reviewersDiscordIds: pr.requested_reviewers.map(
+            (reviewer) => githubIdDiscordMappings[reviewer.login],
+          ),
+        })
+      }),
     }
   },
 })
@@ -228,6 +237,7 @@ const getCommitsToolOutputSchema = z.object({
     z.object({
       sha: z.string(),
       author: z.string(),
+      authorDiscordId: z.string().optional(),
       url: z.string(),
       message: z.string(),
     }),
@@ -244,9 +254,9 @@ export const getCommitsTool = createTool({
     organization: z.string().describe('Organization name').optional(),
     channel: z.string().describe('Channel id').optional(),
     repository: z.string().describe('Repository name').optional(),
-    useDiscordIdMapping: z
+    withPlatformId: z
       .boolean()
-      .describe('Use Discord ID mapping')
+      .describe("Include Author's platform ID like Discord, Slack")
       .optional(),
     fromDate: z
       .string()
@@ -278,18 +288,33 @@ export const getCommitsTool = createTool({
       { repository: context.repository },
     )
 
+    const githubIdDiscordMappings: { [key: string]: string } = {}
+    if (context.withPlatformId) {
+      for (const c of commits) {
+        if (githubIdDiscordMappings[c.author.login]) {
+          continue
+        }
+
+        const authorPlatformsInfo = await MemberRepository.getByGithubId(
+          c.author.login,
+        )
+        authorPlatformsInfo.forEach((authorPlatformsInfo) => {
+          if (authorPlatformsInfo.platformId) {
+            githubIdDiscordMappings[authorPlatformsInfo.githubId] =
+              authorPlatformsInfo.platformId
+          }
+        })
+      }
+    }
+
     return {
-      list: await Promise.all(
-        commits.map(async (commit) => ({
-          sha: commit.sha,
-          author: await mapGitHubUser(
-            commit.author.login,
-            context.useDiscordIdMapping,
-          ),
-          url: commit.html_url,
-          message: commit.commit.message,
-        })),
-      ),
+      list: commits.map((commit) => ({
+        sha: commit.sha.substring(0, 8),
+        author: commit.author.login,
+        authorDiscordId: githubIdDiscordMappings[commit.author.login],
+        url: commit.html_url,
+        message: commit.commit.message,
+      })),
     }
   },
 })
