@@ -87,14 +87,16 @@ export class Repositories {
   static async getByChannel(params: {
     channelId: number
     organizationId: number
+    repository?: string
     orderBy?: Prisma.RepositoryOrderByWithRelationInput
   }) {
     const prisma = getPrisma()
-    const { channelId, organizationId, orderBy } = params
+    const { channelId, organizationId, repository, orderBy } = params
     return prisma.repository.findMany({
       where: {
         organizationId,
         channelId,
+        githubRepoName: repository,
       },
       orderBy: orderBy || { createdAt: 'desc' },
     })
@@ -108,5 +110,17 @@ export class Repositories {
   ): Promise<Repository | null> {
     const prisma = getPrisma()
     return prisma.repository.findUnique({ where })
+  }
+
+  /**
+   * Get repository by repository name
+   */
+  static async getByRepositoryName(
+    repositoryName: string,
+  ): Promise<Repository[]> {
+    const prisma = getPrisma()
+    return prisma.repository.findMany({
+      where: { githubRepoName: repositoryName },
+    })
   }
 }

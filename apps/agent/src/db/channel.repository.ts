@@ -1,4 +1,4 @@
-import type { Channel, Prisma } from './.generated/client'
+import type { $Enums, Channel, Prisma } from './.generated/client'
 import { getPrisma } from './connection'
 
 /**
@@ -85,5 +85,21 @@ export class ChannelRepository {
   ): Promise<Channel | null> {
     const prisma = getPrisma()
     return prisma.channel.findUnique({ where })
+  }
+
+  /**
+   * Get channel by channel ID
+   */
+  static async getByChannelId(
+    channelId: string,
+    platform: $Enums.Platform,
+  ): Promise<Channel | null> {
+    const prisma = getPrisma()
+    return prisma.channel.findFirst({
+      where: {
+        platformChannelId: channelId,
+        platform,
+      },
+    })
   }
 }

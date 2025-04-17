@@ -204,10 +204,10 @@ const stepFetchRepoData = new Step({
                 updatedAt: pr.updated_at,
                 mergedAt: pr.merged_at,
                 isMerged: pr.merged_at !== null,
-                isWaitingForReview: githubClient.isWaitingForReview(pr),
-                hasMergeConflicts: githubClient.hasMergeConflicts(pr),
+                isWaitingForReview: GitHubClient.isWaitingForReview(pr),
+                hasMergeConflicts: GitHubClient.hasMergeConflicts(pr),
                 draft: pr.draft,
-                isWIP: githubClient.isWIP(pr),
+                isWIP: GitHubClient.isWIP(pr),
                 labels: pr.labels.map((label) => label.name),
                 reviewers: pr.requested_reviewers.map(
                   (reviewer) => reviewer.login,
