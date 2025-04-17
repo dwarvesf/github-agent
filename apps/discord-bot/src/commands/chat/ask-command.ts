@@ -68,7 +68,11 @@ export class AskCommand implements Command {
     let response = ''
     try {
       // Process the stream
-      for await (const chunk of getStreamedResponse(intr.user.id, question)) {
+      for await (const chunk of getStreamedResponse(
+        intr.user.id,
+        question,
+        intr.channel.isDMBased() ? undefined : intr.channelId,
+      )) {
         response += chunk
       }
 
@@ -116,6 +120,7 @@ export class AskCommand implements Command {
 async function* getStreamedResponse(
   discordUserId: string,
   question: string,
+  channelId?: string,
 ): AsyncGenerator<string, void, unknown> {
   const AGENT_STREAM_URL = process.env.AGENT_STREAM_URL
 
@@ -133,7 +138,12 @@ async function* getStreamedResponse(
       },
       body: JSON.stringify({
         messages: [
-          { role: 'user', content: `I am <@${discordUserId}>` },
+          {
+            role: 'user',
+            content: channelId
+              ? `I am <@${discordUserId}> in channel ${channelId}`
+              : `I am <@${discordUserId}>`,
+          },
           { role: 'user', content: question },
         ],
       }),

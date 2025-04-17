@@ -70,7 +70,7 @@ export class GithubDataManager {
       )
     }
     // Validate repository exists
-    if (!channels.some((channel) => channel.repositories.length)) {
+    if (!channels.every((channel) => channel.repositories.length)) {
       throw new Error('No repositories found for organization')
     }
     this.githubClient = new GitHubClient({

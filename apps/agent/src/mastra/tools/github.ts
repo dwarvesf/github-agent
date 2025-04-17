@@ -141,7 +141,7 @@ export const getPullRequestTool = createTool({
     reviewerId: z.string().describe('Reviewer ID').optional(),
     commenterId: z.string().describe('Commenter ID').optional(),
     organization: z.string().describe('Organization name').optional(),
-    channel: z.string().describe('Channel name').optional(),
+    channel: z.string().describe('Channel id').optional(),
     repository: z.string().describe('Repository name').optional(),
     authorId: z.string().describe('Reviewer ID').optional(),
     isOpen: z.boolean().describe('Filter by open PRs').optional(),
@@ -242,7 +242,8 @@ export const getCommitsTool = createTool({
   inputSchema: z.object({
     authorId: z.string().describe('Author of the commits').optional(),
     organization: z.string().describe('Organization name').optional(),
-    repository: z.string().describe('Repository name'),
+    channel: z.string().describe('Channel id').optional(),
+    repository: z.string().describe('Repository name').optional(),
     useDiscordIdMapping: z
       .boolean()
       .describe('Use Discord ID mapping')
@@ -262,6 +263,7 @@ export const getCommitsTool = createTool({
   execute: async ({ context }) => {
     const organizations = await getOrganizations({
       organization: context.organization,
+      channel: context.channel,
       repository: context.repository,
     })
 
@@ -298,7 +300,7 @@ export const getUserActivitiesTool = createTool({
   inputSchema: z.object({
     authorId: z.string().describe('Reviewer ID'),
     organization: z.string().describe('Organization name').optional(),
-    channel: z.string().describe('Channel name').optional(),
+    channel: z.string().describe('Channel id').optional(),
     repository: z.string().describe('Repository name').optional(),
     fromDate: z
       .string()
