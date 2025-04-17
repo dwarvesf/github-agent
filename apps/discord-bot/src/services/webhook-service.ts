@@ -30,7 +30,7 @@ export class WebhookService {
   private client: Client
   private port: number
 
-  constructor(client: Client, port: number = 3000) {
+  constructor(client: Client, port: number = 4000) {
     this.client = client
     this.port = port
     this.app = express()

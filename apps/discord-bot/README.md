@@ -112,16 +112,16 @@ This bot uses webhooks to send messages to Discord
 
 ```bash
 # Send message to a channel
-curl -X POST http://localhost:3000/webhook/channel -H "Content-Type: application/json" -d '{"channelId": "channel_id", "message": "Test message to <@!user_id> In <#channel_id> channel"}'
+curl -X POST http://localhost:4000/webhook/channel -H "Content-Type: application/json" -d '{"channelId": "channel_id", "message": "Test message to <@!user_id> In <#channel_id> channel"}'
 
 # Send message with embed to a channel
-curl -X POST http://localhost:3000/webhook/channel -H "Content-Type: application/json" -d '{"channelId": "channel_id", "message": "Test message to <@!user_id> In <#channel_id> channel", "embed": {"title": "Test Embed", "description": "This is a test embed"}}'
+curl -X POST http://localhost:4000/webhook/channel -H "Content-Type: application/json" -d '{"channelId": "channel_id", "message": "Test message to <@!user_id> In <#channel_id> channel", "embed": {"title": "Test Embed", "description": "This is a test embed"}}'
 
 # Send message to a user
-curl -X POST http://localhost:3000/webhook/user -H "Content-Type: application/json" -d '{"userId": "user_id", "message": "Test message to <@!user_id> In <#channel_id> channel"}'
+curl -X POST http://localhost:4000/webhook/user -H "Content-Type: application/json" -d '{"userId": "user_id", "message": "Test message to <@!user_id> In <#channel_id> channel"}'
 
 # Send message with embed to a user
-curl -X POST http://localhost:3000/webhook/user -H "Content-Type: application/json" -d '{"userId": "user_id", "message": "Test message to <@!user_id> In <#channel_id> channel", "embed": {"title": "Test Embed", "description": "This is a test embed"}}'
+curl -X POST http://localhost:4000/webhook/user -H "Content-Type: application/json" -d '{"userId": "user_id", "message": "Test message to <@!user_id> In <#channel_id> channel", "embed": {"title": "Test Embed", "description": "This is a test embed"}}'
 ```
 
 ### Embed templates
@@ -131,7 +131,7 @@ curl -X POST http://localhost:3000/webhook/user -H "Content-Type: application/js
 <img width="350" alt="image" src="img/success.png">
 
 ```bash
-curl -X POST http://localhost:3000/webhook/channel \
+curl -X POST http://localhost:4000/webhook/channel \
      -H "Content-Type: application/json" \
      -d '{
        "channelId": "channel_id",
@@ -153,7 +153,7 @@ curl -X POST http://localhost:3000/webhook/channel \
 <img width="350" alt="image" src="img/failure.png">
 
 ```bash
-curl -X POST http://localhost:3000/webhook/channel \
+curl -X POST http://localhost:4000/webhook/channel \
      -H "Content-Type: application/json" \
      -d '{
        "channelId": "channel_id",
@@ -175,7 +175,7 @@ curl -X POST http://localhost:3000/webhook/channel \
 <img width="350" alt="image" src="img/info.png">
 
 ```bash
-curl -X POST http://localhost:3000/webhook/channel \
+curl -X POST http://localhost:4000/webhook/channel \
      -H "Content-Type: application/json" \
      -d '{
        "channelId": "channel_id",
@@ -197,7 +197,7 @@ curl -X POST http://localhost:3000/webhook/channel \
 <img width="350" alt="image" src="img/pullrequests.png">
 
 ```bash
-curl -X POST http://localhost:3000/webhook/channel \
+curl -X POST http://localhost:4000/webhook/channel \
   -H "Content-Type: application/json" \
   -d '{
     "channelId": "964734967517167616",
@@ -238,7 +238,7 @@ curl -X POST http://localhost:3000/webhook/channel \
 <img width="350" alt="image" src="img/table.png">
 
 ```bash
-curl -X POST http://localhost:3000/webhook/channel \
+curl -X POST http://localhost:4000/webhook/channel \
   -H "Content-Type: application/json" \
   -d '{
     "channelId": "964734967517167616",
@@ -265,7 +265,7 @@ Alignment:
 ```
 
 ```bash
-curl -X POST http://localhost:3000/webhook/channel \
+curl -X POST http://localhost:4000/webhook/channel \
   -H "Content-Type: application/json" \
   -d '{
     "channelId": "964734967517167616",
@@ -284,7 +284,7 @@ curl -X POST http://localhost:3000/webhook/channel \
 <img width="350" alt="image" src="img/list.png">
 
 ```bash
-curl -X POST http://localhost:3000/webhook/channel \
+curl -X POST http://localhost:4000/webhook/channel \
   -H "Content-Type: application/json" \
   -d '{
     "channelId": "964734967517167616",
@@ -304,7 +304,7 @@ curl -X POST http://localhost:3000/webhook/channel \
 <img width="350" alt="image" src="img/list2.png">
 
 ```bash
-curl -X POST http://localhost:3000/webhook/channel \
+curl -X POST http://localhost:4000/webhook/channel \
   -H "Content-Type: application/json" \
   -d '{
     "channelId": "964734967517167616",

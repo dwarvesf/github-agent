@@ -39,7 +39,7 @@ RUN apk add --no-cache gettext
 WORKDIR /app/apps/discord-bot
 
 # Expose the API, Webhook, Master port
-EXPOSE 3001 3000 5000
+EXPOSE 3001 4000 5000
 
 # Run the entrypoint script
 ENTRYPOINT ["./entrypoint.sh"]
