@@ -19,7 +19,7 @@ import { GitHubClient } from './github'
  * const repositories = repoUser.groupRepositories();
  * ```
  */
-export class RepositoryDMChannelUser {
+export class GithubDataManager {
   /** Authenticated GitHub client instance for API operations */
   private githubClient!: GitHubClient
 

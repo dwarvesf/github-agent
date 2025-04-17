@@ -1,4 +1,4 @@
-import type { $Enums, Member, Prisma } from './.generated/client'
+import type { Member, Prisma } from './.generated/client'
 import { getPrisma } from './connection'
 
 /**
@@ -100,5 +100,41 @@ export class MemberRepository {
   ): Promise<Member | null> {
     const prisma = getPrisma()
     return prisma.member.findUnique({ where })
+  }
+
+  /**
+   * Get members by Github ID and Platform
+   */
+  static async getByGithubIdAndPlatform(
+    githubId: string,
+    platform: string,
+    select?: Prisma.MemberSelect,
+  ) {
+    const prisma = getPrisma()
+    return prisma.member.findFirst({
+      where: {
+        githubId,
+        platformType: platform,
+      },
+      select,
+    })
+  }
+
+  /**
+   * Get members by Platform ID and Platform Type
+   */
+  static async getByPlatformIdAndPlatform(
+    platformId: string,
+    platform: string,
+    select?: Prisma.MemberSelect,
+  ) {
+    const prisma = getPrisma()
+    return prisma.member.findFirst({
+      where: {
+        platformId,
+        platformType: platform,
+      },
+      select,
+    })
   }
 }

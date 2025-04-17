@@ -77,7 +77,7 @@ class GitHubClient {
     }
   }
 
-  isWIP(pr: GitHubAPIPullRequest): boolean {
+  static isWIP(pr: GitHubAPIPullRequest): boolean {
     if (pr.draft) {
       return true
     }
@@ -113,8 +113,8 @@ class GitHubClient {
   /**
    * Check if PR is waiting for review
    */
-  isWaitingForReview(pr: GitHubAPIPullRequest): boolean {
-    if (this.isWIP(pr)) {
+  static isWaitingForReview(pr: GitHubAPIPullRequest): boolean {
+    if (GitHubClient.isWIP(pr)) {
       return false
     }
 
@@ -138,7 +138,7 @@ class GitHubClient {
   /**
    * Check if PR has merge conflicts
    */
-  hasMergeConflicts(pr: GitHubAPIPullRequest): boolean {
+  static hasMergeConflicts(pr: GitHubAPIPullRequest): boolean {
     // mergeable can be true, false, or null (when GitHub hasn't computed it yet)
     // mergeable_state can be: clean, dirty, blocked, behind, unstable
     return pr.mergeable === false || pr.mergeable_state === 'dirty'
@@ -149,14 +149,14 @@ class GitHubClient {
    * @param pr Pull request to check
    * @returns boolean indicating if PR is approved but not merged
    */
-  isApprovedButNotMerged(pr: GitHubAPIPullRequest): boolean {
+  static isApprovedButNotMerged(pr: GitHubAPIPullRequest): boolean {
     // If PR is merged, it's not waiting for merge
     if (pr.merged_at !== null) {
       return false
     }
 
     // If PR is in WIP state, it's not ready for merge
-    if (this.isWIP(pr)) {
+    if (GitHubClient.isWIP(pr)) {
       return false
     }
 
@@ -379,31 +379,40 @@ class GitHubClient {
    * Retrieves channel repositories for a given organization
    * @param organizationId The unique identifier of the organization
    * @param channelId The unique identifier of the channel
+   * @param repository Optional repository name to filter by
    * @returns Object containing the organization's channels
    */
-  static getChannelRepositories(organizationId: number, channelId: number) {
+  static getChannelRepositories(
+    organizationId: number,
+    channelId: number,
+    repository?: string,
+  ) {
     return Repositories.getByChannel({
       organizationId: organizationId,
       channelId: channelId,
+      repository: repository,
     })
   }
 
   /**
    * Retrieves organization channels
    * @param organizationId The unique identifier of the organization
-   * @param channelType Optional channel type to filter by
+   * @param channelType The type of channel (optional)
+   * @param channel The name of the channel (optional)
    * @returns Object containing the organization's channels
    */
-  static getOrganizationChannels(
-    organizationId: number,
-    channelType?: $Enums.Platform,
-  ) {
+  static getOrganizationChannels(p: {
+    organizationId: number
+    channelType?: $Enums.Platform
+    channel?: string
+  }) {
     return ChannelRepository.getByOrganization({
       where: {
         organizationId: {
-          equals: organizationId,
+          equals: p.organizationId,
         },
-        platform: channelType,
+        platform: p.channelType,
+        name: p.channel,
       },
     })
   }
@@ -416,13 +425,19 @@ class GitHubClient {
    */
   static async getChannelsRepositories(
     organizationId: number,
+    channel?: string,
+    repository?: string,
   ): Promise<Array<Channel & { repositories: Repository[] }>> {
-    const channels = await this.getOrganizationChannels(organizationId)
+    const channels = await this.getOrganizationChannels({
+      organizationId,
+      channel,
+    })
     return await Promise.all(
       channels.map(async (channel) => {
         const repositories = await this.getChannelRepositories(
           organizationId,
           channel.id,
+          repository,
         )
         return {
           ...channel,
@@ -435,18 +450,67 @@ class GitHubClient {
   /**
    * Retrieves organization data with optional related entities (channels, members, repositories)
    * @param organizationOwner The unique identifier of the organization
+   * @param channel Optional channel identifier to filter by
+   * @param repository Optional repository identifier to filter by
    * @returns Object containing the organization and its related data based on specified options
    */
-  static async getOrganizationData(organizationOwner: string) {
-    const organization =
-      await OrganizationRepository.getUnique(organizationOwner)
-    const channels = organization
-      ? await this.getChannelsRepositories(organization.id)
-      : []
+  static async getOrganizationData(
+    organizationOwner?: string,
+    channel?: {
+      platformChannelId?: string
+      platform: $Enums.Platform
+    },
+    repository?: string,
+  ) {
+    if (!organizationOwner && !channel && !repository) {
+      return {
+        organization: null,
+        channels: [],
+      }
+    }
+    if (organizationOwner) {
+      // Fetch the organization based on the owner
+      const organization =
+        await OrganizationRepository.getUnique(organizationOwner)
+      const channels = organization
+        ? await this.getChannelsRepositories(
+            organization.id,
+            channel?.platformChannelId,
+            repository,
+          )
+        : []
+
+      return {
+        organization,
+        channels,
+      }
+    }
+
+    if (channel?.platformChannelId) {
+      // Fetch the organization based on the channel
+      const channelData = await ChannelRepository.getByChannelId(
+        channel.platformChannelId,
+        channel.platform,
+      )
+      if (channelData) {
+        const organization = await OrganizationRepository.getById(
+          channelData.organizationId,
+        )
+        const channels = await this.getChannelsRepositories(
+          channelData.organizationId,
+          channel.platformChannelId,
+          repository,
+        )
+        return {
+          organization,
+          channels,
+        }
+      }
+    }
 
     return {
-      organization,
-      channels,
+      organization: null,
+      channels: [],
     }
   }
 
@@ -493,7 +557,7 @@ class GitHubClient {
     }
   }
 
-  public convertApiPullRequestToPullRequest(
+  static convertApiPullRequestToPullRequest(
     apiPullRequest: GitHubAPIPullRequest,
   ): PullRequest {
     return {
@@ -506,10 +570,11 @@ class GitHubClient {
       mergedAt: apiPullRequest.merged_at,
       draft: apiPullRequest.draft,
       isMerged: apiPullRequest.merged_at !== null,
-      isWaitingForReview: this.isWaitingForReview(apiPullRequest),
-      hasMergeConflicts: this.hasMergeConflicts(apiPullRequest),
-      isApprovedWaitingForMerging: this.isApprovedButNotMerged(apiPullRequest),
-      isWIP: this.isWIP(apiPullRequest),
+      isWaitingForReview: GitHubClient.isWaitingForReview(apiPullRequest),
+      hasMergeConflicts: GitHubClient.hasMergeConflicts(apiPullRequest),
+      isApprovedWaitingForMerging:
+        GitHubClient.isApprovedButNotMerged(apiPullRequest),
+      isWIP: GitHubClient.isWIP(apiPullRequest),
       labels: apiPullRequest.labels.map((label) => label.name),
       reviewers: apiPullRequest.requested_reviewers.map(
         (reviewer) => reviewer.login,

@@ -1,11 +1,11 @@
 import { createTool } from '@mastra/core/tools'
 import { z } from 'zod'
-import { CommitsToolOutputSchema, PRListOutputSchema } from './github'
+import { githubIdMapper } from '../../lib/id-mapper'
 import {
   convertNestedArrayToTreeList,
   escapeSpecialCharactersForMarkdown,
 } from '../../utils/string'
-import { githubIdMapper } from '../../lib/id-mapper'
+import { CommitsToolOutputSchema, PRListOutputSchema } from './github'
 
 export const formatCommitList = createTool({
   id: 'format-commits-to-markdown-list-agent',
@@ -50,7 +50,12 @@ export const formatPullRequestList = createTool({
     let list: PRListOutputSchema['list'] = []
     try {
       list = JSON.parse(context.list) ?? []
-    } catch (e) {}
+    } catch (e) {
+      console.error('Failed to parse pull request list:', e)
+      return {
+        markdown: 'Error: Failed to parse pull request list',
+      }
+    }
 
     if (list.length === 0) {
       return {
@@ -79,23 +84,26 @@ export const mapGithubIdsToDiscordIdsTool = createTool({
     message: z.string(),
   }),
   execute: async ({ context }) => {
-    const githubIdToDiscordIdMapping = githubIdMapper.getDiscordIdMapping()
-
-    const message = context.message.replaceAll(
-      /@([a-zA-Z0-9_-]+)/g,
-      (match, githubId) => {
-        const discordId = githubIdToDiscordIdMapping.find(
-          (mapping) => mapping.githubId === githubId,
-        )?.discordId
-        if (discordId) {
-          return `<@!${discordId}>`
+    const matches = [...context.message.matchAll(/@([a-zA-Z0-9_-]+)/g)]
+    const replacements = await Promise.all(
+      matches.map(async ([match, githubId]) => {
+        const discordId = githubId
+          ? await githubIdMapper.getDiscordID(githubId)
+          : ''
+        return {
+          match,
+          replacement: discordId ? `<@!${discordId}>` : match,
         }
-        return match
-      },
+      }),
     )
 
+    let message = context.message
+    for (const { match, replacement } of replacements) {
+      message = message.replace(match, replacement)
+    }
+
     return {
-      message: message,
+      message,
     }
   },
 })
@@ -110,20 +118,26 @@ export const mapDiscordIdsToGithubIdsTool = createTool({
     message: z.string(),
   }),
   execute: async ({ context }) => {
-    const githubIdToDiscordIdMapping = githubIdMapper.getDiscordIdMapping()
-
-    const message = context.message.replaceAll(
-      /<@!?(\d+)>/g,
-      (match, discordId) => {
-        const githubId = githubIdToDiscordIdMapping.find(
-          (mapping) => mapping.discordId === discordId,
-        )?.githubId
-        return githubId || match
-      },
+    const matches = [...context.message.matchAll(/<@!?(\d+)>/g)]
+    const replacements = await Promise.all(
+      matches.map(async ([match, discordId]) => {
+        const githubId = discordId
+          ? await githubIdMapper.getGithubIDByDiscordId(discordId)
+          : ''
+        return {
+          match,
+          replacement: githubId ? githubId : match,
+        }
+      }),
     )
 
+    let message = context.message
+    for (const { match, replacement } of replacements) {
+      message = message.replace(match, replacement)
+    }
+
     return {
-      message: message,
+      message,
     }
   },
 })

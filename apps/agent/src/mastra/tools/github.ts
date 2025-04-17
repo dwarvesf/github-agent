@@ -1,21 +1,115 @@
 import { createTool } from '@mastra/core/tools'
 import { z } from 'zod'
-import {
-  GITHUB_OWNER,
-  GITHUB_REPO,
-  GITHUB_TOKEN,
-  GitHubClient,
-} from '../../lib/github'
+import { GitHubAPIPullRequest, GitHubClient } from '../../lib/github'
 import {
   convertArrayToMarkdownTableList,
   convertNestedArrayToTreeList,
 } from '../../utils/string'
 import { githubIdMapper } from '../../lib/id-mapper'
+import { $Enums, OrganizationRepository, Repositories } from '../../db'
+import { groupBy } from '../../utils/array'
 
-const githubClient = new GitHubClient({
-  githubOwner: GITHUB_OWNER!,
-  githubToken: GITHUB_TOKEN!,
-})
+type OrganizationData = Awaited<
+  ReturnType<typeof GitHubClient.getOrganizationData>
+>
+
+async function getOrganizations(params: {
+  organization?: string
+  channel?: string
+  repository?: string
+}): Promise<OrganizationData[]> {
+  const { organization, channel, repository } = params
+
+  if (organization || channel) {
+    const data = await GitHubClient.getOrganizationData(
+      organization,
+      channel
+        ? {
+            platformChannelId: channel,
+            platform: $Enums.Platform.discord,
+          }
+        : undefined,
+      repository,
+    )
+    return data.organization ? [data] : []
+  }
+
+  if (repository) {
+    const repositories = await Repositories.getByRepositoryName(repository)
+    if (!repositories.length) return []
+
+    const organizations = await Promise.all(
+      repositories.map(async (repo) => {
+        const org = await OrganizationRepository.getById(repo.organizationId)
+        if (!org) {
+          return null
+        }
+        const data = await GitHubClient.getOrganizationData(
+          org.githubName,
+          channel
+            ? {
+                platformChannelId: channel,
+                platform: $Enums.Platform.discord,
+              }
+            : undefined,
+          repository,
+        )
+        return data.organization?.githubTokenId ? data : null
+      }),
+    )
+
+    return organizations.filter((org): org is OrganizationData => org !== null)
+  }
+
+  const orgs = await OrganizationRepository.list()
+  const organizations = await Promise.all(
+    orgs.map(async (org) => {
+      const data = await GitHubClient.getOrganizationData(org.githubName)
+      return data.organization ? data : null
+    }),
+  )
+
+  return organizations.filter((org): org is OrganizationData => org !== null)
+}
+
+async function fetchGitHubData<T>(
+  organizations: OrganizationData[],
+  fetchFn: (client: GitHubClient, repoName: string) => Promise<T[]>,
+  filter?: { repository?: string },
+): Promise<T[]> {
+  const results: T[] = []
+
+  for (const org of organizations) {
+    if (!org.organization?.githubTokenId) continue
+
+    const client = new GitHubClient({
+      githubOwner: org.organization.githubName,
+      githubToken: org.organization.githubTokenId,
+    })
+
+    for (const channel of org.channels) {
+      if (!channel.repositories?.length) continue
+
+      for (const repo of channel.repositories) {
+        if (filter?.repository && repo.githubRepoName !== filter.repository)
+          continue
+        const data = await fetchFn(client, repo.githubRepoName)
+        results.push(...data)
+      }
+    }
+  }
+
+  return results
+}
+
+async function mapGitHubUser(
+  username: string,
+  useDiscordMapping?: boolean,
+): Promise<string> {
+  if (!useDiscordMapping) return username
+  const discordId = await githubIdMapper.getDiscordID(username)
+  return discordId ? `<@!${discordId}>` : `@${username}`
+}
 
 const prListSchema = z.object({
   list: z.array(
@@ -46,6 +140,9 @@ export const getPullRequestTool = createTool({
   inputSchema: z.object({
     reviewerId: z.string().describe('Reviewer ID').optional(),
     commenterId: z.string().describe('Commenter ID').optional(),
+    organization: z.string().describe('Organization name').optional(),
+    channel: z.string().describe('Channel name').optional(),
+    repository: z.string().describe('Repository name').optional(),
     authorId: z.string().describe('Reviewer ID').optional(),
     isOpen: z.boolean().describe('Filter by open PRs').optional(),
     isMerged: z.boolean().describe('Filter by merged PRs').optional(),
@@ -68,50 +165,60 @@ export const getPullRequestTool = createTool({
   }),
   outputSchema: prListSchema.describe('PR JSON list'),
   execute: async ({ context }) => {
-    const prs = await githubClient.getRepoPRs(GITHUB_REPO, {
-      reviewerId: context.reviewerId,
-      commenterId: context.commenterId,
-      from: context.fromDate,
-      to: context.toDate,
-      isMerged: context.isMerged,
-      isOpen: context.isOpen,
-      authorId: context.authorId,
+    const organizations = await getOrganizations({
+      organization: context.organization,
+      channel: context.channel,
+      repository: context.repository,
     })
 
+    const prs = await fetchGitHubData(
+      organizations,
+      (client, repoName) =>
+        client.getRepoPRs(repoName, {
+          reviewerId: context.reviewerId,
+          commenterId: context.commenterId,
+          from: context.fromDate,
+          to: context.toDate,
+          isMerged: context.isMerged,
+          isOpen: context.isOpen,
+          authorId: context.authorId,
+        }),
+      { repository: context.repository },
+    )
+
     return {
-      list: prs.map((pr) => {
-        let author = pr.user.login
-        let reviewers = pr.requested_reviewers.map((reviewer) => reviewer.login)
+      list: await Promise.all(
+        prs.map(async (pr) => {
+          const author = await mapGitHubUser(
+            pr.user.login,
+            context.useDiscordIdMapping,
+          )
+          const reviewers = await Promise.all(
+            pr.requested_reviewers.map((reviewer) =>
+              mapGitHubUser(reviewer.login, context.useDiscordIdMapping),
+            ),
+          )
 
-        if (context.useDiscordIdMapping) {
-          const discordId = githubIdMapper.getDiscordID(author)
-          author = discordId ? `<@!${discordId}>` : `@${author}`
-          reviewers = reviewers.map((reviewer) => {
-            const discordId = githubIdMapper.getDiscordID(reviewer)
-            return discordId ? `<@!${discordId}>` : `@${reviewer}`
-          })
-        }
-
-        return {
-          number: pr.number,
-          title: pr.title,
-          url: pr.html_url,
-          author: author,
-          createdAt: pr.created_at,
-          updatedAt: pr.updated_at,
-          mergedAt: pr.merged_at,
-          isMerged: pr.merged_at !== null,
-          hasMergeConflicts: githubClient.hasMergeConflicts(pr),
-          draft: pr.draft,
-          isWIP: githubClient.isWIP(pr),
-          isWaitingForReview: githubClient.isWaitingForReview(pr),
-          labels: pr.labels.map((label) => label.name),
-          reviewers: reviewers,
-          hasComments: pr.comments > 0 || pr.review_comments > 0,
-          hasReviews: pr.reviews && pr.reviews.length > 0,
-          body: pr.body,
-        }
-      }),
+          const convertedPR =
+            GitHubClient.convertApiPullRequestToPullRequest(pr)
+          return {
+            number: convertedPR.number,
+            title: convertedPR.title,
+            url: convertedPR.url,
+            createdAt: convertedPR.createdAt,
+            updatedAt: convertedPR.updatedAt,
+            draft: convertedPR.draft,
+            isWIP: convertedPR.isWIP,
+            hasMergeConflicts: convertedPR.hasMergeConflicts || false,
+            isWaitingForReview: convertedPR.isWaitingForReview || false,
+            labels: convertedPR.labels || [],
+            hasComments: convertedPR.hasComments || false,
+            hasReviews: convertedPR.hasReviews || false,
+            author,
+            reviewers,
+          }
+        }),
+      ),
     }
   },
 })
@@ -134,6 +241,8 @@ export const getCommitsTool = createTool({
   description: 'Get a list of commits from a repo',
   inputSchema: z.object({
     authorId: z.string().describe('Author of the commits').optional(),
+    organization: z.string().describe('Organization name').optional(),
+    repository: z.string().describe('Repository name'),
     useDiscordIdMapping: z
       .boolean()
       .describe('Use Discord ID mapping')
@@ -151,27 +260,34 @@ export const getCommitsTool = createTool({
     'List of commits in JSON format',
   ),
   execute: async ({ context }) => {
-    const commits = await githubClient.getRepoCommits(GITHUB_REPO, {
-      from: context.fromDate,
-      to: context.toDate,
-      authorId: context.authorId,
+    const organizations = await getOrganizations({
+      organization: context.organization,
+      repository: context.repository,
     })
 
-    return {
-      list: commits.map((c) => {
-        let author = c.author.login
-        if (context.useDiscordIdMapping) {
-          const discordId = githubIdMapper.getDiscordID(author)
-          author = discordId ? `<@!${discordId}>` : `@${author}`
-        }
+    const commits = await fetchGitHubData(
+      organizations,
+      (client, repoName) =>
+        client.getRepoCommits(repoName, {
+          from: context.fromDate,
+          to: context.toDate,
+          authorId: context.authorId,
+        }),
+      { repository: context.repository },
+    )
 
-        return {
-          sha: c.sha,
-          author: author,
-          url: c.html_url,
-          message: c.commit.message,
-        }
-      }),
+    return {
+      list: await Promise.all(
+        commits.map(async (commit) => ({
+          sha: commit.sha,
+          author: await mapGitHubUser(
+            commit.author.login,
+            context.useDiscordIdMapping,
+          ),
+          url: commit.html_url,
+          message: commit.commit.message,
+        })),
+      ),
     }
   },
 })
@@ -181,6 +297,9 @@ export const getUserActivitiesTool = createTool({
   description: 'List user activities in unstructured format',
   inputSchema: z.object({
     authorId: z.string().describe('Reviewer ID'),
+    organization: z.string().describe('Organization name').optional(),
+    channel: z.string().describe('Channel name').optional(),
+    repository: z.string().describe('Repository name').optional(),
     fromDate: z
       .string()
       .describe(
@@ -196,45 +315,58 @@ export const getUserActivitiesTool = createTool({
   }),
   outputSchema: z.object({ rawText: z.string() }),
   execute: async ({ context }) => {
-    const prs = await githubClient.getRepoPRs(GITHUB_REPO, {
-      from: context.fromDate,
-      to: context.toDate,
-      authorId: context.authorId,
+    const organizations = await getOrganizations({
+      organization: context.organization,
+      channel: context.channel,
+      repository: context.repository,
     })
 
-    const openPRs = prs.filter(
-      (pr) => pr.merged_at === null && !githubClient.isWIP(pr),
+    const prs = await fetchGitHubData(organizations, (client, repoName) =>
+      client.getRepoPRs(repoName, {
+        from: context.fromDate,
+        to: context.toDate,
+        authorId: context.authorId,
+      }),
     )
 
-    const mergedPRs = prs.filter((pr) => pr.merged_at !== null)
+    const commits = await fetchGitHubData(organizations, (client, repoName) =>
+      client.getRepoCommits(repoName, {
+        from: context.fromDate,
+        to: context.toDate,
+        authorId: context.authorId,
+      }),
+    )
 
-    const wipPRs = prs.filter((pr) => githubClient.isWIP(pr))
+    const openPRs = prs.filter(
+      (pr: GitHubAPIPullRequest) =>
+        pr.merged_at === null && !GitHubClient.isWIP(pr),
+    )
 
-    const rawParticipatedPRs = await githubClient.getRepoPRs(GITHUB_REPO, {
-      from: context.fromDate,
-      to: context.toDate,
-      reviewerId: context.authorId,
-    })
+    const mergedPRs = prs.filter(
+      (pr: GitHubAPIPullRequest) => pr.merged_at !== null,
+    )
 
-    const needToReviewPRs = rawParticipatedPRs.filter((pr) => {
-      return !prs.find((p) => p.number === pr.number)
-    })
+    const wipPRs = prs.filter((pr: GitHubAPIPullRequest) =>
+      GitHubClient.isWIP(pr),
+    )
 
-    const rawNeedYouToReviewPRs = await githubClient.getRepoPRs(GITHUB_REPO, {
-      from: context.fromDate,
-      to: context.toDate,
-      reviewerId: context.authorId,
-    })
+    const rawParticipatedPRs = prs.filter((pr: GitHubAPIPullRequest) =>
+      pr.requested_reviewers.some(
+        (reviewer) => reviewer.login === context.authorId,
+      ),
+    )
 
-    const needYouToReviewPRs = rawNeedYouToReviewPRs.filter((pr) => {
-      return githubClient.isWaitingForReview(pr)
-    })
+    const needToReviewPRs = rawParticipatedPRs.filter(
+      (pr: GitHubAPIPullRequest) => {
+        return !prs.find((p: GitHubAPIPullRequest) => p.number === pr.number)
+      },
+    )
 
-    const commits = await githubClient.getRepoCommits(GITHUB_REPO, {
-      from: context.fromDate,
-      to: context.toDate,
-      authorId: context.authorId,
-    })
+    const needYouToReviewPRs = rawParticipatedPRs.filter(
+      (pr: GitHubAPIPullRequest) => {
+        return GitHubClient.isWaitingForReview(pr)
+      },
+    )
 
     const summary = [
       { label: 'Open PRs', value: `**${openPRs.length}**` },
@@ -258,7 +390,7 @@ export const getUserActivitiesTool = createTool({
       representData.push(
         convertNestedArrayToTreeList({
           label: '`Open PRs:`',
-          children: openPRs.map((pr) => ({
+          children: openPRs.map((pr: GitHubAPIPullRequest) => ({
             label: `[#${pr.number}](${pr.html_url}) ${pr.title}`,
           })),
         }),
@@ -270,7 +402,7 @@ export const getUserActivitiesTool = createTool({
       representData.push(
         convertNestedArrayToTreeList({
           label: '`Merged PRs:`',
-          children: mergedPRs.map((pr) => ({
+          children: mergedPRs.map((pr: GitHubAPIPullRequest) => ({
             label: `[#${pr.number}](${pr.html_url}) ${pr.title}`,
           })),
         }),
@@ -281,7 +413,7 @@ export const getUserActivitiesTool = createTool({
       representData.push(
         convertNestedArrayToTreeList({
           label: '`WIP PRs:`',
-          children: wipPRs.map((pr) => ({
+          children: wipPRs.map((pr: GitHubAPIPullRequest) => ({
             label: `[#${pr.number}](${pr.html_url}) ${pr.title}`,
           })),
         }),
@@ -292,7 +424,7 @@ export const getUserActivitiesTool = createTool({
       representData.push(
         convertNestedArrayToTreeList({
           label: '`Need to review:`',
-          children: needToReviewPRs.map((pr) => ({
+          children: needToReviewPRs.map((pr: GitHubAPIPullRequest) => ({
             label: `[#${pr.number}](${pr.html_url}) ${pr.title}`,
           })),
         }),
@@ -303,7 +435,7 @@ export const getUserActivitiesTool = createTool({
       representData.push(
         convertNestedArrayToTreeList({
           label: '`Need to assign reviewer:`',
-          children: needYouToReviewPRs.map((pr) => ({
+          children: needYouToReviewPRs.map((pr: GitHubAPIPullRequest) => ({
             label: `[#${pr.number}](${pr.html_url}) ${pr.title}`,
           })),
         }),
@@ -311,15 +443,20 @@ export const getUserActivitiesTool = createTool({
     }
 
     if (commits.length > 0) {
-      representData.push('\n')
-      representData.push(
-        convertNestedArrayToTreeList({
-          label: '`Commits:`',
-          children: commits.map((c) => ({
-            label: `[${c.sha.substring(0, 8)}](${c.html_url}) ${c.message}`,
-          })),
-        }),
-      )
+      const groupedCommitByRepository = groupBy(commits, (commit) => {
+        return commit.html_url.split('/')[4]!
+      })
+      for (const repo in groupedCommitByRepository) {
+        representData.push('\n')
+        representData.push(
+          convertNestedArrayToTreeList({
+            label: `\`${repo}:\``,
+            children: groupedCommitByRepository[repo]!.map((c) => ({
+              label: `[${c.sha.substring(0, 8)}](${c.html_url}) ${c.commit.message}`,
+            })),
+          }),
+        )
+      }
     }
 
     return {

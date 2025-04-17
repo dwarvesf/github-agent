@@ -13,17 +13,17 @@ import {
   NotificationType,
 } from '../../db/event.repository'
 import { discordClient } from '../../lib/discord'
-import { GitHubAPIPullRequest } from '../../lib/github'
-import { RepositoryDMChannelUser } from '../../lib/repository-dm-user'
+import { GitHubAPIPullRequest, GitHubClient } from '../../lib/github'
+import { GithubDataManager } from '../../lib/github-data-manager'
+import {
+  NotificationEmbed,
+  NotificationEmbedBuilder,
+  NotificationTemplate,
+} from '../../lib/notification-embed'
 import { PullRequest } from '../../lib/type'
 import { groupBy } from '../../utils/array'
 import { prTitleFormatValid } from '../../utils/string'
 import { suggestPRDescriptionAgent } from '../agents/analyze-github-prs'
-import {
-  NotificationEmbedBuilder,
-  NotificationTemplate,
-  NotificationEmbed,
-} from '../../lib/notification-embed'
 
 // Types
 type Platform = $Enums.Platform
@@ -293,7 +293,7 @@ const notifyDeveloperAboutPRStatus = new Workflow({
         > = []
         for (const organization of organizations) {
           try {
-            const organizationReposInstance = new RepositoryDMChannelUser()
+            const organizationReposInstance = new GithubDataManager()
             await organizationReposInstance.initClient(organization.githubName)
 
             const repositories = organizationReposInstance.groupRepositories()
@@ -316,7 +316,7 @@ const notifyDeveloperAboutPRStatus = new Workflow({
                 const prs = await Promise.all(
                   item.prs.map(async (pr) => {
                     const prWithReviews = await githubClient.getPRReviews(pr)
-                    return githubClient.convertApiPullRequestToPullRequest(
+                    return GitHubClient.convertApiPullRequestToPullRequest(
                       prWithReviews,
                     )
                   }),

@@ -1,16 +1,16 @@
 import { Step, Workflow } from '@mastra/core/workflows'
 import { z } from 'zod'
-import { discordClient } from '../../lib/discord'
-import { PullRequest } from '../../lib/type'
-import { RepositoryDMChannelUser } from '../../lib/repository-dm-user'
 import {
   $Enums,
   EventData,
   MemberRepository,
   OrganizationRepository,
 } from '../../db'
+import { discordClient } from '../../lib/discord'
 import { GitHubAPIPullRequest, GitHubClient } from '../../lib/github'
+import { GithubDataManager } from '../../lib/github-data-manager'
 import { NotificationEmbedBuilder } from '../../lib/notification-embed'
+import { PullRequest } from '../../lib/type'
 
 // Types
 interface ReviewerWithPRs {
@@ -105,7 +105,7 @@ class NotifyReviewersWorkflow {
         reposPRs.push({
           repoName: repo.repoName,
           prs: needsReviewPRs.map((pr) =>
-            githubClient.convertApiPullRequestToPullRequest(pr),
+            GitHubClient.convertApiPullRequestToPullRequest(pr),
           ),
         })
       }
@@ -168,7 +168,7 @@ class NotifyReviewersWorkflow {
       }
       const orgReposPRs: Array<RepoPRs[]> = []
       for (const org of organizations) {
-        const organizationReposInstance = new RepositoryDMChannelUser()
+        const organizationReposInstance = new GithubDataManager()
         await organizationReposInstance.initClient(org.githubName)
 
         const repositories = organizationReposInstance.groupRepositories()
