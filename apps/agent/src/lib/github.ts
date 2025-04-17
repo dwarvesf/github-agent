@@ -398,13 +398,13 @@ class GitHubClient {
    * Retrieves organization channels
    * @param organizationId The unique identifier of the organization
    * @param channelType The type of channel (optional)
-   * @param channel The name of the channel (optional)
+   * @param channelId The id of the channel (optional)
    * @returns Object containing the organization's channels
    */
   static getOrganizationChannels(p: {
     organizationId: number
     channelType?: $Enums.Platform
-    channel?: string
+    channelId?: string
   }) {
     return ChannelRepository.getByOrganization({
       where: {
@@ -412,7 +412,7 @@ class GitHubClient {
           equals: p.organizationId,
         },
         platform: p.channelType,
-        name: p.channel,
+        platformChannelId: p.channelId,
       },
     })
   }
@@ -425,12 +425,12 @@ class GitHubClient {
    */
   static async getChannelsRepositories(
     organizationId: number,
-    channel?: string,
+    channelId?: string,
     repository?: string,
   ): Promise<Array<Channel & { repositories: Repository[] }>> {
     const channels = await this.getOrganizationChannels({
       organizationId,
-      channel,
+      channelId,
     })
     return await Promise.all(
       channels.map(async (channel) => {
