@@ -249,6 +249,88 @@ const stepFetchRepoData = new Step({
   },
 })
 
+// Helper function to generate repository report
+const generateRepositoryReport = (repoData: RepoData) => {
+  // Filter PR data for this specific repository
+  const openPRs =
+    repoData.todayPRs.filter((pr) => !pr.isMerged && !pr.isWIP) || []
+  const mergedPRs = repoData.todayPRs.filter((pr) => pr.isMerged) || []
+  const wipPRs = repoData.todayPRs.filter((pr) => pr.isWIP) || []
+  const needToReviewPRs = repoData.todayPRs.filter(
+    (pr) => !pr.isMerged && !pr.isWIP && pr.isWaitingForReview,
+  )
+
+  // Create summary for this repository
+  const summary = [
+    { label: 'Open PRs', value: `**${openPRs.length}**` },
+    { label: 'Merged PRs', value: `**${mergedPRs.length}**` },
+    { label: 'WIP PRs', value: `**${wipPRs.length}**` },
+    { label: 'Commits', value: `**${repoData.todayCommits.length}**` },
+  ]
+
+  const representData = [
+    '🔥 **Summary**',
+    convertArrayToMarkdownTableList(summary, false),
+  ]
+
+  if (openPRs.length > 0) {
+    representData.push(
+      convertNestedArrayToTreeList({
+        label: '`Open PRs:`',
+        children: openPRs.map((pr) => ({
+          label: `[#${pr.number}](${pr.url}) ${pr.title}`,
+        })),
+      }),
+    )
+  }
+
+  if (mergedPRs.length > 0) {
+    representData.push(
+      convertNestedArrayToTreeList({
+        label: '\n`Merged PRs:`',
+        children: mergedPRs.map((pr) => ({
+          label: `[#${pr.number}](${pr.url}) ${pr.title}`,
+        })),
+      }),
+    )
+  }
+
+  if (wipPRs.length > 0) {
+    representData.push(
+      convertNestedArrayToTreeList({
+        label: '\n`WIP PRs:`',
+        children: wipPRs.map((pr) => ({
+          label: `[#${pr.number}](${pr.url}) ${pr.title}`,
+        })),
+      }),
+    )
+  }
+
+  if (needToReviewPRs.length > 0) {
+    representData.push(
+      convertNestedArrayToTreeList({
+        label: '\n`Need to review PRs:`',
+        children: needToReviewPRs.map((pr) => ({
+          label: `[#${pr.number}](${pr.url}) ${pr.title}`,
+        })),
+      }),
+    )
+  }
+
+  if (repoData.todayCommits.length > 0) {
+    representData.push(
+      convertNestedArrayToTreeList({
+        label: '\n`Commits:`',
+        children: repoData.todayCommits.map((c) => ({
+          label: `[${c.sha.substring(0, 8)}](${c.url}) ${c.message}`,
+        })),
+      }),
+    )
+  }
+
+  return representData.join('\n').trim() || 'No activity today'
+}
+
 // Step 3: Compose messages for each channel
 const stepComposeMessages = new Step({
   id: 'compose-messages',
@@ -256,7 +338,12 @@ const stepComposeMessages = new Step({
     messages: z.array(
       z.object({
         channelData: channelDataSchema,
-        message: z.string(),
+        repositoryMessages: z.array(
+          z.object({
+            repoData: repoDataSchema,
+            message: z.string(),
+          }),
+        ),
       }),
     ),
   }),
@@ -269,141 +356,19 @@ const stepComposeMessages = new Step({
     const messages = []
 
     for (const channelData of channelDataList) {
-      // Aggregate all PRs and commits across repositories for this channel
-      let allOpenPRs: PR[] = []
-      let allMergedPRs: PR[] = []
-      let allWipPRs: PR[] = []
-      let allNeedToReviewPRs: PR[] = []
-      let allCommits: Commit[] = []
-
-      // Process each repository
-      for (const repoData of channelData.repositories) {
-        const { todayPRs, todayCommits } = repoData
-
-        // Add repository name to PR titles for clarity
-        const repoOpenPRs = todayPRs
-          .filter((pr: PR) => !pr.isMerged && !pr.isWIP)
-          .map((pr: PR) => ({
-            ...pr,
-            title: `[${repoData.repoName}] ${pr.title}`,
-          }))
-
-        const repoMergedPRs = todayPRs
-          .filter((pr: PR) => pr.isMerged)
-          .map((pr: PR) => ({
-            ...pr,
-            title: `[${repoData.repoName}] ${pr.title}`,
-          }))
-
-        const repoWipPRs = todayPRs
-          .filter((pr: PR) => pr.isWIP)
-          .map((pr: PR) => ({
-            ...pr,
-            title: `[${repoData.repoName}] ${pr.title}`,
-          }))
-
-        const repoNeedToReviewPRs = todayPRs
-          .filter(
-            (pr: PR) => !pr.isMerged && !pr.isWIP && pr.isWaitingForReview,
-          )
-          .map((pr: PR) => ({
-            ...pr,
-            title: `[${repoData.repoName}] ${pr.title}`,
-          }))
-
-        // Add repository name to commit messages for clarity
-        const repoCommits = todayCommits.map((commit: Commit) => ({
-          ...commit,
-          message: `[${repoData.repoName}] ${commit.message}`,
-        }))
-
-        // Aggregate
-        allOpenPRs = [...allOpenPRs, ...repoOpenPRs]
-        allMergedPRs = [...allMergedPRs, ...repoMergedPRs]
-        allWipPRs = [...allWipPRs, ...repoWipPRs]
-        allNeedToReviewPRs = [...allNeedToReviewPRs, ...repoNeedToReviewPRs]
-        allCommits = [...allCommits, ...repoCommits]
-      }
-
-      // Create summary
-      const summary = [
-        { label: 'Open PRs', value: `**${allOpenPRs.length}**` },
-        { label: 'Merged PRs', value: `**${allMergedPRs.length}**` },
-        { label: 'WIP PRs', value: `**${allWipPRs.length}**` },
-        { label: 'Commits', value: `**${allCommits.length}**` },
-        {
-          label: 'Repositories',
-          value: `**${channelData.repositories.length}**`,
-        },
-      ]
-
-      const representData = [
-        '🔥 **Summary**',
-        convertArrayToMarkdownTableList(summary, false),
-      ]
-
-      if (allOpenPRs.length > 0) {
-        representData.push(
-          convertNestedArrayToTreeList({
-            label: '`Open PRs:`',
-            children: allOpenPRs.map((pr) => ({
-              label: `[#${pr.number}](${pr.url}) ${pr.title}`,
-            })),
-          }),
-        )
-      }
-
-      if (allMergedPRs.length > 0) {
-        representData.push(
-          convertNestedArrayToTreeList({
-            label: '\n`Merged PRs:`',
-            children: allMergedPRs.map((pr) => ({
-              label: `[#${pr.number}](${pr.url}) ${pr.title}`,
-            })),
-          }),
-        )
-      }
-
-      if (allWipPRs.length > 0) {
-        representData.push(
-          convertNestedArrayToTreeList({
-            label: '\n`WIP PRs:`',
-            children: allWipPRs.map((pr) => ({
-              label: `[#${pr.number}](${pr.url}) ${pr.title}`,
-            })),
-          }),
-        )
-      }
-
-      if (allNeedToReviewPRs.length > 0) {
-        representData.push(
-          convertNestedArrayToTreeList({
-            label: '\n`Need to review PRs:`',
-            children: allNeedToReviewPRs.map((pr) => ({
-              label: `[#${pr.number}](${pr.url}) ${pr.title}`,
-            })),
-          }),
-        )
-      }
-
-      if (allCommits.length > 0) {
-        representData.push(
-          convertNestedArrayToTreeList({
-            label: '\n`Commits:`',
-            children: allCommits.map((c) => ({
-              label: `[${c.sha.substring(0, 8)}](${c.url}) ${c.message}`,
-            })),
-          }),
-        )
-      }
-
-      const message = representData.join('\n').trim() || ''
+      const repositoryMessages = channelData.repositories.map(
+        (repoData: RepoData) => ({
+          repoData,
+          message: generateRepositoryReport(repoData),
+        }),
+      )
 
       messages.push({
         channelData,
-        message,
+        repositoryMessages,
       })
     }
+
     return { messages }
   },
 })
@@ -431,101 +396,15 @@ const stepSendMessages = new Step({
     const { messages } = context.steps['compose-messages'].output
     const results = []
 
-    for (const { channelData, message } of messages) {
-      // Instead of sending one aggregated message, send individual messages for each repository
-      for (const repoData of channelData.repositories) {
+    for (const { channelData, repositoryMessages } of messages) {
+      for (const { repoData, message } of repositoryMessages) {
         try {
           if (channelData.platform === 'discord') {
-            // Filter PR and commit data for this specific repository
-            const openPRs =
-              repoData.todayPRs.filter((pr: PR) => !pr.isMerged && !pr.isWIP) ||
-              []
-            const mergedPRs =
-              repoData.todayPRs.filter((pr: PR) => pr.isMerged) || []
-            const wipPRs = repoData.todayPRs.filter((pr: PR) => pr.isWIP) || []
-            const needToReviewPRs = repoData.todayPRs.filter(
-              (pr: PR) => !pr.isMerged && !pr.isWIP && pr.isWaitingForReview,
-            )
-
-            // Create summary for this repository
-            const summary = [
-              { label: 'Open PRs', value: `**${openPRs.length}**` },
-              { label: 'Merged PRs', value: `**${mergedPRs.length}**` },
-              { label: 'WIP PRs', value: `**${wipPRs.length}**` },
-              {
-                label: 'Commits',
-                value: `**${repoData.todayCommits.length}**`,
-              },
-            ]
-
-            const representData = [
-              '🔥 **Summary**',
-              convertArrayToMarkdownTableList(summary, false),
-            ]
-
-            if (openPRs.length > 0) {
-              representData.push(
-                convertNestedArrayToTreeList({
-                  label: '`Open PRs:`',
-                  children: openPRs.map((pr: PR) => ({
-                    label: `[#${pr.number}](${pr.url}) ${pr.title}`,
-                  })),
-                }),
-              )
-            }
-
-            if (mergedPRs.length > 0) {
-              representData.push(
-                convertNestedArrayToTreeList({
-                  label: '\n`Merged PRs:`',
-                  children: mergedPRs.map((pr: PR) => ({
-                    label: `[#${pr.number}](${pr.url}) ${pr.title}`,
-                  })),
-                }),
-              )
-            }
-
-            if (wipPRs.length > 0) {
-              representData.push(
-                convertNestedArrayToTreeList({
-                  label: '\n`WIP PRs:`',
-                  children: wipPRs.map((pr: PR) => ({
-                    label: `[#${pr.number}](${pr.url}) ${pr.title}`,
-                  })),
-                }),
-              )
-            }
-
-            if (needToReviewPRs.length > 0) {
-              representData.push(
-                convertNestedArrayToTreeList({
-                  label: '\n`Need to review PRs:`',
-                  children: needToReviewPRs.map((pr: PR) => ({
-                    label: `[#${pr.number}](${pr.url}) ${pr.title}`,
-                  })),
-                }),
-              )
-            }
-
-            if (repoData.todayCommits.length > 0) {
-              representData.push(
-                convertNestedArrayToTreeList({
-                  label: '\n`Commits:`',
-                  children: repoData.todayCommits.map((c: Commit) => ({
-                    label: `[${c.sha.substring(0, 8)}](${c.url}) ${c.message}`,
-                  })),
-                }),
-              )
-            }
-
-            const repoMessage =
-              representData.join('\n').trim() || 'No activity today'
-
             await discordClient.sendMessageToChannel({
               channelId: channelData.channelId,
               embed: {
                 title: `🤖 Daily report (${formatDate(new Date(), 'MMMM d, yyyy')}) for ${repoData.repoName}`,
-                description: repoMessage,
+                description: message,
                 color: 15158332,
                 footer: {
                   text: `${channelData.orgName}/${repoData.repoName}`,
