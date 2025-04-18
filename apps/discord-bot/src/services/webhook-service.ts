@@ -1,14 +1,20 @@
 import express from 'express'
 import bodyParser from 'body-parser'
-import { Client } from 'discord.js'
+import { APIEmbed, Client, ActionRowBuilder, ButtonBuilder } from 'discord.js'
 import { Logger } from '../services/index.js'
 import { RootController } from '../controllers/root-controller.js'
 import { Controller } from '../controllers/index.js'
-import { processResponseToEmbedFields } from '../commands/common.js'
+import {
+  processResponseToEmbedFields,
+  splittingDescriptionEmbedToMultipleEmbeds,
+  splittingResponseFieldsToEmbedFields,
+} from '../commands/common.js'
+import { PaginationUtils } from '../utils/pagination-utils'
 
 interface MessagePayload {
   content?: string
-  embeds?: any[]
+  embeds?: APIEmbed[]
+  components?: ActionRowBuilder<ButtonBuilder>[]
 }
 
 interface WebhookRequest {
@@ -48,16 +54,32 @@ export class WebhookService {
     }
 
     if (request.embed) {
+      let embeds = [request.embed]
       if (request.embed.table) {
-        request.embed.fields = await processResponseToEmbedFields(
+        embeds = await processResponseToEmbedFields(
           this.client,
           '',
           request.embed.table.value,
         )
+        embeds = embeds.map((fields) => ({
+          ...request.embed,
+          fields,
+        }))
         delete request.embed.table
       }
 
-      payload.embeds = [request.embed]
+      if (request.embed.description) {
+        embeds = splittingDescriptionEmbedToMultipleEmbeds(request.embed)
+      }
+
+      if (Array.isArray(request.embed.fields)) {
+        embeds = splittingResponseFieldsToEmbedFields(request.embed.fields)
+        embeds = embeds.map((fields) => ({
+          ...request.embed,
+          fields,
+        }))
+      }
+      payload.embeds = embeds
     }
 
     return payload
@@ -106,7 +128,17 @@ export class WebhookService {
 
       // Create and send message
       const payload = await this.createMessagePayload(request)
-      await channel.send(payload)
+
+      // Setup pagination if needed
+      if (payload.embeds && payload.embeds.length > 1) {
+        PaginationUtils.setupWebhookPaginationCollector(
+          channel,
+          payload.embeds,
+          payload.content,
+        )
+      } else {
+        await channel.send(payload)
+      }
 
       return res
         .status(200)
@@ -135,7 +167,17 @@ export class WebhookService {
 
         // Create and send message
         const payload = await this.createMessagePayload(request)
-        await dmChannel.send(payload)
+
+        // Setup pagination if needed
+        if (payload.embeds && payload.embeds.length > 1) {
+          PaginationUtils.setupWebhookPaginationCollector(
+            dmChannel,
+            payload.embeds,
+            payload.content,
+          )
+        } else {
+          await dmChannel.send(payload)
+        }
 
         return res
           .status(200)
