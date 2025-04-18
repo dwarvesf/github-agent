@@ -71,7 +71,7 @@ export class AskCommand implements Command {
       for await (const chunk of getStreamedResponse(
         intr.user.id,
         question,
-        intr.channel.isDMBased() ? undefined : intr.channelId,
+        intr.channel?.isDMBased?.() ? undefined : intr.channelId,
       )) {
         response += chunk
       }
