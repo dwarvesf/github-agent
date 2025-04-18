@@ -202,6 +202,8 @@ class GitHubClient {
       commenterId?: string
       from?: string // YYYY-MM-DD
       to?: string // YYYY-MM-DD
+      updatedFrom?: string // YYYY-MM-DD
+      updatedTo?: string // YYYY-MM-DD
     },
   ): Promise<GitHubAPIPullRequest[]> {
     const apiPRs: GitHubAPIPullRequest[] = []
@@ -214,6 +216,8 @@ class GitHubClient {
       commenterId,
       from,
       to,
+      updatedFrom,
+      updatedTo,
     } = params || {}
     const reviewerFilter = reviewerId
       ? ` user-review-requested:${reviewerId}`
@@ -228,10 +232,18 @@ class GitHubClient {
         let dateFilter = ''
         if (from || to) {
           if (from) {
-            dateFilter = ` updated:>=${from}`
+            dateFilter = ` created:>=${from}`
           }
           if (to) {
-            dateFilter = ` updated:<=${to}`
+            dateFilter = ` created:<=${to}`
+          }
+        }
+        if (updatedFrom || updatedTo) {
+          if (updatedFrom) {
+            dateFilter += ` updated:>=${updatedFrom}`
+          }
+          if (updatedTo) {
+            dateFilter += ` updated:<=${updatedTo}`
           }
         }
         const openQuery = `is:pr is:open ${
@@ -244,12 +256,12 @@ class GitHubClient {
       // Fetch merged PRs
       if (isMerged) {
         let dateFilter = ''
-        if (from || to) {
-          if (from) {
-            dateFilter = ` merged:>=${from}`
+        if (from || to || updatedFrom || updatedTo) {
+          if (from || updatedFrom) {
+            dateFilter = ` merged:>=${from || updatedFrom}`
           }
-          if (to) {
-            dateFilter = ` merged:<=${to}`
+          if (to || updatedTo) {
+            dateFilter += ` merged:<=${to || updatedTo}`
           }
         }
         const mergedQuery = `is:pr is:merged ${

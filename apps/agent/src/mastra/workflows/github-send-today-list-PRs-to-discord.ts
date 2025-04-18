@@ -179,7 +179,7 @@ const stepFetchRepoData = new Step({
           try {
             // Fetch PRs for this repository
             const prs = await githubClient.getRepoPRs(repo.githubRepoName, {
-              from: formatDate(new Date()),
+              updatedFrom: formatDate(new Date()),
             })
 
             // Fetch commits for this repository
@@ -405,7 +405,7 @@ const stepSendMessages = new Step({
               embed: {
                 title: `🤖 Daily report (${formatDate(new Date(), 'MMMM d, yyyy')}) for ${repoData.repoName}`,
                 description: message,
-                color: 15158332,
+                color: 3447003,
                 footer: {
                   text: `${channelData.orgName}/${repoData.repoName}`,
                 },
