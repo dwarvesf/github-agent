@@ -1,17 +1,18 @@
 import { createTool } from '@mastra/core/tools'
 import { z } from 'zod'
-import { githubIdMapper } from '../../lib/id-mapper'
 import {
   convertNestedArrayToTreeList,
   escapeSpecialCharactersForMarkdown,
 } from '../../utils/string'
 import { CommitsToolOutputSchema, PRListOutputSchema } from './github'
+import { MemberRepository } from '../../db'
 
 export const formatCommitList = createTool({
   id: 'format-commits-to-markdown-list-agent',
   description: 'format a list of commits to markdown format',
   inputSchema: z.object({
     list: z.string().describe('JSON list'),
+    platform: z.enum(['github', 'discord']).default('github').optional(),
   }),
   outputSchema: z.object({
     markdown: z.string().describe('Markdown commit list'),
@@ -29,9 +30,22 @@ export const formatCommitList = createTool({
     return {
       markdown: convertNestedArrayToTreeList({
         label: '`Commits:`',
-        children: list.map((commit) => ({
-          label: `[\`${commit.sha}\`](${commit.url}) ${escapeSpecialCharactersForMarkdown(commit.message)} by @${commit.author}`,
-        })),
+        children: list.map((commit) => {
+          let authorTag = `@${commit.author}`
+          switch (context.platform) {
+            case 'discord':
+              authorTag = commit.authorDiscordId
+                ? `<@${commit.authorDiscordId}>`
+                : authorTag
+              break
+            default:
+              break
+          }
+
+          return {
+            label: `[\`${commit.sha}\`](${commit.url}) ${escapeSpecialCharactersForMarkdown(commit.message)} by ${authorTag}`,
+          }
+        }),
       }),
     }
   },
@@ -42,6 +56,7 @@ export const formatPullRequestList = createTool({
   description: 'format a list of pull requests to markdown format',
   inputSchema: z.object({
     list: z.string().describe('JSON list'),
+    platform: z.enum(['github', 'discord']).default('github').optional(),
   }),
   outputSchema: z.object({
     markdown: z.string().describe('Markdown pull request list'),
@@ -66,78 +81,61 @@ export const formatPullRequestList = createTool({
     return {
       markdown: convertNestedArrayToTreeList({
         label: '`Pull requests:`',
-        children: list.map((pr) => ({
-          label: `[\`#${pr.number}\`](${pr.url}) ${escapeSpecialCharactersForMarkdown(pr.title)} by @${pr.author}`,
-        })),
+        children: list.map((pr) => {
+          let authorTag = `@${pr.author}`
+          switch (context.platform) {
+            case 'discord':
+              authorTag = pr.authorDiscordId
+                ? `<@${pr.authorDiscordId}>`
+                : authorTag
+              break
+            default:
+              break
+          }
+
+          return {
+            label: `[\`#${pr.number}\`](${pr.url}) ${escapeSpecialCharactersForMarkdown(pr.title)} by ${authorTag}`,
+          }
+        }),
       }),
     }
   },
 })
 
-export const mapGithubIdsToDiscordIdsTool = createTool({
-  id: 'map-users-github-to-discord-id-tool',
-  description: 'Map users Github ID to Discord ID',
+export const mapPlatformIdToGithubIdTool = createTool({
+  id: 'map-users-platform-to-github-id-tool',
+  description: 'Map users platform ID to Github ID',
   inputSchema: z.object({
-    message: z.string().describe('Message Content'),
+    id: z.string().describe('platform id'),
+    platform: z.enum(['github', 'discord']).default('github').optional(),
   }),
   outputSchema: z.object({
-    message: z.string(),
+    githubId: z.string().optional(),
   }),
   execute: async ({ context }) => {
-    const matches = [...context.message.matchAll(/@([a-zA-Z0-9_-]+)/g)]
-    const replacements = await Promise.all(
-      matches.map(async ([match, githubId]) => {
-        const discordId = githubId
-          ? await githubIdMapper.getDiscordID(githubId)
-          : ''
-        return {
-          match,
-          replacement: discordId ? `<@!${discordId}>` : match,
-        }
-      }),
-    )
+    if (context.platform === 'github') {
+      return {
+        githubId: context.id,
+      }
+    }
 
-    let message = context.message
-    for (const { match, replacement } of replacements) {
-      message = message.replace(match, replacement)
+    const members = await MemberRepository.list({
+      where: {
+        platformId: context.id,
+        platformType: context.platform,
+      },
+    })
+
+    for (const member of members) {
+      if (member.platformId && context.id == member.platformId) {
+        return {
+          githubId: member.githubId,
+        }
+      }
     }
 
     return {
-      message,
-    }
-  },
-})
-
-export const mapDiscordIdsToGithubIdsTool = createTool({
-  id: 'map-users-discord-to-github-id-tool',
-  description: 'Map users Discord ID to Github ID',
-  inputSchema: z.object({
-    message: z.string().describe('Message Content'),
-  }),
-  outputSchema: z.object({
-    message: z.string(),
-  }),
-  execute: async ({ context }) => {
-    const matches = [...context.message.matchAll(/<@!?(\d+)>/g)]
-    const replacements = await Promise.all(
-      matches.map(async ([match, discordId]) => {
-        const githubId = discordId
-          ? await githubIdMapper.getGithubIDByDiscordId(discordId)
-          : ''
-        return {
-          match,
-          replacement: githubId ? githubId : match,
-        }
-      }),
-    )
-
-    let message = context.message
-    for (const { match, replacement } of replacements) {
-      message = message.replace(match, replacement)
-    }
-
-    return {
-      message,
+      githubId: undefined,
     }
   },
 })
