@@ -1,4 +1,5 @@
-import { APIEmbedField, Client } from 'discord.js'
+import { APIEmbed, APIEmbedField, Client } from 'discord.js'
+import { DiscordLimits } from '../constants'
 
 const hardCodeIDMap = {
   zlatanpham: '790170208228212766',
@@ -61,13 +62,90 @@ export async function getUsername(
   }
 }
 
+export function splittingDescriptionEmbedToMultipleEmbeds(
+  input: APIEmbed,
+): APIEmbed[] {
+  const maxDescriptionLength = DiscordLimits.EMBED_DESCRIPTION_LENGTH - 200
+  const description = input.description ?? ''
+  const chunks: APIEmbed[] = []
+  let currentChunk = ''
+
+  for (const line of description.split('\n')) {
+    if (currentChunk.length + line.length + 1 > maxDescriptionLength) {
+      chunks.push({ ...input, description: currentChunk })
+      currentChunk = ''
+    }
+    currentChunk += (currentChunk ? '\n' : '') + line
+  }
+
+  if (currentChunk) {
+    chunks.push({ ...input, description: currentChunk })
+  }
+
+  return chunks
+}
+
+export function splittingResponseFieldsToEmbedFields(
+  embedFields: APIEmbedField[],
+): APIEmbedField[][] {
+  const maxEmbedSize = DiscordLimits.EMBED_COMBINED_LENGTH - 1000
+  const maxFields = DiscordLimits.FIELDS_PER_EMBED - 2
+  // Check if the accumulated fields length exceeds the limit
+  const isOverLimit =
+    embedFields.reduce((acc, field) => acc + field.value.length, 0) >=
+    maxEmbedSize
+  if (isOverLimit) {
+    const chunks: APIEmbedField[][] = []
+    let currentChunk: APIEmbedField[] = []
+
+    for (const field of embedFields) {
+      if (
+        currentChunk.reduce((acc, f) => acc + f.value.length, 0) >= maxEmbedSize
+      ) {
+        chunks.push([...currentChunk])
+        currentChunk = [field]
+      } else {
+        currentChunk.push(field)
+      }
+    }
+
+    if (currentChunk.length > 0) {
+      chunks.push([...currentChunk])
+    }
+
+    return chunks
+  }
+
+  // Check if the number of fields exceeds the limit
+  if (embedFields.length >= maxFields) {
+    const chunks: APIEmbedField[][] = []
+    let currentChunk: APIEmbedField[] = []
+
+    for (const field of embedFields) {
+      if (currentChunk.length >= maxFields) {
+        chunks.push(currentChunk)
+        currentChunk = []
+      }
+      currentChunk.push(field)
+    }
+
+    if (currentChunk.length > 0) {
+      chunks.push(currentChunk)
+    }
+
+    return chunks
+  }
+
+  return [embedFields]
+}
+
 export async function processResponseToEmbedFields(
   client: Client,
   guildID: string,
   response: string,
-): Promise<APIEmbedField[]> {
+): Promise<APIEmbedField[][]> {
   const fields: APIEmbedField[] = []
-  const maxChunkSize = 800
+  const maxChunkSize = DiscordLimits.EMBED_FIELD_VALUE_LENGTH - 200
   const discordIDs = getDiscordMentions(response)
   let currentChunk = ''
   let isTable = false
@@ -107,11 +185,13 @@ export async function processResponseToEmbedFields(
 
   pushField()
 
-  return fields.map((field) => ({
+  const embedFields = fields.map((field) => ({
     name: '',
     value: field.value,
     inline: false,
   }))
+
+  return splittingResponseFieldsToEmbedFields(embedFields)
 }
 
 // Constants for regex patterns
