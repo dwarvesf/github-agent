@@ -1,9 +1,13 @@
-import { ChatInputCommandInteraction, PermissionsString } from 'discord.js'
+import {
+  ButtonStyle,
+  ChatInputCommandInteraction,
+  PermissionsString,
+} from 'discord.js'
 
 import { EventData } from '../../models/internal-models.js'
 import { Language } from '../../models/enum-helpers/index.js'
 import { Lang } from '../../services/index.js'
-import { InteractionUtils } from '../../utils/index.js'
+import { InteractionUtils, PaginationUtils } from '../../utils/index.js'
 import {
   Command,
   CommandDeferType,
@@ -79,16 +83,23 @@ export class AskCommand implements Command {
       const processedResponse = await processResponseToEmbedFields(
         intr.client,
         intr.guildId,
-        `**Question**: ${formatQuestionWithUserMention(question)}\n\n${response}`,
+        `${response}`,
       )
 
-      // Set the embed color to 5737479 when the stream is complete
-      const finalEmbed = Lang.getEmbed('displayEmbeds.askResponse', data.lang, {
-        USER: intr.user.id,
-      })
-        .setColor(5737479)
-        .addFields([
-          ...processedResponse,
+      const questionField = {
+        name: '',
+        value: `**Question**: ${formatQuestionWithUserMention(question)}\n`,
+        inline: false,
+      }
+
+      const embeds = processedResponse.map((fields, index) => {
+        const embed = Lang.getEmbed('displayEmbeds.askResponse', data.lang, {
+          USER: intr.user.id,
+        }).setColor(5737479)
+
+        embed.addFields([
+          questionField,
+          ...fields,
           {
             name: '',
             value:
@@ -104,7 +115,31 @@ export class AskCommand implements Command {
           },
         ])
 
-      await InteractionUtils.editReply(intr, finalEmbed)
+        if (processedResponse.length > 1) {
+          embed.setFooter({
+            text: `Page ${index + 1}/${processedResponse.length}`,
+          })
+        }
+
+        return embed
+      })
+
+      if (embeds.length > 1) {
+        // Convert EmbedBuilder[] to APIEmbed[] and add pagination
+        await PaginationUtils.handleInteractionPagination(
+          intr,
+          embeds.map((embed) => embed.toJSON()),
+          {
+            useEmoji: true,
+            prevEmoji: '◀️',
+            nextEmoji: '▶️',
+            style: ButtonStyle.Secondary,
+          },
+        )
+      } else {
+        // If there's only one embed, just edit the original message
+        await InteractionUtils.editReply(intr, embeds[0])
+      }
     } catch (error) {
       console.error('Error processing streamed response:', error)
       await InteractionUtils.editReply(
