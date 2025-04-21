@@ -281,13 +281,17 @@ export const getCommitsTool = createTool({
     return {
       list: await Promise.all(
         commits.map(async (commit) => ({
-          sha: commit.sha,
+          sha: commit.sha.substring(0, 8),
           author: await mapGitHubUser(
             commit.author.login,
             context.useDiscordIdMapping,
           ),
           url: commit.html_url,
-          message: commit.commit.message,
+          // Only keep the first line of the commit message
+          // and remove leading and trailing spaces
+          message:
+            commit.commit.message.split('\n')[0]?.trim() ??
+            commit.commit.message,
         })),
       ),
     }
