@@ -161,13 +161,14 @@ const stepFetchInactivePRs = new Step({
 
     const { organizations } = context.steps['fetch-organizations'].output
     const results: StepOneOutput[] = []
-    const inactiveDays = 3 // Default value
+    // Default to 3 days if inactiveDays is not provided in trigger data
+    const inactiveDays = context.triggerData?.inactiveDays || 3
 
     for (const org of organizations) {
       // Create GitHub client for this organization
       const githubClient = new GitHubClient({
         githubOwner: org.githubName,
-        githubToken: org.githubTokenId,
+        githubToken: org.githubTokenId || undefined,
       })
 
       // Process each channel
@@ -175,7 +176,7 @@ const stepFetchInactivePRs = new Step({
         // Process each repository in this channel
         for (const repo of channel.repositories) {
           try {
-            // Fetch inactive PRs for this repository
+            // Fetch inactive PRs for this repository using dynamic inactiveDays
             const inactivePRs = await githubClient.getInactivePRs(
               repo.githubRepoName,
               inactiveDays,
@@ -282,17 +283,12 @@ const stepProcessDiscordNotifications = new Step({
   id: 'process-embed-discord-notification',
   outputSchema: z.array(
     z.object({
-      fields: z.array(
-        z.object({
-          value: z.string(),
-          name: z.string(),
-          inline: z.boolean(),
-        }),
-      ),
+      description: z.string(),
       orgName: z.string(),
-      repoName: z.string(),
       channelId: z.string(),
       notificationsByRepo: z.record(z.string(), z.any()),
+      inactiveDays: z.number(),
+      totalPRs: z.number(),
     }),
   ),
   execute: async ({ context }) => {
@@ -307,54 +303,120 @@ const stepProcessDiscordNotifications = new Step({
       .output as StepTwoOutput[]
     const inactivePRsResults = context.steps['get-inactive-prs']
       .output as StepOneOutput[]
-    const results = []
+    // Default to 3 days if inactiveDays is not provided in trigger data
+    const inactiveDays = context.triggerData?.inactiveDays || 3
 
-    for (let i = 0; i < processedResults.length; i++) {
-      // Use non-null assertion to tell TypeScript these properties definitely exist
-      const processedResult = processedResults[i]
-      const inactivePRsResult = inactivePRsResults[i]
-
-      if (!processedResult || !inactivePRsResult) {
-        continue
+    // Group results by channel
+    const resultsByChannel: Record<
+      string,
+      {
+        orgName: string
+        channelId: string
+        repos: Array<{
+          repoName: string
+          prs: Array<{
+            number: number
+            title: string
+            url: string
+            author: string
+            daysInactive: number
+          }>
+        }>
       }
+    > = {}
+
+    // Process and group all results by channel
+    for (let i = 0; i < processedResults.length; i++) {
+      const processedResult = processedResults[i]
+      if (!processedResult) continue
 
       const { notificationsByRepo, orgName, repoName, channelId } =
         processedResult
-      const { inactivePRs } = inactivePRsResult
-      const inactiveDays = 3 // Default value
+      if (!notificationsByRepo || !orgName || !repoName || !channelId) continue
 
-      const summary = `Found **${inactivePRs.length}** PRs inactive for ${inactiveDays}+ days in repository \`${repoName}\`.`
       const repoNotify = Object.values(notificationsByRepo)[0]
+      if (!repoNotify?.prs?.length) continue
 
-      if (!repoNotify?.prs.length) {
-        continue
+      // Initialize channel group if it doesn't exist
+      if (!resultsByChannel[channelId]) {
+        resultsByChannel[channelId] = {
+          orgName,
+          channelId,
+          repos: [],
+        }
       }
 
-      const tableRows = repoNotify.prs
-        .reduce((chunks: string[][], pr, idx: number) => {
-          const row = `- **[#${pr.number}](${pr.url})** \`${pr.title}\` by @${pr.author} **(${pr.daysInactive}+ days)**`
-          const chunkIndex = Math.floor(idx / 5)
-          if (!chunks[chunkIndex]) {
-            chunks[chunkIndex] = []
-          }
-          chunks[chunkIndex].push(row)
-          return chunks
-        }, [] as string[][])
-        .map((chunk: string[]) => chunk.join('\n'))
+      // Add repository data to the channel group
+      resultsByChannel[channelId].repos.push({
+        repoName,
+        prs: repoNotify.prs.map((pr) => ({
+          number: pr.number,
+          title: pr.title,
+          url: pr.url,
+          author: pr.author,
+          daysInactive: pr.daysInactive,
+        })),
+      })
+    }
 
-      // Combine summary and table
-      const fields = [summary, ...tableRows].map((value) => ({
-        value,
-        name: '',
-        inline: false,
-      }))
+    // Create a single message for each channel with all repositories
+    const results = []
+    for (const channelId in resultsByChannel) {
+      const channelData = resultsByChannel[channelId]
+      if (!channelData || !channelData.repos || !channelData.repos.length)
+        continue
+
+      let totalPRs = 0
+
+      // Calculate total PRs
+      channelData.repos.forEach((repo) => {
+        if (repo && repo.prs) {
+          totalPRs += repo.prs.length
+        }
+      })
+
+      // Create description content
+      let description = `📊 **Summary**\nFound **${totalPRs}** PRs inactive for ${inactiveDays}+ days across **${channelData.repos.length}** repositories.\n\n`
+
+      // Add repository sections to description
+      channelData.repos.forEach((repo) => {
+        if (!repo || !repo.prs || !repo.prs.length) return
+
+        const prCount = repo.prs.length
+        const pluralSuffix = prCount === 1 ? 'inactived PR' : 'inactived PRs'
+
+        // Add repository header
+        description += `**${repo.repoName}**: (${prCount} ${pluralSuffix})\n`
+
+        // Add each PR under the repository with the new format
+        repo.prs.forEach((pr) => {
+          description += `- [#${pr.number}](${pr.url}) \`${pr.title || 'No title'}\` by @${pr.author || 'Unknown'} **(${pr.daysInactive}+ days)**\n`
+        })
+
+        description += '\n'
+      })
+
+      const combinedNotificationsByRepo = processedResults.reduce(
+        (acc, result) => {
+          if (
+            result &&
+            result.channelId === channelId &&
+            result.notificationsByRepo
+          ) {
+            return { ...acc, ...result.notificationsByRepo }
+          }
+          return acc
+        },
+        {},
+      )
 
       results.push({
-        fields,
-        orgName,
-        repoName,
+        description,
+        orgName: channelData.orgName,
         channelId,
-        notificationsByRepo,
+        notificationsByRepo: combinedNotificationsByRepo,
+        inactiveDays,
+        totalPRs,
       })
     }
 
@@ -369,16 +431,11 @@ const stepSendDiscordNotifications = new Step({
     z.object({
       success: z.boolean(),
       orgName: z.string(),
-      repoName: z.string(),
       channelId: z.string(),
-      fields: z.array(
-        z.object({
-          value: z.string(),
-          name: z.string(),
-          inline: z.boolean(),
-        }),
-      ),
+      description: z.string(),
       notificationsByRepo: z.record(z.string(), z.any()),
+      inactiveDays: z.number(),
+      totalPRs: z.number(),
     }),
   ),
   execute: async ({ context }) => {
@@ -389,19 +446,30 @@ const stepSendDiscordNotifications = new Step({
     }
 
     const notifications =
-      context.steps['process-embed-discord-notification'].output
+      context.steps['process-embed-discord-notification'].output || []
     const results = []
 
     for (const notification of notifications) {
-      const { fields, orgName, repoName, channelId, notificationsByRepo } =
-        notification
+      if (!notification) continue
+
+      const {
+        description,
+        orgName,
+        channelId,
+        notificationsByRepo,
+        inactiveDays,
+        totalPRs,
+      } = notification
+
+      if (!description || !orgName || !channelId || !notificationsByRepo)
+        continue
 
       try {
         await discordClient.sendMessageToChannel({
           channelId,
           embed: {
-            title: `👀 **Inactive work**`,
-            fields,
+            title: `👀 **Inactive work - ${totalPRs || 0} PRs need attention**`,
+            description,
             color: 0xffa500,
             footer: {
               text: takeSnapshotTime(new Date()),
@@ -412,23 +480,21 @@ const stepSendDiscordNotifications = new Step({
         results.push({
           success: true,
           orgName,
-          repoName,
           channelId,
-          fields,
+          description,
           notificationsByRepo,
+          inactiveDays: inactiveDays || 3,
+          totalPRs: totalPRs || 0,
         })
       } catch (error) {
-        console.error(
-          `Error sending Discord notification for ${orgName}/${repoName}:`,
-          error,
-        )
         results.push({
           success: false,
           orgName,
-          repoName,
           channelId,
-          fields,
+          description,
           notificationsByRepo,
+          inactiveDays: inactiveDays || 3,
+          totalPRs: totalPRs || 0,
         })
       }
     }
@@ -446,36 +512,45 @@ const stepLogEvents = new Step({
       throw new Error('Failed to send Discord notifications')
     }
 
-    const results = context.steps['send-discord-notification'].output
+    const results = context.steps['send-discord-notification'].output || []
 
     for (const result of results) {
-      if (result.success) {
-        const { fields, orgName, repoName, channelId, notificationsByRepo } =
-          result
-        const ctxId = nanoid()
+      if (!result || !result.success) continue
 
-        await EventRepository.logEvent({
-          workflowId: 'notifyInactivePRsWorkflow',
-          eventCategory: EventCategory.NOTIFICATION_DISCORD,
-          eventType: EventType.PR_NOTIFIED,
-          organizationId: orgName,
-          repositoryId: repoName,
-          eventData: {
-            notificationType: NotificationType.WAITING_FOR_REVIEW,
-            message:
-              fields?.map((f: { value: string }) => f.value).join('\n') || '',
-            prList: Object.values(notificationsByRepo).flatMap(
-              (repo: any) => repo.prs,
-            ),
-            discordChannelId: channelId,
-          },
-          metadata: {
-            inactiveDays: 3, // Default value
-          },
-          contextId: ctxId,
-          tags: ['inactive-prs', 'github', 'discord'],
-        })
-      }
+      const {
+        description,
+        orgName,
+        channelId,
+        notificationsByRepo,
+        inactiveDays,
+      } = result
+
+      if (!description || !orgName || !channelId || !notificationsByRepo)
+        continue
+
+      const ctxId = nanoid()
+
+      await EventRepository.logEvent({
+        workflowId: 'notifyInactivePRsWorkflow',
+        eventCategory: EventCategory.NOTIFICATION_DISCORD,
+        eventType: EventType.PR_NOTIFIED,
+        organizationId: orgName,
+        repositoryId: Object.keys(notificationsByRepo).join(','),
+        eventData: {
+          notificationType: NotificationType.WAITING_FOR_REVIEW,
+          message: description,
+          prList: Object.values(notificationsByRepo).flatMap(
+            (repo: any) => repo?.prs || [],
+          ),
+          discordChannelId: channelId,
+        },
+        metadata: {
+          inactiveDays: inactiveDays || 3,
+          repositoryCount: Object.keys(notificationsByRepo).length,
+        },
+        contextId: ctxId,
+        tags: ['inactive-prs', 'github', 'discord'],
+      })
     }
 
     return {}
@@ -485,6 +560,9 @@ const stepLogEvents = new Step({
 // Create and commit the workflow
 const notifyInactivePRsWorkflow = new Workflow({
   name: 'Notify Inactive PRs',
+  triggerSchema: z.object({
+    inactiveDays: z.number().default(3).optional(),
+  }),
 })
   .step(stepFetchOrganizations)
   .then(stepFetchInactivePRs)
