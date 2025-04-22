@@ -8,7 +8,7 @@ import {
   Message,
   MessageComponentInteraction,
 } from 'discord.js'
-import { DiscordLimits } from '../constants/discord-limits'
+import { DiscordLimits } from '../constants/discord-limits.js'
 
 // Constants
 const COLLECTOR_TIMEOUT = 300000 // 5 minutes

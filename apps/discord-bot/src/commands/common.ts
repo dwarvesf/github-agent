@@ -1,5 +1,5 @@
 import { APIEmbed, APIEmbedField, Client } from 'discord.js'
-import { DiscordLimits } from '../constants'
+import { DiscordLimits } from '../constants/index.js'
 
 const hardCodeIDMap = {
   zlatanpham: '790170208228212766',

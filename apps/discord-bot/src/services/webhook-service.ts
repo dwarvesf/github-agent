@@ -9,7 +9,7 @@ import {
   splittingDescriptionEmbedToMultipleEmbeds,
   splittingResponseFieldsToEmbedFields,
 } from '../commands/common.js'
-import { PaginationUtils } from '../utils/pagination-utils'
+import { PaginationUtils } from '../utils/pagination-utils.js'
 
 interface MessagePayload {
   content?: string
