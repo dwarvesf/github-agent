@@ -22,6 +22,14 @@ export class MemberRepository {
   }
 
   /**
+   * Get members by Github IDs
+   */
+  static async getByGithubIds(ids: string[]): Promise<Member[]> {
+    const prisma = getPrisma()
+    return prisma.member.findMany({ where: { githubId: { in: ids } } })
+  }
+
+  /**
    * Update member
    */
   static async update(

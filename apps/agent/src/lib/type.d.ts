@@ -6,6 +6,7 @@ export interface PullRequest {
   createdAt: string
   updatedAt: string
   mergedAt: string | null
+  organizationId?: string
   draft: boolean
   isWaitingForReview?: boolean
   hasMergeConflicts?: boolean

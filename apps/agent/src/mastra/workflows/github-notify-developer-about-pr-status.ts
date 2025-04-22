@@ -20,15 +20,22 @@ import {
   NotificationEmbedBuilder,
   NotificationTemplate,
 } from '../../lib/notification-embed'
+import { NotificationTimingService } from '../../lib/notification-timing'
 import { PullRequest } from '../../lib/type'
 import { groupBy } from '../../utils/array'
 import { prTitleFormatValid } from '../../utils/string'
 import { suggestPRDescriptionAgent } from '../agents/analyze-github-prs'
+import { NOTIFICATION_CONFIG } from '../../constants/notification'
+import { getStartOfDateInTz } from '../../utils/datetime'
 
 // Types
 type Platform = $Enums.Platform
 type AuthorPRData = {
-  platforms?: Awaited<ReturnType<typeof MemberRepository.getByGithubId>>
+  platforms?: Array<
+    Awaited<ReturnType<typeof MemberRepository.getByGithubId>>[number] & {
+      notifiedTimes?: string[]
+    }
+  >
   organizationId: string
   data: Array<{
     repo: string
@@ -73,15 +80,30 @@ class NotificationService {
     }
   }
 
-  private static async logEvent(
-    eventCategory: EventCategory,
-    notificationType: NotificationType,
-    userId: string,
-    repositoriesPRs: EventData['repositoriesPRs'],
-    context: NotificationContext,
-    embed: NotificationEmbed,
-    response: unknown,
-  ): Promise<void> {
+  private static async logEvent(p: {
+    eventCategory: EventCategory
+    notificationType: NotificationType
+    userId: string
+    githubId: string
+    repositoriesPRs: EventData['repositoriesPRs']
+    context: NotificationContext
+    embed: NotificationEmbed
+    response: unknown
+    platformType: Platform
+    notifiedTimes: string[]
+  }): Promise<void> {
+    const {
+      eventCategory,
+      notificationType,
+      userId,
+      githubId,
+      repositoriesPRs,
+      context,
+      embed,
+      response,
+      platformType,
+      notifiedTimes,
+    } = p
     try {
       await EventRepository.logEvent({
         workflowId: 'notifyDeveloperAboutPRStatus',
@@ -93,11 +115,17 @@ class NotificationService {
           message: embed.title,
           repositoriesPRs,
           discordUserId: userId,
-          details: { embed },
+          reviewer: githubId,
+          details: { embed, notifiedTimes },
         },
         metadata: { response },
         contextId: context.ctxId,
-        tags: ['notification', 'discord', notificationType, 'pr-status'],
+        tags: [
+          'author-notification',
+          platformType,
+          notificationType,
+          'pr-status',
+        ],
       })
     } catch (error) {
       console.error(`Failed to log notification event: ${error}`)
@@ -125,11 +153,14 @@ class NotificationService {
   }
 
   static async notify(
+    author: string,
     item: AuthorPRData,
     notificationType: NotificationType,
     itemsDisplay: EventData['repositoriesPRs'] | undefined,
   ): Promise<void> {
-    if (!item.platforms?.length || !itemsDisplay?.length) return
+    if (!item.platforms?.length || !itemsDisplay?.length) {
+      return
+    }
 
     const template =
       notificationType === NotificationType.PR_PENDING_MERGE
@@ -150,22 +181,31 @@ class NotificationService {
           embed,
         )
 
-        const context: NotificationContext = {
-          ctxId: nanoid(),
-          organizationId: item.organizationId,
-        }
+        // Add the current time to notifiedTimes
+        // to keep track of when the notification was sent
+        const notifiedTimes = [
+          ...(platform.notifiedTimes || []),
+          new Date().toISOString(),
+        ]
 
-        const eventCategory = this.getEventCategory(platformType)
+        // Get all organization IDs from PRs
+        const orgs = EventRepository.getOrganizationsString(itemsDisplay)
 
-        await this.logEvent(
-          eventCategory,
+        await this.logEvent({
+          eventCategory: this.getEventCategory(platformType),
           notificationType,
-          platform.platformId,
-          itemsDisplay,
-          context,
+          userId: platform.platformId,
+          githubId: author,
+          repositoriesPRs: itemsDisplay,
+          context: {
+            ctxId: nanoid(),
+            organizationId: orgs,
+          },
           embed,
           response,
-        )
+          platformType,
+          notifiedTimes,
+        })
       } catch (error) {
         console.error(
           `Failed to send ${notificationType} notification: ${error}`,
@@ -225,12 +265,67 @@ class PRAnalyzer {
   }
 }
 
+async function filterPRsNeedNotificationByAuthor(
+  results: PRsByAuthor,
+  platformType: Platform,
+  notificationType: NotificationType,
+): Promise<PRsByAuthor> {
+  const notifications: PRsByAuthor = {}
+
+  for (const [author, authorData] of Object.entries(results)) {
+    const platforms = authorData.platforms
+    if (!platforms?.length) {
+      continue
+    }
+    for (const platform of platforms) {
+      if (platform.platformType !== platformType) {
+        continue
+      }
+      const latestEvent = await EventRepository.findLastEvent({
+        workflowId: 'notifyDeveloperAboutPRStatus',
+        eventTypes: [EventType.PR_NOTIFIED],
+        eventData: {
+          notificationType,
+          reviewer: author,
+        },
+        fromDate: getStartOfDateInTz(new Date()), // Start from today for resetting notified times
+        tags: [
+          'author-notification',
+          platformType,
+          notificationType,
+          'pr-status',
+        ],
+      })
+      const notifyHistory = NotificationTimingService.checkNotificationHistory(
+        (latestEvent?.eventData as EventData)?.details?.notifiedTimes,
+        // TODO: Use a config for an uniq member + platform instead of a constant
+        NOTIFICATION_CONFIG,
+      )
+      if (!notifyHistory.shouldNotify) {
+        continue
+      }
+      const modifiedPlatformNotifiedTimes = {
+        ...platform,
+        notifiedTimes: [...notifyHistory.notifiedTimes],
+      }
+
+      const notificationPlatforms = notifications[author]?.platforms || []
+
+      notifications[author] = {
+        ...authorData,
+        platforms: [...notificationPlatforms, modifiedPlatformNotifiedTimes],
+      }
+    }
+  }
+  return notifications
+}
+
 const processPRNotifications = async (
   results: PRsByAuthor,
   notificationType: NotificationType,
   filterFn: (pr: PullRequest) => boolean | Promise<boolean>,
 ): Promise<void> => {
-  for (const item of Object.values(results)) {
+  for (const [author, item] of Object.entries(results)) {
     const itemsDisplay: EventData['repositoriesPRs'] = []
 
     for (const { repo, prs } of item.data) {
@@ -252,13 +347,24 @@ const processPRNotifications = async (
       }
     }
 
-    await NotificationService.notify(item, notificationType, itemsDisplay)
+    await NotificationService.notify(
+      author,
+      item,
+      notificationType,
+      itemsDisplay,
+    )
   }
 }
 
 const handleApprovedNotMerged = async (results: PRsByAuthor): Promise<void> => {
-  await processPRNotifications(
+  // Filter PRs that are approved but not merged
+  const approvedNotMergedPRs = await filterPRsNeedNotificationByAuthor(
     results,
+    $Enums.Platform.discord,
+    NotificationType.PR_PENDING_MERGE,
+  )
+  await processPRNotifications(
+    approvedNotMergedPRs,
     NotificationType.PR_PENDING_MERGE,
     (pr) => pr.isApprovedWaitingForMerging ?? false,
   )
@@ -267,8 +373,15 @@ const handleApprovedNotMerged = async (results: PRsByAuthor): Promise<void> => {
 const handleUnconventionalTitleOrDescription = async (
   results: PRsByAuthor,
 ): Promise<void> => {
-  await processPRNotifications(
+  // Filter PRs with unconventional titles or descriptions
+  const unconventionalPRs = await filterPRsNeedNotificationByAuthor(
     results,
+    $Enums.Platform.discord,
+    NotificationType.WRONG_CONVENTION,
+  )
+  // Process PRs that need to be notified
+  await processPRNotifications(
+    unconventionalPRs,
     NotificationType.WRONG_CONVENTION,
     async (pr): Promise<boolean> => {
       const conventions = await PRAnalyzer.analyzeConventions([pr])
@@ -381,8 +494,6 @@ const notifyDeveloperAboutPRStatus = new Workflow({
 
               for (const [author, prs] of Object.entries(byAuthor)) {
                 if (!results[author]) {
-                  const platformInfo =
-                    await MemberRepository.getByGithubId(author)
                   results[author] = {
                     data: [
                       {
@@ -391,7 +502,6 @@ const notifyDeveloperAboutPRStatus = new Workflow({
                       },
                     ],
                     organizationId: repoPRs.org,
-                    platforms: platformInfo,
                   }
                 } else {
                   results[author].data.push({
@@ -400,6 +510,17 @@ const notifyDeveloperAboutPRStatus = new Workflow({
                   })
                 }
               }
+            }
+
+            const allAuthors = Object.keys(results)
+            const allMembers = await MemberRepository.getByGithubIds(allAuthors)
+            const allMembersById = groupBy(
+              allMembers,
+              (member) => member.githubId,
+            )
+            for (const author of Object.keys(results)) {
+              const platforms = allMembersById[author]
+              results[author]!.platforms = platforms || []
             }
 
             await handleApprovedNotMerged(results)

@@ -13,6 +13,7 @@ export interface NotificationEmbed {
   footer?: {
     text: string
   }
+  inline?: boolean
 }
 
 export interface NotificationTemplate {

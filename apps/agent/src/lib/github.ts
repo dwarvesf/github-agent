@@ -581,6 +581,7 @@ class GitHubClient {
       updatedAt: apiPullRequest.updated_at,
       mergedAt: apiPullRequest.merged_at,
       draft: apiPullRequest.draft,
+      organizationId: apiPullRequest.html_url.split('/')[3],
       isMerged: apiPullRequest.merged_at !== null,
       isWaitingForReview: GitHubClient.isWaitingForReview(apiPullRequest),
       hasMergeConflicts: GitHubClient.hasMergeConflicts(apiPullRequest),
