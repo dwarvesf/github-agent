@@ -27,6 +27,7 @@ import { prTitleFormatValid } from '../../utils/string'
 import { suggestPRDescriptionAgent } from '../agents/analyze-github-prs'
 import { NOTIFICATION_CONFIG } from '../../constants/notification'
 import { getStartOfDateInTz } from '../../utils/datetime'
+import { scheduler } from '../../lib/scheduler'
 
 // Types
 type Platform = $Enums.Platform
@@ -523,8 +524,22 @@ const notifyDeveloperAboutPRStatus = new Workflow({
               results[author]!.platforms = platforms || []
             }
 
-            await handleApprovedNotMerged(results)
-            await handleUnconventionalTitleOrDescription(results)
+            if (
+              scheduler.isSubJobActive(
+                'notifyDeveloperAboutPRStatus',
+                'handleApprovedNotMerged',
+              )
+            ) {
+              await handleApprovedNotMerged(results)
+            }
+            if (
+              scheduler.isSubJobActive(
+                'notifyDeveloperAboutPRStatus',
+                'handleUnconventionalTitleOrDescription',
+              )
+            ) {
+              await handleUnconventionalTitleOrDescription(results)
+            }
           }
 
           return 'ok'
