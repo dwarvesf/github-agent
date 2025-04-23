@@ -12,11 +12,11 @@ type HonoOpenAPIRoute = NonNullable<
 
 export const apiRoutes: HonoOpenAPIRoute[] = [
   registerApiRoute('/refresh-cronjobs', {
-    method: 'GET',
+    method: 'POST',
     openapi: CRON_JOBS_SCHEMA,
     handler: async (context) => {
       try {
-        scheduler.initializeJobScheduler()
+        await scheduler.initializeJobScheduler()
         return context.json({
           message: 'Cron jobs was refreshed successfully',
         })
@@ -33,7 +33,7 @@ export const apiRoutes: HonoOpenAPIRoute[] = [
     },
   }),
   registerApiRoute('/refresh-cronjobs/:id', {
-    method: 'GET',
+    method: 'POST',
     openapi: CRON_JOBS_REFRESH_SCHEMA,
     handler: async (context) => {
       const { id } = context.req.param()
@@ -46,7 +46,7 @@ export const apiRoutes: HonoOpenAPIRoute[] = [
         )
       }
       try {
-        await scheduler.refreshJob(id)
+        await scheduler.refreshJob(Number(id))
         return context.json({
           message: `Cron job: ${id} was refreshed successfully`,
         })

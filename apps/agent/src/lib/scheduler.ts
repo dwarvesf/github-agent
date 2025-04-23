@@ -198,7 +198,7 @@ class Scheduler {
    * @param id - The unique identifier of the job to refresh
    * @throws NotificationConfigError if no configuration is found for the given ID
    */
-  public refreshJob(id: number): void {
+  public async refreshJob(id: number): Promise<void> {
     const config = DEFAULT_NOTIFICATION_CONFIGS.find(
       (config) => config.id === id,
     )
@@ -258,7 +258,7 @@ class Scheduler {
    * as scheduled jobs. Terminates any existing jobs before initialization.
    * Logs success/failure for each job initialization attempt.
    */
-  public initializeJobScheduler(): void {
+  public async initializeJobScheduler(): Promise<void> {
     logger.info('Initializing scheduler...')
     logger.info('Terminating existing jobs...')
     this.terminate()

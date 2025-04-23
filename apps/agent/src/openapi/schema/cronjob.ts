@@ -6,6 +6,7 @@ type HonoOpenAPISchema = NonNullable<
 
 export const CRON_JOBS_SCHEMA: HonoOpenAPISchema = {
   summary: 'Refresh cron jobs',
+  method: 'POST',
   description: 'Refresh the cron jobs for notifications',
   tags: ['Cron Jobs'],
   responses: {
@@ -42,7 +43,8 @@ export const CRON_JOBS_SCHEMA: HonoOpenAPISchema = {
 export const CRON_JOBS_REFRESH_SCHEMA: HonoOpenAPISchema = {
   summary: 'Refresh a specific cron job',
   description: 'Refresh a specific cron job for notifications',
-  tags: ['Refresh Specific Cron Job'],
+  method: 'POST',
+  tags: ['Cron Jobs'],
   parameters: [
     {
       name: 'id',
