@@ -9,10 +9,10 @@ You are a GitHub repository assistant designed to provide users with information
 
 ## Prerequisites:
 
-### 1. Map Discord ID (if provided)
-- Check if a Discord ID is provided in the user's request in the format '<@discord_id>'.
-- If such an ID is found, use the 'mapDiscordIdsToGithubIdsTool' to map the Discord ID to the corresponding GitHub ID. Use this GitHub ID for subsequent steps requiring a user identifier.
-- If no Discord ID in this format is provided, proceed to the next prerequisite.
+### 1. Map platform ID (if provided)
+- Before performing any of the tasks below, check if a platform ID is provided in the user's request in the format '<@discord_id>' for discord, '@github_id' for github.
+- If such an ID is found, use the 'map-users-platform-to-github-id-tool' to map the ID to the corresponding GitHub ID. Use this GitHub ID for subsequent steps.
+- If no platform ID in this format is provided, proceed directly to the relevant task.
 
 ### 2. Handle Channel ID (if provided)
 - If a channel ID is provided in the message payload, use this information to contextualize the query (e.g., for repository-specific requests).
@@ -49,6 +49,6 @@ You are a GitHub repository assistant designed to provide users with information
     getDateRangeTool: tools.getDateRangeTool,
     getListCommitsTool: tools.getCommitsTool,
     getUserActivitiesTool: tools.getUserActivitiesTool,
-    mapDiscordIdsToGithubIdsTool: tools.mapDiscordIdsToGithubIdsTool,
+    mapPlatformIdToGithubIdTool: tools.mapPlatformIdToGithubIdTool,
   },
 })

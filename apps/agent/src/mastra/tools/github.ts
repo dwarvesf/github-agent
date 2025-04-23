@@ -5,9 +5,9 @@ import {
   convertArrayToMarkdownTableList,
   convertNestedArrayToTreeList,
 } from '../../utils/string'
-import { githubIdMapper } from '../../lib/id-mapper'
 import { $Enums, OrganizationRepository, Repositories } from '../../db'
 import { groupBy } from '../../utils/array'
+import { MemberRepository } from '../../db'
 
 type OrganizationData = Awaited<
   ReturnType<typeof GitHubClient.getOrganizationData>
@@ -102,15 +102,6 @@ async function fetchGitHubData<T>(
   return results
 }
 
-async function mapGitHubUser(
-  username: string,
-  useDiscordMapping?: boolean,
-): Promise<string> {
-  if (!useDiscordMapping) return username
-  const discordId = await githubIdMapper.getDiscordID(username)
-  return discordId ? `<@!${discordId}>` : `@${username}`
-}
-
 const prListSchema = z.object({
   list: z.array(
     z.object({
@@ -118,6 +109,7 @@ const prListSchema = z.object({
       title: z.string(),
       url: z.string(),
       author: z.string(),
+      authorDiscordId: z.string().optional(),
       createdAt: z.string(),
       updatedAt: z.string(),
       draft: z.boolean(),
@@ -126,6 +118,7 @@ const prListSchema = z.object({
       isWaitingForReview: z.boolean(),
       labels: z.array(z.string()),
       reviewers: z.array(z.string()),
+      reviewersDiscordIds: z.array(z.string().optional()),
       hasComments: z.boolean(),
       hasReviews: z.boolean(),
     }),
@@ -146,9 +139,9 @@ export const getPullRequestTool = createTool({
     authorId: z.string().describe('Reviewer ID').optional(),
     isOpen: z.boolean().describe('Filter by open PRs').optional(),
     isMerged: z.boolean().describe('Filter by merged PRs').optional(),
-    useDiscordIdMapping: z
+    withPlatformId: z
       .boolean()
-      .describe('Use Discord ID mapping')
+      .describe("Include Author, Reviewers's platform ID like Discord, Slack")
       .optional(),
     fromDate: z
       .string()
@@ -185,40 +178,49 @@ export const getPullRequestTool = createTool({
         }),
       { repository: context.repository },
     )
+    const githubIdDiscordMappings: { [key: string]: string } = {}
+    if (context.withPlatformId) {
+      prs.forEach((pr) => {
+        githubIdDiscordMappings[pr.user.login] = ''
+        pr.requested_reviewers.forEach((reviewer) => {
+          githubIdDiscordMappings[reviewer.login] = ''
+        })
+      })
+
+      MemberRepository.list({
+        where: { githubId: { in: Object.keys(githubIdDiscordMappings) } },
+      }).then((members) => {
+        members.forEach((member) => {
+          githubIdDiscordMappings[member.githubId] = member.platformId
+        })
+      })
+    }
 
     return {
-      list: await Promise.all(
-        prs.map(async (pr) => {
-          const author = await mapGitHubUser(
-            pr.user.login,
-            context.useDiscordIdMapping,
-          )
-          const reviewers = await Promise.all(
-            pr.requested_reviewers.map((reviewer) =>
-              mapGitHubUser(reviewer.login, context.useDiscordIdMapping),
-            ),
-          )
+      list: prs.map((pr) => {
+        const convertedPR = GitHubClient.convertApiPullRequestToPullRequest(pr)
 
-          const convertedPR =
-            GitHubClient.convertApiPullRequestToPullRequest(pr)
-          return {
-            number: convertedPR.number,
-            title: convertedPR.title,
-            url: convertedPR.url,
-            createdAt: convertedPR.createdAt,
-            updatedAt: convertedPR.updatedAt,
-            draft: convertedPR.draft,
-            isWIP: convertedPR.isWIP,
-            hasMergeConflicts: convertedPR.hasMergeConflicts || false,
-            isWaitingForReview: convertedPR.isWaitingForReview || false,
-            labels: convertedPR.labels || [],
-            hasComments: convertedPR.hasComments || false,
-            hasReviews: convertedPR.hasReviews || false,
-            author,
-            reviewers,
-          }
-        }),
-      ),
+        return {
+          number: convertedPR.number,
+          title: convertedPR.title,
+          url: convertedPR.url,
+          createdAt: convertedPR.createdAt,
+          updatedAt: convertedPR.updatedAt,
+          draft: convertedPR.draft,
+          isWIP: convertedPR.isWIP,
+          hasMergeConflicts: convertedPR.hasMergeConflicts || false,
+          isWaitingForReview: convertedPR.isWaitingForReview || false,
+          labels: convertedPR.labels || [],
+          hasComments: convertedPR.hasComments || false,
+          hasReviews: convertedPR.hasReviews || false,
+          author: convertedPR.author,
+          authorDiscordId: githubIdDiscordMappings[pr.user.login],
+          reviewers: convertedPR.reviewers || [],
+          reviewersDiscordIds: pr.requested_reviewers.map(
+            (reviewer) => githubIdDiscordMappings[reviewer.login],
+          ),
+        }
+      }),
     }
   },
 })
@@ -228,6 +230,7 @@ const getCommitsToolOutputSchema = z.object({
     z.object({
       sha: z.string(),
       author: z.string(),
+      authorDiscordId: z.string().optional(),
       url: z.string(),
       message: z.string(),
     }),
@@ -244,9 +247,9 @@ export const getCommitsTool = createTool({
     organization: z.string().describe('Organization name').optional(),
     channel: z.string().describe('Channel id').optional(),
     repository: z.string().describe('Repository name').optional(),
-    useDiscordIdMapping: z
+    withPlatformId: z
       .boolean()
-      .describe('Use Discord ID mapping')
+      .describe("Include Author's platform ID like Discord, Slack")
       .optional(),
     fromDate: z
       .string()
@@ -278,22 +281,32 @@ export const getCommitsTool = createTool({
       { repository: context.repository },
     )
 
+    const githubIdDiscordMappings: { [key: string]: string } = {}
+    if (context.withPlatformId) {
+      commits.forEach((commit) => {
+        githubIdDiscordMappings[commit.author.login] = ''
+      })
+
+      await MemberRepository.list({
+        where: { githubId: { in: Object.keys(githubIdDiscordMappings) } },
+      }).then((members) => {
+        members.forEach((member) => {
+          githubIdDiscordMappings[member.githubId] = member.platformId
+        })
+      })
+    }
+
     return {
-      list: await Promise.all(
-        commits.map(async (commit) => ({
-          sha: commit.sha.substring(0, 8),
-          author: await mapGitHubUser(
-            commit.author.login,
-            context.useDiscordIdMapping,
-          ),
-          url: commit.html_url,
-          // Only keep the first line of the commit message
-          // and remove leading and trailing spaces
-          message:
-            commit.commit.message.split('\n')[0]?.trim() ??
-            commit.commit.message,
-        })),
-      ),
+      list: commits.map((commit) => ({
+        sha: commit.sha.substring(0, 8),
+        author: commit.author.login,
+        authorDiscordId: githubIdDiscordMappings[commit.author.login],
+        url: commit.html_url,
+        // Only keep the first line of the commit message
+        // and remove leading and trailing spaces
+        message:
+          commit.commit.message.split('\n')[0]?.trim() ?? commit.commit.message,
+      })),
     }
   },
 })
