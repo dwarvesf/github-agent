@@ -342,6 +342,7 @@ const stepComposeMessages = new Step({
           z.object({
             repoData: repoDataSchema,
             message: z.string(),
+            hasActivity: z.boolean(),
           }),
         ),
       }),
@@ -357,10 +358,18 @@ const stepComposeMessages = new Step({
 
     for (const channelData of channelDataList) {
       const repositoryMessages = channelData.repositories.map(
-        (repoData: RepoData) => ({
-          repoData,
-          message: generateRepositoryReport(repoData),
-        }),
+        (repoData: RepoData) => {
+          const message = generateRepositoryReport(repoData)
+          // Check if there's any activity in this repository
+          const hasActivity =
+            repoData.todayPRs.length > 0 || repoData.todayCommits.length > 0
+
+          return {
+            repoData,
+            message,
+            hasActivity,
+          }
+        },
       )
 
       messages.push({
@@ -397,17 +406,23 @@ const stepSendMessages = new Step({
     const results = []
 
     for (const { channelData, repositoryMessages } of messages) {
-      for (const { repoData, message } of repositoryMessages) {
+      // Check if any repository has activity
+      const reposWithActivity = repositoryMessages.filter(
+        ({ hasActivity }: { hasActivity: boolean }) => hasActivity,
+      )
+
+      if (reposWithActivity.length === 0) {
+        // No activity in any repository - send a general message
         try {
           if (channelData.platform === 'discord') {
             await discordClient.sendMessageToChannel({
               channelId: channelData.channelId,
               embed: {
-                title: `🤖 Daily report (${formatDate(new Date(), 'MMMM d, yyyy')}) for ${repoData.repoName}`,
-                description: message,
+                title: `🤖 Daily report (${formatDate(new Date(), 'MMMM d, yyyy')})`,
+                description: 'No new activity today in any repository.',
                 color: 3447003,
                 footer: {
-                  text: `${channelData.orgName}/${repoData.repoName}`,
+                  text: `${channelData.orgName}`,
                 },
               },
             })
@@ -417,7 +432,7 @@ const stepSendMessages = new Step({
 
           results.push({
             orgName: channelData.orgName,
-            repoName: repoData.repoName,
+            repoName: 'all-repositories',
             channelId: channelData.channelId,
             platform: channelData.platform,
             success: true,
@@ -425,12 +440,53 @@ const stepSendMessages = new Step({
         } catch (error) {
           results.push({
             orgName: channelData.orgName,
-            repoName: repoData.repoName,
+            repoName: 'all-repositories',
             channelId: channelData.channelId,
             platform: channelData.platform,
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error',
           })
+        }
+      } else {
+        // Send individual reports only for repositories with activity
+        for (const { repoData, message, hasActivity } of repositoryMessages) {
+          // Skip repositories with no activity
+          if (!hasActivity) continue
+
+          try {
+            if (channelData.platform === 'discord') {
+              await discordClient.sendMessageToChannel({
+                channelId: channelData.channelId,
+                embed: {
+                  title: `🤖 Daily report (${formatDate(new Date(), 'MMMM d, yyyy')}) for ${repoData.repoName}`,
+                  description: message,
+                  color: 3447003,
+                  footer: {
+                    text: `${channelData.orgName}/${repoData.repoName}`,
+                  },
+                },
+              })
+            } else {
+              throw new Error(`Unsupported platform ${channelData.platform}`)
+            }
+
+            results.push({
+              orgName: channelData.orgName,
+              repoName: repoData.repoName,
+              channelId: channelData.channelId,
+              platform: channelData.platform,
+              success: true,
+            })
+          } catch (error) {
+            results.push({
+              orgName: channelData.orgName,
+              repoName: repoData.repoName,
+              channelId: channelData.channelId,
+              platform: channelData.platform,
+              success: false,
+              error: error instanceof Error ? error.message : 'Unknown error',
+            })
+          }
         }
       }
     }
