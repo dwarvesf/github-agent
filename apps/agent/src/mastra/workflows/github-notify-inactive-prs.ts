@@ -464,6 +464,11 @@ const stepSendDiscordNotifications = new Step({
       if (!description || !orgName || !channelId || !notificationsByRepo)
         continue
 
+      // Skip sending notification if there are no inactive PRs
+      if (totalPRs === 0) {
+        continue
+      }
+
       try {
         await discordClient.sendMessageToChannel({
           channelId,
