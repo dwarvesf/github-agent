@@ -1,7 +1,9 @@
 import js from '@eslint/js'
+// @ts-ignore
 import eslintConfigPrettier from 'eslint-config-prettier'
 import turboPlugin from 'eslint-plugin-turbo'
 import tseslint from 'typescript-eslint'
+// @ts-ignore
 import onlyWarn from 'eslint-plugin-only-warn'
 
 /**

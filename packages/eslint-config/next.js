@@ -1,9 +1,11 @@
 import js from '@eslint/js'
+// @ts-ignore
 import eslintConfigPrettier from 'eslint-config-prettier'
 import tseslint from 'typescript-eslint'
 import pluginReactHooks from 'eslint-plugin-react-hooks'
 import pluginReact from 'eslint-plugin-react'
 import globals from 'globals'
+// @ts-ignore
 import pluginNext from '@next/eslint-plugin-next'
 import { config as baseConfig } from './base.js'
 
@@ -20,7 +22,7 @@ export const nextJsConfig = [
   {
     ...pluginReact.configs.flat.recommended,
     languageOptions: {
-      ...pluginReact.configs.flat.recommended.languageOptions,
+      ...(pluginReact.configs.flat.recommended?.languageOptions ?? {}),
       globals: {
         ...globals.serviceworker,
       },

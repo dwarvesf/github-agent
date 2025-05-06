@@ -31,3 +31,9 @@ jobs:
 
       - name: Run tests
         run: pnpm test:run
+
+      - name: Run Build
+        run: npx -y prisma generate --schema="./apps/agent/prisma/schema.prisma" \
+             && cp ./apps/admin/.env.example ./apps/admin/.env.local \
+             && npx -y prisma generate --schema="./apps/admin/prisma/schema.prisma" \
+             && pnpm build
